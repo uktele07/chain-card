@@ -9,7 +9,7 @@ const CARDS = data.cards as CardDef[];
 const items = (ids: string[]) => ids.map(id => (data.items as ItemDef[]).find(d => d.id === id) ?? null);
 export const SKILLS = { '初心者': { play: 0.8, read: 0.5, keep: 0.4 }, '普通': { play: 0.5, read: 0.3, keep: 0.25 }, '上級': { play: 0.3, read: 0.15, keep: 0.15 } };
 export type Skill = { play: number; read: number; keep: number };
-export interface Setup { items?: string[]; weapon?: string; armor?: string; spells?: string[]; keepS?: boolean }
+export interface Setup { items?: string[]; weapon?: string; armor?: string; spells?: string[]; keepS?: boolean; gear?: Gear }
 
 const deckOf = (spells: string[]) => buildDeck(CARDS, spells, data.rules.maxSpells as number);
 const gear = (weapon = 'sword', armor = 'leather'): Gear =>
@@ -17,7 +17,7 @@ const gear = (weapon = 'sword', armor = 'leather'): Gear =>
 
 export function battle(skill: Skill, enemy: EnemyDef, s: Setup = {}) {
   const keepS = s.keepS ?? true;
-  const b = new Battle(deckOf(s.spells ?? (data.rules.defaultSpells as string[])), rules, Math.random, items(s.items ?? (data.rules.defaultItems as string[])), enemy, gear(s.weapon, s.armor));
+  const b = new Battle(deckOf(s.spells ?? (data.rules.defaultSpells as string[])), rules, Math.random, items(s.items ?? (data.rules.defaultItems as string[])), enemy, s.gear ?? gear(s.weapon, s.armor));
   const tickItems = () => {
     b.items.forEach((it, i) => {
       if (!it || it.used) return;

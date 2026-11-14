@@ -317,7 +317,8 @@ export class GameScene extends Phaser.Scene {
           this.ringPulse = e.lv === 4 ? 0.4 : 0.18;
           if (e.lv === 4) this.cameras.main.shake(180, 0.006);
           this.snd.hit(e.lv, e.hits > 1);
-          this.popup(String(e.damage), e.lv === 4 || e.hits > 1 ? '#ffd24a' : C.text, e.lv === 4 ? 42 : 26 + e.damage * 2, MON.y - 60 - e.index * 26, MON.x + Phaser.Math.Between(-60, 60));
+          this.popup(String(e.damage), e.lv === 4 || e.hits > 1 ? '#ffd24a' : C.text, e.lv === 4 ? 42 : Math.min(40, 26 + e.damage * 2), MON.y - 60 - e.index * 26, MON.x + Phaser.Math.Between(-60, 60));
+          if (e.bonus > 0) this.popup(`+${e.bonus} 使い切り`, '#7fe0a0', 18, MON.y - 110, MON.x);
         });
       } else if (e.kind === 'miss') this.snd.miss();
       else if (e.kind === 'spell') this.snd.spell();

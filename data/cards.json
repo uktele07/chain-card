@@ -6,7 +6,7 @@
     "allowStepDown": true,
     "sResetsChain": true,
     "chargeSec": 1.0,
-    "fullConsumeChargeSec": 0.3,
+    "fullConsumeChargeSec": 0.5,
     "autoSkipDelaySec": 0.35,
     "misinputStunSec": 0.3,
     "playLockSec": 0.12,
@@ -18,13 +18,14 @@
       "awake"
     ],
     "resumeCountSec": 1.0,
-    "keepConsumeChargeSec": 1.0,
+    "keepConsumeChargeSec": 0.5,
     "autoChargeSec": 0.65,
     "defaultSpells": [
       "double",
       "levelx"
     ],
-    "maxSpells": 2
+    "maxSpells": 2,
+    "fullConsumeBonus": 3
   },
   "cards": [
     {

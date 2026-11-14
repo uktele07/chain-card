@@ -53,6 +53,7 @@ export interface Rules {
   chargeSec: number;            // スキップしたときの入れ替え時間
   fullConsumeChargeSec: number; // 4枚すべて使い切ったとき
   keepConsumeChargeSec: number; // キープを残して使い切ったとき
+  fullConsumeBonus: number;     // 4枚すべて使い切る最後の1枚がアタックなら、その分ダメージを足す
   autoSkipDelaySec: number;     // 出せるカードがないとき、自動で入れ替えが始まるまでの時間
   autoChargeSec: number;        // 自動で入れ替えるときの入れ替え時間（上と合わせて合計の待ちになる）
   misinputStunSec: number;
@@ -64,7 +65,7 @@ export interface Rules {
 export interface Slot { card: Card | null; kept: boolean }
 
 export type BattleEvent =
-  | { kind: 'hit'; slot: number; damage: number; lv: number; index: number; hits: number }
+  | { kind: 'hit'; slot: number; damage: number; lv: number; index: number; hits: number; bonus: number }
   | { kind: 'spell'; slot: number; effect: string }
   | { kind: 'item'; slot: number; effect: string }
   | { kind: 'heal'; amount: number }
@@ -212,6 +213,8 @@ export class Battle {
       this.events.push({ kind: 'miss', slot: i });
       return 'miss';
     }
+    // 4枚すべてを使い切る最後の1枚か（ほかの枠がすべて空）
+    const lastOfHand = this.slots.every((s, j) => j === i || !s.card);
     slot.card = null; slot.kept = false;
     this.stats.plays++;
     this.lock = this.rules.playLockSec;
@@ -222,12 +225,13 @@ export class Battle {
       // ダブル: 同じアタックを2回当てる。強化薬は1回ごとに乗る
       const hits = this.buffs.double > 0 ? 2 : 1;
       const per = this.powerOf(lv) + (this.rageLeft > 0 ? this.rageBonus : 0);
-      const damage = per * hits;
+      const bonus = lastOfHand ? this.rules.fullConsumeBonus : 0;   // 使い切りボーナス
+      const damage = per * hits + bonus;
       this.stats.damage += damage;
       this.turnDamage += damage;
       this.stats.maxTurn = Math.max(this.stats.maxTurn, this.turnDamage);
       if (lv === MAX_CHAIN) this.stats.sCount++;
-      for (let h = 0; h < hits; h++) this.events.push({ kind: 'hit', slot: i, damage: per, lv, index: h, hits });
+      for (let h = 0; h < hits; h++) this.events.push({ kind: 'hit', slot: i, damage: per, lv, index: h, hits, bonus: h === hits - 1 ? bonus : 0 });
       if (this.buffs.drain > 0) {   // ドレイン: 与えたダメージと同じだけ回復
         const before = this.hp;
         this.hp = Math.min(this.rules.playerMaxHp, this.hp + damage);

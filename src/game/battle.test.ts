@@ -38,7 +38,7 @@ describe('レベル順', () => {
     expect(b.press(2)).toBe('played'); wait(b, 0.2);   // A
     expect(b.press(3)).toBe('played');                 // S
     expect(b.chain).toBe(0);                           // Sを出すとチェインはなくなる
-    expect(b.stats.damage).toBe(1 + 2 + 3 + 10);
+    expect(b.stats.damage).toBe(1 + 2 + 3 + 10 + 3);   // 4枚目がアタックなので使い切りボーナス+3
     expect(b.stats.fullConsumes).toBe(1);
   });
 
@@ -134,8 +134,9 @@ describe('スキップとキープ', () => {
     b.press(1); wait(b, 0.2); b.press(2); wait(b, 0.2); b.press(3);
     expect(b.charging).toBe(true);
     expect(b.chain).toBe(2);
-    expect(b.chargeTotal).toBeCloseTo(1.0);     // キープを残した使い切りは1秒
-    wait(b, 1.1);
+    expect(b.chargeTotal).toBeCloseTo(0.5);     // キープを残した使い切りは0.5秒
+    expect(b.stats.damage).toBe(1 + 1 + 2);     // キープが残っているのでボーナスはない
+    wait(b, 0.6);
     expect(b.charging).toBe(false);
     expect(b.chain).toBe(2);
     expect(b.slots[0].card!.id).toBe('atkS');
@@ -243,13 +244,13 @@ describe('アイテム', () => {
     const b = new Battle(defs, rules, seeded());
     setHand(b, ['atk1', 'atk2', 'atk3', 'atkS']);
     for (let i = 0; i < 4; i++) { b.press(i); wait(b, 0.2); }
-    expect(b.stats.maxTurn).toBe(16);
-    expect(b.chargeTotal).toBeCloseTo(0.3);     // 4枚すべて使い切ると0.3秒
-    wait(b, 0.4);
+    expect(b.stats.maxTurn).toBe(19);          // 16 + 使い切りボーナス3
+    expect(b.chargeTotal).toBeCloseTo(0.5);
+    wait(b, 0.6);
     setHand(b, ['atk1', 'atk1', 'atk1', 'atk1']);
     b.press(0);
     expect(b.turnDamage).toBe(1);
-    expect(b.stats.maxTurn).toBe(16);
+    expect(b.stats.maxTurn).toBe(19);
   });
 
 });
@@ -356,6 +357,19 @@ describe('敵', () => {
   });
 });
 
+describe('使い切りボーナス', () => {
+  it('4枚目がスペルならボーナスはない。ダブルでも足すのは1回だけ', () => {
+    const b = new Battle(defs, rules, seeded());
+    setHand(b, ['atk1', 'atk1', 'atk1', 'double']);
+    for (let i = 0; i < 4; i++) { b.press(i); wait(b, 0.2); }
+    expect(b.stats.damage).toBe(3);
+    const c = new Battle(defs, rules, seeded());
+    setHand(c, ['atk1', 'atk1', 'double', 'atk1']);
+    for (let i = 0; i < 4; i++) { c.press(i); wait(c, 0.2); }
+    expect(c.stats.damage).toBe(1 + 1 + 2 + 3);
+  });
+});
+
 describe('追加のスペル', () => {
   it('ドレインは、次のアタックで与えたダメージと同じだけ回復する（ダブルなら2回分）', () => {
     const b = new Battle(defs, rules, seeded());
@@ -393,7 +407,7 @@ describe('装備', () => {
     const b = gear({ power: [2, 3, 4, 20] });
     setHand(b, ['atk1', 'atk2', 'atk3', 'atkS']);
     for (let i = 0; i < 4; i++) { b.press(i); wait(b, 0.2); }
-    expect(b.stats.damage).toBe(29);
+    expect(b.stats.damage).toBe(29 + 3);
   });
 
   it('斧は、アタックを出すたびに0.5秒待つ。スペルの後は待たない', () => {
@@ -414,7 +428,7 @@ describe('装備', () => {
     wait(bow, 0.6);
     setHand(bow, ['atk1', 'atk1', 'atk1', 'atk1']);
     for (let i = 0; i < 4; i++) { bow.press(i); wait(bow, 0.2); }
-    expect(bow.charging).toBe(false);          // 0.3 - 0.5 → 0秒: すぐ配られる
+    expect(bow.charging).toBe(false);          // 0.5 - 0.5 → 0秒: すぐ配られる
     const iron = gear({ chargeMod: 0.5 });
     iron.skip();
     expect(iron.chargeTotal).toBeCloseTo(1.5);
