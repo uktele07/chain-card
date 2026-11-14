@@ -11,9 +11,11 @@
 | カードを出す | △ ○ ✕ □ | W D S A（上・右・下・左） |
 | キープ / 解除 | 十字キー | 矢印キー |
 | 入れ替え | R1・L1 | スペース |
-| アイテム | L2・R2 | Q・E |
-| やり直し | OPTIONS | R |
+| アイテムを切り替える / 使う | L2 / R2 | Q / E |
+| メニュー / ポーズ | OPTIONS | Esc |
+| 決定 / 戻る（メニュー） | ○ / ✕ | Enter / Backspace |
 | 消音 | – | M |
+| 無敵（テスト用） | タッチパッド | T |
 
 ## 開発
 
@@ -36,5 +38,8 @@ npm run dev
 - `src/game/battle.ts`: 戦闘ルール本体（描画に依存しない）
 - `src/game/input.ts`: キーボードとゲームパッドの入力
 - `src/game/audio.ts`: 効果音とBGM（その場で合成）
-- `src/scenes/BattleScene.ts`: 画面
+- `src/game/ui.ts`: 描画の土台（毎フレーム描き直す層）
+- `src/game/art.ts`: 敵とアイテムの仮の絵（SVGの図形）
+- `src/game/save.ts`: セーブデータ（セットしたアイテム、敵ごとの記録）
+- `src/scenes/GameScene.ts`: 全画面（敵の一覧、戦闘、結果、メニュー、装備）
 - `sim/`: シミュレーション（`sim/old/` は過去のルール用）

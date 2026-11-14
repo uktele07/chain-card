@@ -12,51 +12,261 @@
     "playLockSec": 0.12,
     "keepCountsAsConsumed": true,
     "playerMaxHp": 100,
-    "defaultItems": ["potion", "flash"],
-    "stages": ["slime", "golem", "dragon"]
+    "defaultItems": [
+      "potion",
+      "flash",
+      "awake"
+    ],
+    "resumeCountSec": 1.0
   },
   "cards": [
-    { "id": "atk1", "name": "アタックC", "type": "attack", "lv": 1, "power": 1,  "copies": 13 },
-    { "id": "atk2", "name": "アタックB", "type": "attack", "lv": 2, "power": 2,  "copies": 8 },
-    { "id": "atk3", "name": "アタックA", "type": "attack", "lv": 3, "power": 3,  "copies": 5 },
-    { "id": "atkS", "name": "アタックS", "type": "attack", "lv": 4, "power": 10, "copies": 2 },
-
-    { "id": "levelx", "name": "レベルX", "type": "spell", "effect": "levelx", "desc": "次のアタックは\nレベル無視", "copies": 1 },
-    { "id": "power",  "name": "パワー",  "type": "spell", "effect": "power",  "desc": "次のアタックは\n威力2倍", "copies": 1 }
+    {
+      "id": "atk1",
+      "name": "アタックC",
+      "type": "attack",
+      "lv": 1,
+      "power": 1,
+      "copies": 13
+    },
+    {
+      "id": "atk2",
+      "name": "アタックB",
+      "type": "attack",
+      "lv": 2,
+      "power": 2,
+      "copies": 8
+    },
+    {
+      "id": "atk3",
+      "name": "アタックA",
+      "type": "attack",
+      "lv": 3,
+      "power": 3,
+      "copies": 5
+    },
+    {
+      "id": "atkS",
+      "name": "アタックS",
+      "type": "attack",
+      "lv": 4,
+      "power": 10,
+      "copies": 2
+    },
+    {
+      "id": "levelx",
+      "name": "レベルX",
+      "type": "spell",
+      "effect": "levelx",
+      "desc": "次のアタックは\nレベル無視",
+      "copies": 1
+    },
+    {
+      "id": "double",
+      "name": "ダブル",
+      "type": "spell",
+      "effect": "double",
+      "desc": "次のアタックを\n2回",
+      "copies": 1
+    }
   ],
   "items": [
-    { "id": "potion", "name": "回復薬", "effect": "heal",  "value": 20, "desc": "HPを20回復" },
-    { "id": "flash",  "name": "閃光弾", "effect": "flash", "stunSec": 1, "desc": "スタン＋行動リセット" },
-    { "id": "sand",   "name": "星の砂", "effect": "sand",  "durationSec": 10, "desc": "10秒 入れ替え0秒" }
+    {
+      "id": "potion",
+      "name": "回復薬",
+      "effect": "heal",
+      "value": 20,
+      "short": "HPを20回復",
+      "desc": "HPを20回復する。"
+    },
+    {
+      "id": "flash",
+      "name": "閃光弾",
+      "effect": "flash",
+      "stunSec": 1,
+      "short": "敵を止めて行動リセット",
+      "desc": "敵を1秒止め、行動ゲージを0に戻す。強い攻撃の直前に。"
+    },
+    {
+      "id": "sand",
+      "name": "時の砂",
+      "effect": "sand",
+      "durationSec": 10,
+      "chargeScale": 0.1,
+      "short": "10秒 入れ替え10倍速",
+      "desc": "10秒間、入れ替えが10倍速。その間チェインは下がらない。"
+    },
+    {
+      "id": "awake",
+      "name": "チェインの実",
+      "effect": "awake",
+      "value": 3,
+      "short": "チェインをAにする",
+      "desc": "チェインをすぐ A にする。キープした S を出したいときに。"
+    },
+    {
+      "id": "rage",
+      "name": "強化薬",
+      "effect": "rage",
+      "durationSec": 10,
+      "value": 1,
+      "short": "10秒 威力+1",
+      "desc": "10秒間、アタックの威力+1。ダブルでは2回とも乗る。"
+    }
   ],
   "enemies": [
     {
-      "id": "slime", "name": "スライム", "rank": "弱", "hp": 80,
+      "id": "slime",
+      "name": "スライム",
+      "rank": "弱",
+      "hp": 80,
       "actions": [
-        { "name": "体当たり",   "chargeSec": 4.5, "damage": 4 },
-        { "name": "体当たり",   "chargeSec": 4.5, "damage": 4 },
-        { "name": "体当たり",   "chargeSec": 4.5, "damage": 4 },
-        { "name": "のしかかり", "chargeSec": 5.5, "damage": 12, "big": true }
-      ]
+        {
+          "name": "体当たり",
+          "chargeSec": 4.5,
+          "damage": 4
+        },
+        {
+          "name": "体当たり",
+          "chargeSec": 4.5,
+          "damage": 4
+        },
+        {
+          "name": "体当たり",
+          "chargeSec": 4.5,
+          "damage": 4
+        },
+        {
+          "name": "のしかかり",
+          "chargeSec": 5.5,
+          "damage": 12,
+          "big": true
+        }
+      ],
+      "rankSec": {
+        "S": 18,
+        "A": 24,
+        "B": 33
+      }
     },
     {
-      "id": "golem", "name": "ゴーレム", "rank": "並", "hp": 120,
+      "id": "golem",
+      "name": "ゴーレム",
+      "rank": "並",
+      "hp": 120,
       "actions": [
-        { "name": "パンチ",     "chargeSec": 4.0, "damage": 6 },
-        { "name": "パンチ",     "chargeSec": 4.0, "damage": 6 },
-        { "name": "パンチ",     "chargeSec": 4.0, "damage": 6 },
-        { "name": "叩きつけ",   "chargeSec": 5.0, "damage": 18, "big": true }
-      ]
+        {
+          "name": "パンチ",
+          "chargeSec": 4.0,
+          "damage": 6
+        },
+        {
+          "name": "パンチ",
+          "chargeSec": 4.0,
+          "damage": 6
+        },
+        {
+          "name": "パンチ",
+          "chargeSec": 4.0,
+          "damage": 6
+        },
+        {
+          "name": "叩きつけ",
+          "chargeSec": 5.0,
+          "damage": 18,
+          "big": true
+        }
+      ],
+      "rankSec": {
+        "S": 27,
+        "A": 37,
+        "B": 51
+      }
     },
     {
-      "id": "dragon", "name": "ドラゴン", "rank": "強", "hp": 135,
+      "id": "dragon",
+      "name": "ドラゴン",
+      "rank": "強",
+      "hp": 135,
       "actions": [
-        { "name": "爪",         "chargeSec": 3.8, "damage": 6 },
-        { "name": "爪",         "chargeSec": 3.8, "damage": 6 },
-        { "name": "ブレス",     "chargeSec": 4.8, "damage": 20, "big": true },
-        { "name": "尾",         "chargeSec": 3.8, "damage": 7 },
-        { "name": "ブレス",     "chargeSec": 4.8, "damage": 20, "big": true }
-      ]
+        {
+          "name": "爪",
+          "chargeSec": 3.8,
+          "damage": 6
+        },
+        {
+          "name": "爪",
+          "chargeSec": 3.8,
+          "damage": 6
+        },
+        {
+          "name": "ブレス",
+          "chargeSec": 4.8,
+          "damage": 20,
+          "big": true
+        },
+        {
+          "name": "尾",
+          "chargeSec": 3.8,
+          "damage": 7
+        },
+        {
+          "name": "ブレス",
+          "chargeSec": 4.8,
+          "damage": 20,
+          "big": true
+        }
+      ],
+      "rankSec": {
+        "S": 31,
+        "A": 40,
+        "B": 53
+      }
+    },
+    {
+      "id": "maou",
+      "name": "魔王",
+      "rank": "魔",
+      "hp": 155,
+      "unlock": "all",
+      "actions": [
+        {
+          "name": "斬撃",
+          "chargeSec": 3.6,
+          "damage": 7
+        },
+        {
+          "name": "斬撃",
+          "chargeSec": 3.6,
+          "damage": 7
+        },
+        {
+          "name": "闇の波動",
+          "chargeSec": 4.8,
+          "damage": 20,
+          "big": true
+        },
+        {
+          "name": "連撃",
+          "chargeSec": 3.0,
+          "damage": 6
+        },
+        {
+          "name": "連撃",
+          "chargeSec": 3.0,
+          "damage": 6
+        },
+        {
+          "name": "滅びの光",
+          "chargeSec": 5.6,
+          "damage": 26,
+          "big": true
+        }
+      ],
+      "rankSec": {
+        "S": 35,
+        "A": 45,
+        "B": 58
+      }
     }
   ]
 }

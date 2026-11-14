@@ -66,12 +66,18 @@ describe('レベル順', () => {
 });
 
 describe('スペル', () => {
-  it('パワーは次のアタック1枚だけ2倍にする', () => {
+  it('ダブルは次のアタック1枚だけ2回当てる', () => {
     const b = new Battle(defs, rules, seeded());
-    setHand(b, ['power', 'atk1', 'atk1', 'atk2']);
+    setHand(b, ['double', 'atk1', 'atk1', 'atk2']);
     b.press(0); wait(b, 0.2);
     expect(b.chain).toBe(0);                    // スペルはチェインを変えない
-    b.press(1); wait(b, 0.2);
+    b.events.length = 0;
+    b.press(1);
+    const hits = b.events.filter(e => e.kind === 'hit');
+    expect(hits.length).toBe(2);                // ヒットは2回分（音と表示も2回になる）
+    expect(hits.map(h => h.kind === 'hit' && h.damage)).toEqual([1, 1]);
+    expect(b.chain).toBe(1);                    // チェインの動きは1枚分
+    wait(b, 0.2);
     b.press(2);
     expect(b.stats.damage).toBe(2 + 1);
   });
@@ -86,9 +92,9 @@ describe('スペル', () => {
     expect(b.press(3)).toBe('miss');
   });
 
-  it('パワーとレベルXは重ねがけできる', () => {
+  it('ダブルとレベルXは重ねがけできる', () => {
     const b = new Battle(defs, rules, seeded());
-    setHand(b, ['levelx', 'power', 'atkS', 'atk1']);
+    setHand(b, ['levelx', 'double', 'atkS', 'atk1']);
     b.press(0); wait(b, 0.2); b.press(1); wait(b, 0.2); b.press(2);
     expect(b.stats.damage).toBe(20);
   });
@@ -166,30 +172,83 @@ describe('アイテム', () => {
     expect(b.hp).toBe(30);
   });
 
-  it('星の砂の効果中は入れ替えが0秒で、スキップしてもチェインが下がらない', () => {
+  it('時の砂の効果中は入れ替えが10倍速で、スキップしてもチェインが下がらない', () => {
     const b = new Battle(defs, rules, seeded(), [item('sand'), item('flash')]);
     setHand(b, ['atk1', 'atk2', 'atkS', 'atkS']);
     b.useItem(0);
     b.press(0); wait(b, 0.2); b.press(1); wait(b, 0.2);
     expect(b.skip()).toBe(true);
     expect(b.chain).toBe(2);
+    expect(b.chargeTotal).toBeCloseTo(0.1);
+    wait(b, 0.12);
     expect(b.charging).toBe(false);
     expect(b.slots.every(s => s.card)).toBe(true);
     wait(b, 10);
+    setHand(b, ['atk1', 'atk1', 'atk1', 'atk1']);
     b.chain = 2; b.chainTimer = 3;
     b.skip();
     expect(b.chain).toBe(1);
-    expect(b.charging).toBe(true);
+    expect(b.chargeTotal).toBeCloseTo(1);
   });
 
-  it('補充待ちの間に星の砂を使うと、その場で補充される', () => {
+  it('補充待ちの間に時の砂を使うと、残りの待ち時間も10分の1になる', () => {
     const b = new Battle(defs, rules, seeded(), [item('sand')]);
     b.skip();
-    expect(b.charging).toBe(true);
+    expect(b.chargeLeft).toBeCloseTo(1);
     b.useItem(0);
-    expect(b.charging).toBe(false);
-    expect(b.slots.every(s => s.card)).toBe(true);
+    expect(b.chargeLeft).toBeCloseTo(0.1);
   });
+
+  it('チェインの実はチェインをすぐAにする', () => {
+    const b = new Battle(defs, rules, seeded(), [item('awake')]);
+    setHand(b, ['atkS', 'atk1', 'atk1', 'atk1']);
+    expect(b.canPlay(b.slots[0].card!)).toBe(false);
+    b.useItem(0);
+    expect(b.chain).toBe(3);
+    expect(b.press(0)).toBe('played');
+  });
+
+  it('強化薬は10秒間アタックの威力を+1する。ダブルでは2回それぞれに乗る', () => {
+    const b = new Battle(defs, rules, seeded(), [item('rage')]);
+    setHand(b, ['double', 'atk1', 'atk1', 'atk1']);
+    b.useItem(0);
+    b.press(0); wait(b, 0.2); b.press(1); wait(b, 0.2);
+    expect(b.stats.damage).toBe(4);            // (1+1) x 2
+    b.press(2);
+    expect(b.stats.damage).toBe(6);
+    wait(b, 10);
+    setHand(b, ['atk1', 'atk1', 'atk1', 'atk1']);
+    b.press(0);
+    expect(b.stats.damage).toBe(7);
+  });
+
+  it('アイテムは3つまで。L2で未使用のものを順に選び、R2で使うと次に移る', () => {
+    const b = new Battle(defs, rules, seeded(), [item('potion'), null, item('rage')]);
+    b.hp = 50;
+    expect(b.selected).toBe(0);
+    expect(b.cycleItem()).toBe(true);
+    expect(b.selected).toBe(2);                // 空の枠は飛ばす
+    b.cycleItem();
+    expect(b.selected).toBe(0);
+    expect(b.useSelected()).toBe(true);
+    expect(b.hp).toBe(70);
+    expect(b.selected).toBe(2);                // 使うと次の未使用へ
+    expect(b.useSelected()).toBe(true);
+    expect(b.useSelected()).toBe(false);       // もう残っていない
+  });
+
+  it('最大ダメージは、手札が配られてから次に配られるまでの合計で数える', () => {
+    const b = new Battle(defs, rules, seeded());
+    setHand(b, ['atk1', 'atk2', 'atk3', 'atkS']);
+    for (let i = 0; i < 4; i++) { b.press(i); wait(b, 0.2); }
+    expect(b.stats.maxTurn).toBe(16);
+    wait(b, 0.6);
+    setHand(b, ['atk1', 'atk1', 'atk1', 'atk1']);
+    b.press(0);
+    expect(b.turnDamage).toBe(1);
+    expect(b.stats.maxTurn).toBe(16);
+  });
+
 });
 
 describe('1つ下のレベル', () => {
@@ -221,7 +280,7 @@ describe('自動入れ替え', () => {
 
   it('出せるカードが1枚でもあれば入れ替わらない。キープしたカードは残る', () => {
     const b = new Battle(defs, realRules, seeded());
-    setHand(b, ['atkS', 'atk3', 'atk3', 'power']);
+    setHand(b, ['atkS', 'atk3', 'atk3', 'double']);
     wait(b, 1);
     expect(b.stats.autoSkips).toBe(0);                 // スペルは出せる
     b.press(3); wait(b, 0.2);
@@ -254,7 +313,7 @@ describe('敵', () => {
 
   it('敵のHPを0にすると勝ち、自分のHPが0になると負け', () => {
     const win = new Battle(defs, rules, seeded(), [], enemy);
-    setHand(win, ['levelx', 'power', 'atkS', 'atk1']);
+    setHand(win, ['levelx', 'double', 'atkS', 'atk1']);
     win.press(0); wait(win, 0.2); win.press(1); wait(win, 0.2); win.press(2);
     expect(win.result).toBe('won');
     expect(win.press(3)).toBe('ignored');
@@ -279,6 +338,14 @@ describe('敵', () => {
     const b = new Battle(defs, realRules, seeded(), [], golem);
     expect(b.enemy!.hp).toBe(golem.hp);
     expect(b.enemyAction!.name).toBe(golem.actions[0].name);
+  });
+
+  it('無敵を使った戦闘は、使ったことが記録される', () => {
+    const b = new Battle(defs, rules, seeded(), [], enemy);
+    wait(b, 0.1);
+    expect(b.usedInvincible).toBe(false);
+    b.invincible = true; wait(b, 0.1); b.invincible = false; wait(b, 0.1);
+    expect(b.usedInvincible).toBe(true);
   });
 });
 

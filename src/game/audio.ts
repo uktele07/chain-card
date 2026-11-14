@@ -72,7 +72,7 @@ export class Sound {
   }
 
   /** アタック。レベルが上がるほど音が高く、Sは別格の音 */
-  hit(lv: number, powered: boolean) {
+  hit(lv: number, powered = false) {
     if (!this.ready) return;
     const b = this.seBus;
     if (lv >= 4) {
@@ -141,6 +141,12 @@ export class Sound {
     if (!this.ready) return;
     for (const [i, f] of [392, 349.23, 311.13, 261.63].entries()) this.tone(this.seBus, 'sawtooth', f, f * 0.97, i === 3 ? 0.9 : 0.3, 0.12, i * 0.22);
   }
+  // ---- メニューの操作音 ----
+  uiMove() { if (this.ready) this.tone(this.seBus, 'triangle', 880, 880, 0.04, 0.09); }
+  uiOk() { if (this.ready) { this.tone(this.seBus, 'triangle', 880, 880, 0.06, 0.12); this.tone(this.seBus, 'triangle', 1318.5, 1318.5, 0.09, 0.12, 0.05); } }
+  uiBack() { if (this.ready) this.tone(this.seBus, 'triangle', 660, 440, 0.09, 0.11); }
+  /** 再開前のカウント */
+  count() { if (this.ready) this.tone(this.seBus, 'square', 660, 660, 0.1, 0.12); }
   finish() {
     if (!this.ready) return;
     for (const [i, f] of [392, 523.25, 659.25, 783.99].entries()) this.tone(this.seBus, 'triangle', f, f, 0.9, 0.13, i * 0.09);
