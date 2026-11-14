@@ -431,7 +431,7 @@ export class GameScene extends Phaser.Scene {
   private drawList(l: Layer) {
     l.text(40, 40, '敵を選ぶ', 24, C.text, 'start', true);
     l.text(920, 40, `所持金  ${this.save.gold} G`, 16, C.keep, 'end', true);
-    const ys = this.rows(l, 40, 62, 400, 62, ENEMIES.length, this.cur.list);
+    const ys = this.rows(l, 40, 72, 400, 62, ENEMIES.length, this.cur.list);
     ENEMIES.forEach((e, i) => {
       const y = ys[i], on = i === this.cur.list, open = this.unlocked(e), rec = this.save.records[e.id];
       l.rect(78, y - 20, 40, 40, { fill: open ? ENEMY_COL[e.id] ?? C.dim : C.ng, rx: 8, alpha: 0.9 });
