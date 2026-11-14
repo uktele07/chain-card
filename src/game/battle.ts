@@ -28,7 +28,7 @@ export interface ItemSlot { def: ItemDef; used: boolean }
 
 /** 敵: actions を上から順に繰り返す。chargeSec かけてゲージを溜め、満タンで damage を与える */
 export interface EnemyAction { name: string; chargeSec: number; damage: number; big?: boolean }
-export interface EnemyDef { id: string; name: string; hp: number; actions: EnemyAction[] }
+export interface EnemyDef { id: string; name: string; rank?: string; hp: number; actions: EnemyAction[] }
 export interface EnemyState { def: EnemyDef; hp: number; actionIndex: number; gauge: number; stunLeft: number }
 
 export interface Rules {

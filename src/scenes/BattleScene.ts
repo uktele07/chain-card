@@ -8,7 +8,9 @@ import { W, H, ZOOM } from '../game/display';
 const RULES = data.rules as unknown as Rules;
 const DEFS = data.cards as CardDef[];
 const ITEMS = data.items as ItemDef[];
-const ENEMY = (data.enemies as EnemyDef[]).find(e => e.id === data.rules.defaultEnemy)!;
+// 連戦の順番（弱→並→強）
+const STAGES = (data.rules.stages as string[]).map(id => (data.enemies as EnemyDef[]).find(e => e.id === id)!);
+const RESULT_WAIT = 0.8;   // 結果画面で、次へ進む入力を受け付けるまでの秒数
 
 const FONT = '"Hiragino Sans", "Yu Gothic", "Noto Sans JP", "IPAGothic", sans-serif';
 const COL = {
@@ -44,7 +46,11 @@ export class BattleScene extends Phaser.Scene {
   private views: SlotView[] = [];
   private itemViews: ItemView[] = [];
   private itemPick: string[] = [...(data.rules.defaultItems as string[])];
-  private started = false;
+  /** ready=開始前（手札は伏せる） fight=戦闘中 result=結果表示 */
+  private phase: 'ready' | 'fight' | 'result' = 'ready';
+  private stage = 0;
+  private totalTime = 0;
+  private resultWait = 0;
   private txt: Record<string, Phaser.GameObjects.Text> = {};
   private enemyShake = 0;
   private ringPulse = 0;
@@ -113,14 +119,14 @@ export class BattleScene extends Phaser.Scene {
     this.txt.chain = this.t(CX, CY - 4, '', 50, COL.text, 0.5, true).setDepth(3);
     this.txt.chainSub = this.t(CX, CY + 31, '', 11, COL.dim).setDepth(3);
 
-    this.txt.overlay = this.add.text(CX, 268, '', { fontFamily: FONT, fontSize: '17px', color: COL.text, align: 'center', lineSpacing: 9, backgroundColor: '#0d1017f0', padding: { x: 28, y: 22 } })
+    this.txt.overlay = this.add.text(CX, 268, '', { fontFamily: FONT, fontSize: '17px', color: COL.text, align: 'center', lineSpacing: 9, backgroundColor: '#0d1017', padding: { x: 32, y: 24 } })
       .setOrigin(0.5).setDepth(10).setResolution(ZOOM);
 
     // タッチ・クリック: カード上端の帯でキープ、それ以外で出す。中央の丸でスキップ
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       this.sound2.unlock();
       const x = p.worldX, y = p.worldY;
-      if (this.battle.result !== 'playing') { this.input2.push({ kind: 'restart' }); return; }
+      if (this.phase === 'result') { this.input2.push({ kind: 'card', slot: 0 }); return; }
       if (Phaser.Math.Distance.Between(x, y, CX, CY) <= RING) { this.input2.push({ kind: 'skip' }); return; }
       ITEM_BOX.forEach((b, slot) => { if (x >= b.x && x <= b.x + ITEM_W && y >= b.y && y <= b.y + ITEM_H) this.input2.push({ kind: 'item', slot }); });
       SLOT_POS.forEach((s, slot) => {
@@ -134,17 +140,21 @@ export class BattleScene extends Phaser.Scene {
     this.reset();
   }
 
-  private reset() {
+  /** 指定した戦の開始前の状態にする。HPとアイテムは毎戦リセットされる */
+  private reset(stage = this.stage) {
+    if (stage === 0) this.totalTime = 0;
+    this.stage = stage;
     const items = this.itemPick.map(id => ITEMS.find(d => d.id === id)!);
-    this.battle = new Battle(DEFS, RULES, Math.random, items, ENEMY);
+    this.battle = new Battle(DEFS, RULES, Math.random, items, STAGES[stage]);
     this.battle.invincible = this.invincible;
-    this.lastTick = 0;
     this.battle.events.length = 0;
-    this.started = false;
+    this.lastTick = 0;
+    this.phase = 'ready';
     this.hurt = 0;
     this.sound2.stopBgm();
     this.sound2.intensity = 0;
     (window as unknown as Record<string, unknown>).__battle = this.battle;
+    (window as unknown as Record<string, unknown>).__scene = this;
   }
 
   update(_: number, deltaMs: number) {
@@ -154,23 +164,35 @@ export class BattleScene extends Phaser.Scene {
       this.sound2.unlock();
       if (a.kind === 'mute') { this.sound2.toggleMute(); continue; }
       if (a.kind === 'invincible') { this.invincible = !this.invincible; this.battle.invincible = this.invincible; this.sound2.keep(this.invincible); continue; }
-      if (a.kind === 'restart') { this.reset(); continue; }
-      if (this.battle.result !== 'playing') continue;
-      if (a.kind === 'item' && !this.started) {          // 開始前はアイテムを選び直す
-        const k = ITEMS.findIndex(d => d.id === this.itemPick[a.slot]);
-        this.itemPick[a.slot] = ITEMS[(k + 1) % ITEMS.length].id;
-        this.sound2.keep(true);
-        this.reset();
+      if (a.kind === 'restart') { this.reset(0); continue; }          // 1戦目からやり直し
+      if (this.phase === 'result') {
+        // 結果画面: カードのボタンで次へ（勝ち→次の敵 / 3戦目の勝ち→最初から / 負け→同じ敵に再挑戦）
+        if (a.kind !== 'card' || this.resultWait > 0) continue;
+        const won = this.battle.result === 'won';
+        this.reset(won ? (this.stage + 1) % STAGES.length : this.stage);
         continue;
       }
-      if (!this.started) { this.started = true; this.sound2.startBgm(); }
+      if (this.phase === 'ready') {
+        if (a.kind === 'item') {                                       // アイテムを選び直す
+          const k = ITEMS.findIndex(d => d.id === this.itemPick[a.slot]);
+          this.itemPick[a.slot] = ITEMS[(k + 1) % ITEMS.length].id;
+          this.sound2.keep(true);
+          this.reset();
+        } else if (a.kind === 'card') {                                // 開始するだけ。押したボタンのカードは出さない
+          this.phase = 'fight';
+          this.sound2.startBgm();
+          this.sound2.refill();
+        }
+        continue;
+      }
       if (a.kind === 'card') this.battle.press(a.slot);
       else if (a.kind === 'keep') this.battle.toggleKeep(a.slot);
       else if (a.kind === 'item') this.battle.useItem(a.slot);
       else if (a.kind === 'skip') this.battle.skip();
     }
     const b = this.battle;
-    if (this.started) b.update(dt);
+    if (this.phase === 'fight') b.update(dt);
+    this.resultWait = Math.max(0, this.resultWait - dt);
 
     for (const e of b.events) {
       if (e.kind === 'hit') {
@@ -195,18 +217,18 @@ export class BattleScene extends Phaser.Scene {
         this.cameras.main.shake(e.big ? 260 : 120, e.big ? 0.012 : 0.005);
         this.sound2.enemyHit(e.big);
         this.popup(e.damage > 0 ? `-${e.damage}` : '無敵', e.damage > 0 ? '#ff6a6a' : '#ffd24a', e.big ? 34 : 24, 222, 128);
-      } else if (e.kind === 'win') { this.sound2.stopBgm(); this.sound2.win(); }
-      else if (e.kind === 'lose') { this.sound2.stopBgm(); this.sound2.lose(); }
+      } else if (e.kind === 'win') { this.sound2.stopBgm(); this.sound2.win(); this.phase = 'result'; this.resultWait = RESULT_WAIT; this.totalTime += b.time; }
+      else if (e.kind === 'lose') { this.sound2.stopBgm(); this.sound2.lose(); this.phase = 'result'; this.resultWait = RESULT_WAIT; }
     }
     b.events.length = 0;
     // 大技の直前: 残り1.5秒・1.0秒・0.5秒でカウントダウン音
     const en = b.enemy!, ea = b.enemyAction!;
-    if (this.started && b.result === 'playing' && ea.big && en.stunLeft <= 0) {
+    if (this.phase === 'fight' && ea.big && en.stunLeft <= 0) {
       const left = ea.chargeSec - en.gauge;
       const step = left <= 0.5 ? 1 : left <= 1.0 ? 2 : left <= 1.5 ? 3 : 0;
       if (step && step !== this.lastTick) { this.lastTick = step; this.sound2.warnTick(step); }
     }
-    this.sound2.intensity = this.started && b.result === 'playing' ? b.chain : 0;
+    this.sound2.intensity = this.phase === 'fight' ? b.chain : 0;
     this.sound2.update();
     this.enemyShake = Math.max(0, this.enemyShake - dt);
     this.ringPulse = Math.max(0, this.ringPulse - dt);
@@ -232,7 +254,8 @@ export class BattleScene extends Phaser.Scene {
 
     // 敵: HPと行動ゲージ
     const sx = this.enemyShake > 0 ? Phaser.Math.Between(-5, 5) : 0;
-    const big = !!act.big && e.stunLeft <= 0;
+    const fight = this.phase === 'fight', ready = this.phase === 'ready';
+    const big = fight && !!act.big && e.stunLeft <= 0;
     g.fillStyle(COL.panel).fillRoundedRect(EN.x + sx, EN.y, EN.w, EN.h, 10);
     g.lineStyle(big ? 4 : 2, this.enemyShake > 0 ? 0xffd24a : big ? COL.miss : COL.line).strokeRoundedRect(EN.x + sx, EN.y, EN.w, EN.h, 10);
     const bx = EN.x + 18 + sx, bw = EN.w - 36;
@@ -241,7 +264,7 @@ export class BattleScene extends Phaser.Scene {
     const ratioE = Phaser.Math.Clamp(e.gauge / act.chargeSec, 0, 1);
     g.fillStyle(0x0d1017).fillRect(bx, EN.y + 96, bw, 20);
     g.fillStyle(e.stunLeft > 0 ? 0x5fb0e8 : big ? COL.miss : COL.gauge, big && Math.floor(b.time * 6) % 2 ? 0.75 : 1).fillRect(bx, EN.y + 96, bw * ratioE, 20);
-    this.txt.enemy.setText(e.def.name).setX(EN.x + 18 + sx);
+    this.txt.enemy.setText(`${this.stage + 1} / ${STAGES.length}　${e.def.name}（${e.def.rank ?? ''}）`).setX(EN.x + 18 + sx);
     this.txt.enemyHp.setText(`${e.hp} / ${e.def.hp}`).setX(EN.x + EN.w - 18 + sx);
     this.txt.action.setText(e.stunLeft > 0 ? 'スタン中' : big ? `！ 大技  ${act.name}` : act.name).setColor(e.stunLeft > 0 ? '#5fb0e8' : big ? '#ff6a6a' : COL.dim).setX(EN.x + 18 + sx);
     this.txt.actionSub.setText(e.stunLeft > 0 ? '' : `${act.damage}ダメージ  あと${Math.max(0, act.chargeSec - e.gauge).toFixed(1)}秒`).setColor(big ? '#ff6a6a' : COL.dim).setX(EN.x + EN.w - 18 + sx);
@@ -268,15 +291,15 @@ export class BattleScene extends Phaser.Scene {
       g.fillStyle(it.used ? COL.ng : COL.item, it.used ? 0.5 : 0.9).fillRoundedRect(box.x + 6, box.y + 6, 40, ITEM_H - 12, 6);
       v.label.setText(pad ? box.label : box.key).setAlpha(a);
       v.name.setText(it.def.name).setAlpha(a);
-      v.desc.setText(it.used ? '使用済み' : this.started ? (it.def.desc ?? '') : '押すと変更').setAlpha(a);
+      v.desc.setText(it.used ? '使用済み' : (it.def.desc ?? '')).setAlpha(a);
     });
 
     // 記録
     this.txt.time.setText(b.time.toFixed(1));
     this.txt.stats.setText([`S発動  ${b.stats.sCount}`, `使用枚数  ${b.stats.plays}`, `入れ替え  ${b.stats.skips}`, `ミス  ${b.stats.misses}`]);
     this.txt.help.setText(pad
-      ? ['△○✕□: カードを出す', '十字キー: キープ / 解除', 'R1・L1: 入れ替え', 'L2・R2: アイテム', 'OPTIONS: やり直し', 'タッチパッド: 無敵（テスト）']
-      : ['W D S A: カードを出す（上 右 下 左）', '矢印キー: キープ / 解除', 'スペース: 入れ替え', 'Q・E: アイテム', 'R: やり直し　M: 消音　T: 無敵（テスト）']);
+      ? ['△○✕□: カードを出す', '十字キー: キープ / 解除', 'R1・L1: 入れ替え', 'L2・R2: アイテム', 'OPTIONS: 1戦目から', 'タッチパッド: 無敵（テスト）']
+      : ['W D S A: カードを出す（上 右 下 左）', '矢印キー: キープ / 解除', 'スペース: 入れ替え', 'Q・E: アイテム', 'R: 1戦目から　M: 消音　T: 無敵（テスト）']);
     this.txt.audio.setText(this.sound2.muted ? '音: 消音中（Mキーで戻す）' : this.sound2.ready ? '' : '音: 画面を1回クリックするか、キーを押すと鳴ります');
     const ps = this.input2.padStatus;
     this.txt.pad.setText({
@@ -292,7 +315,14 @@ export class BattleScene extends Phaser.Scene {
       const v = this.views[i], slot = b.slots[i], c = slot.card, { x, y } = SLOT_POS[i];
       v.flash = Math.max(0, v.flash - dt);
       const left0 = x - CARD_W / 2, top = y - CARD_H / 2;
-      if (!c) {
+      if (ready) {     // 開始前は伏せる（配置を見てから始められないように）
+        g.fillStyle(COL.panel).fillRoundedRect(left0, top, CARD_W, CARD_H, 10);
+        g.lineStyle(3, COL.line).strokeRoundedRect(left0, top, CARD_W, CARD_H, 10);
+        v.big.setText('?').setAlpha(0.35); v.name.setText(''); v.desc.setText(''); v.keep.setVisible(false);
+        v.glyph.setColor('#ffffff').setAlpha(0.9);
+        continue;
+      }
+      if (!c || this.phase === 'result') {
         g.lineStyle(2, COL.line, 0.7).strokeRoundedRect(left0, top, CARD_W, CARD_H, 10);
         if (b.charging && b.chargeTotal > 0) {
           const p = 1 - b.chargeLeft / b.chargeTotal;
@@ -335,7 +365,7 @@ export class BattleScene extends Phaser.Scene {
     this.fx.clear();
     if (this.hurt > 0) this.fx.fillStyle(0xff2a2a, Math.min(0.35, this.hurt * 0.7)).fillRect(0, 0, W, H);
     // 大技の予告: 画面の縁が赤く点滅する。発動が近いほど速く、太くなる
-    const danger = this.started && b.result === 'playing' && big;
+    const danger = fight && big;
     if (danger) {
       const left = act.chargeSec - e.gauge, near = left <= 1.5;
       const pulse = 0.5 + 0.5 * Math.sin(b.time * (near ? 22 : 9));
@@ -349,14 +379,20 @@ export class BattleScene extends Phaser.Scene {
     this.txt.danger.setText(danger ? `！ 大技まで ${Math.max(0, act.chargeSec - e.gauge).toFixed(1)} 秒` : '');
 
     // 開始前・終了後
-    this.txt.hint.setText(this.started ? '' : ['カードを出すと開始', `${pad ? 'L2・R2' : 'Q・E'} でアイテムを変更`]);
-    if (!this.started) this.txt.overlay.setVisible(false);
-    else if (b.result !== 'playing') {
-      const again = pad ? 'OPTIONS でもう一度' : 'R キーでもう一度';
-      this.txt.overlay.setVisible(true).setText(b.result === 'won'
-        ? ['勝利', '', `撃破タイム  ${b.time.toFixed(1)} 秒　　残りHP  ${b.hp}`, `S発動  ${b.stats.sCount} 回　　最大ダメージ  ${b.stats.maxHit}`, `入れ替え  ${b.stats.skips}　　ミス  ${b.stats.misses}`, '', again]
-        : ['敗北', '', `敵の残りHP  ${e.hp} / ${e.def.hp}`, `経過時間  ${b.time.toFixed(1)} 秒　　S発動  ${b.stats.sCount} 回`, `入れ替え  ${b.stats.skips}　　ミス  ${b.stats.misses}`, '', again],
-      ).setFontSize(18).setY(300);
+    this.txt.hint.setText(ready ? [`${pad ? '△○✕□' : 'W D S A'} のどれかで開始`, `${pad ? 'L2・R2' : 'Q・E'} でアイテムを変更`] : '');
+    if (this.phase === 'result') {
+      const btn = pad ? '△○✕□ のどれか' : 'W D S A のどれか';
+      const last = this.stage === STAGES.length - 1;
+      const lines = b.result === 'won'
+        ? [last ? '3連戦 制覇！' : `${e.def.name} に勝利`, '',
+          `撃破タイム  ${b.time.toFixed(1)} 秒　　残りHP  ${b.hp}`,
+          `S発動  ${b.stats.sCount} 回　　最大ダメージ  ${b.stats.maxHit}　　ミス  ${b.stats.misses}`,
+          ...(last ? [`合計タイム  ${this.totalTime.toFixed(1)} 秒`] : []), '',
+          this.resultWait > 0 ? '…' : last ? `${btn}で最初から` : `${btn}で次の敵へ（HP全回復・アイテム再選択）`]
+        : ['敗北', '', `${e.def.name} の残りHP  ${e.hp} / ${e.def.hp}`,
+          `経過時間  ${b.time.toFixed(1)} 秒　　S発動  ${b.stats.sCount} 回　　ミス  ${b.stats.misses}`, '',
+          this.resultWait > 0 ? '…' : `${btn}で同じ敵に再挑戦`, pad ? 'OPTIONS で1戦目から' : 'R キーで1戦目から'];
+      this.txt.overlay.setVisible(true).setText(lines).setFontSize(17).setY(330);
     } else this.txt.overlay.setVisible(false);
   }
 }

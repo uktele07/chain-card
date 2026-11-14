@@ -12,7 +12,7 @@
     "keepCountsAsConsumed": true,
     "playerMaxHp": 100,
     "defaultItems": ["potion", "flash"],
-    "defaultEnemy": "golem"
+    "stages": ["slime", "golem", "dragon"]
   },
   "cards": [
     { "id": "atk1", "name": "アタックC", "type": "attack", "lv": 1, "power": 1,  "copies": 13 },
@@ -30,12 +30,31 @@
   ],
   "enemies": [
     {
-      "id": "golem", "name": "訓練ゴーレム", "hp": 120,
+      "id": "slime", "name": "スライム", "rank": "弱", "hp": 80,
+      "actions": [
+        { "name": "体当たり",   "chargeSec": 4.5, "damage": 4 },
+        { "name": "体当たり",   "chargeSec": 4.5, "damage": 4 },
+        { "name": "体当たり",   "chargeSec": 4.5, "damage": 4 },
+        { "name": "のしかかり", "chargeSec": 5.5, "damage": 12, "big": true }
+      ]
+    },
+    {
+      "id": "golem", "name": "ゴーレム", "rank": "並", "hp": 120,
       "actions": [
         { "name": "パンチ",     "chargeSec": 4.0, "damage": 6 },
         { "name": "パンチ",     "chargeSec": 4.0, "damage": 6 },
         { "name": "パンチ",     "chargeSec": 4.0, "damage": 6 },
         { "name": "叩きつけ",   "chargeSec": 5.0, "damage": 18, "big": true }
+      ]
+    },
+    {
+      "id": "dragon", "name": "ドラゴン", "rank": "強", "hp": 135,
+      "actions": [
+        { "name": "爪",         "chargeSec": 3.8, "damage": 6 },
+        { "name": "爪",         "chargeSec": 3.8, "damage": 6 },
+        { "name": "ブレス",     "chargeSec": 4.8, "damage": 20, "big": true },
+        { "name": "尾",         "chargeSec": 3.8, "damage": 7 },
+        { "name": "ブレス",     "chargeSec": 4.8, "damage": 20, "big": true }
       ]
     }
   ]
