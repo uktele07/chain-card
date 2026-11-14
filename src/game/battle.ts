@@ -35,6 +35,7 @@ export interface Rules {
   handSize: number;
   chainTimerSec: number;
   allowStepDown: boolean;       // 1つ下のレベルも出せる（チェインはそのレベルに戻る）
+  sResetsChain: boolean;        // Sを出すとチェインがなくなる（次はCから）
   chargeSec: number;
   fullConsumeChargeSec: number;
   autoSkipDelaySec: number;     // 出せるカードがないとき、自動で入れ替えるまでの時間
@@ -186,7 +187,7 @@ export class Battle {
       if (card.lv === MAX_CHAIN) this.stats.sCount++;
       this.events.push({ kind: 'hit', slot: i, damage, lv: card.lv!, powered });
       this.buffs = { power: 0, levelx: 0 };
-      this.chain = card.lv!;
+      this.chain = card.lv === MAX_CHAIN && this.rules.sResetsChain ? 0 : card.lv!;
       if (this.enemy) {
         this.enemy.hp = Math.max(0, this.enemy.hp - damage);
         if (this.enemy.hp <= 0) { this.result = 'won'; this.events.push({ kind: 'win' }); }

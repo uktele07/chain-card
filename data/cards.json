@@ -4,6 +4,7 @@
     "handSize": 4,
     "chainTimerSec": 4.0,
     "allowStepDown": true,
+    "sResetsChain": true,
     "chargeSec": 1.0,
     "fullConsumeChargeSec": 0.5,
     "autoSkipDelaySec": 0.35,

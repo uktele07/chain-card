@@ -36,18 +36,19 @@ describe('レベル順', () => {
     expect(b.press(0)).toBe('played'); wait(b, 0.2);   // B
     expect(b.press(2)).toBe('played'); wait(b, 0.2);   // A
     expect(b.press(3)).toBe('played');                 // S
-    expect(b.chain).toBe(4);
+    expect(b.chain).toBe(0);                           // Sを出すとチェインはなくなる
     expect(b.stats.damage).toBe(1 + 2 + 3 + 10);
     expect(b.stats.fullConsumes).toBe(1);
   });
 
-  it('Sの後もSは続けて出せる。それ以外はCから', () => {
+  it('Sを出すとチェインがなくなり、次はCからになる（Sの連続も不可）', () => {
     const b = new Battle(defs, rules, seeded());
-    setHand(b, ['atkS', 'atkS', 'atk2', 'atk1']);
+    setHand(b, ['atkS', 'atkS', 'atk3', 'atk1']);
     b.chain = 3; b.chainTimer = 3;
     expect(b.press(0)).toBe('played'); wait(b, 0.2);
-    expect(b.press(1)).toBe('played'); wait(b, 0.2);
-    expect(b.press(2)).toBe('miss'); wait(b, 0.4);   // SからBへは戻れない
+    expect(b.chain).toBe(0);
+    expect(b.press(1)).toBe('miss'); wait(b, 0.4);   // Sは続けて出せない
+    expect(b.press(2)).toBe('miss'); wait(b, 0.4);   // Aにも戻れない
     expect(b.press(3)).toBe('played');
     expect(b.chain).toBe(1);
   });
@@ -80,8 +81,9 @@ describe('スペル', () => {
     setHand(b, ['levelx', 'atkS', 'atkS', 'atk2']);
     b.press(0); wait(b, 0.2);
     expect(b.press(1)).toBe('played'); wait(b, 0.2);
-    expect(b.chain).toBe(4);
-    expect(b.press(3)).toBe('miss');            // 効果は1枚で切れる
+    expect(b.chain).toBe(0);
+    expect(b.press(2)).toBe('miss'); wait(b, 0.4);   // 効果は1枚で切れる
+    expect(b.press(3)).toBe('miss');
   });
 
   it('パワーとレベルXは重ねがけできる', () => {
@@ -191,17 +193,16 @@ describe('アイテム', () => {
 });
 
 describe('1つ下のレベル', () => {
-  it('AのときにBを出せて、チェインはBに戻る。SからはAに戻れる', () => {
+  it('AのときにBを出せて、チェインはBに戻る', () => {
     const b = new Battle(defs, rules, seeded());
-    setHand(b, ['atk2', 'atk3', 'atkS', 'atk3']);
+    setHand(b, ['atk2', 'atk3', 'atkS', 'atk1']);
     b.chain = 3; b.chainTimer = 4;
     expect(b.press(0)).toBe('played'); wait(b, 0.2);
     expect(b.chain).toBe(2);
     expect(b.press(2)).toBe('miss'); wait(b, 0.4);     // BからSは出せない
     expect(b.press(1)).toBe('played'); wait(b, 0.2);   // A
-    expect(b.press(2)).toBe('played'); wait(b, 0.2);   // S
-    expect(b.press(3)).toBe('played');                 // SからA
-    expect(b.chain).toBe(3);
+    expect(b.press(2)).toBe('played');                 // S
+    expect(b.chain).toBe(0);
   });
 });
 
