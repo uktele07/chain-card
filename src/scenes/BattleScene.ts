@@ -49,6 +49,8 @@ export class BattleScene extends Phaser.Scene {
   private enemyShake = 0;
   private ringPulse = 0;
   private hurt = 0;
+  private invincible = false;   // テスト用。やり直しても維持する
+  private lastTick = 0;
 
   constructor() { super('battle'); }
 
@@ -75,6 +77,8 @@ export class BattleScene extends Phaser.Scene {
     this.t(40, 248, '次のアタックにかかる効果', 12, COL.dim, 0);
     this.txt.buffs = this.t(40, 272, '', 15, COL.text, 0);
     this.txt.sand = this.t(40, 318, '', 15, '#c9a6ff', 0, true);
+    this.txt.inv = this.t(128, 228, '', 12, '#ffd24a', 0.5, true);
+    this.txt.danger = this.t(CX, 157, '', 15, '#ff6a6a', 0.5, true).setDepth(9);
     this.txt.hint = this.add.text(40, 452, '', { fontFamily: FONT, fontSize: '14px', color: '#ffd24a', lineSpacing: 6 }).setOrigin(0, 0).setDepth(2).setResolution(ZOOM);
     this.txt.audio = this.t(40, 500, '', 12, '#ffb04a', 0);
     this.txt.pad = this.t(40, 520, '', 12, COL.dim, 0);
@@ -83,7 +87,7 @@ export class BattleScene extends Phaser.Scene {
     this.txt.time = this.t(920, 196, '', 34, COL.text, 1, true);
     this.t(920, 226, '経過時間', 12, COL.dim, 1);
     this.txt.stats = this.add.text(920, 250, '', { fontFamily: FONT, fontSize: '14px', color: COL.dim, align: 'right', lineSpacing: 6 }).setOrigin(1, 0).setDepth(2).setResolution(ZOOM);
-    this.txt.help = this.add.text(920, 530, '', { fontFamily: FONT, fontSize: '12px', color: COL.dim, align: 'right', lineSpacing: 4 }).setOrigin(1, 1).setDepth(2).setResolution(ZOOM);
+    this.txt.help = this.add.text(920, 532, '', { fontFamily: FONT, fontSize: '11px', color: COL.dim, align: 'right', lineSpacing: 3 }).setOrigin(1, 1).setDepth(2).setResolution(ZOOM);
 
     for (const b of ITEM_BOX) {
       this.itemViews.push({
@@ -133,6 +137,8 @@ export class BattleScene extends Phaser.Scene {
   private reset() {
     const items = this.itemPick.map(id => ITEMS.find(d => d.id === id)!);
     this.battle = new Battle(DEFS, RULES, Math.random, items, ENEMY);
+    this.battle.invincible = this.invincible;
+    this.lastTick = 0;
     this.battle.events.length = 0;
     this.started = false;
     this.hurt = 0;
@@ -147,6 +153,7 @@ export class BattleScene extends Phaser.Scene {
     for (const a of this.input2.poll()) {
       this.sound2.unlock();
       if (a.kind === 'mute') { this.sound2.toggleMute(); continue; }
+      if (a.kind === 'invincible') { this.invincible = !this.invincible; this.battle.invincible = this.invincible; this.sound2.keep(this.invincible); continue; }
       if (a.kind === 'restart') { this.reset(); continue; }
       if (this.battle.result !== 'playing') continue;
       if (a.kind === 'item' && !this.started) {          // 開始前はアイテムを選び直す
@@ -182,16 +189,23 @@ export class BattleScene extends Phaser.Scene {
         const box = ITEM_BOX[e.slot];
         this.popup({ heal: '+20 HP', flash: 'スタン！', sand: '星の砂' }[e.effect] ?? '', '#7fe0a0', 22, box.y - 8, box.x + ITEM_W / 2);
       } else if (e.kind === 'chainBreak') { this.sound2.chainBreak(); this.popup('チェイン切れ', '#ff8a8a', 16, CY - RING - 6, CX); }
-      else if (e.kind === 'enemyCharge') { if (e.big) this.sound2.warn(); }
+      else if (e.kind === 'enemyCharge') { this.lastTick = 0; if (e.big) this.sound2.warn(); }
       else if (e.kind === 'enemyAttack') {
         this.hurt = e.big ? 0.6 : 0.35;
         this.cameras.main.shake(e.big ? 260 : 120, e.big ? 0.012 : 0.005);
         this.sound2.enemyHit(e.big);
-        this.popup(`-${e.damage}`, '#ff6a6a', e.big ? 34 : 24, 222, 128);
+        this.popup(e.damage > 0 ? `-${e.damage}` : '無敵', e.damage > 0 ? '#ff6a6a' : '#ffd24a', e.big ? 34 : 24, 222, 128);
       } else if (e.kind === 'win') { this.sound2.stopBgm(); this.sound2.win(); }
       else if (e.kind === 'lose') { this.sound2.stopBgm(); this.sound2.lose(); }
     }
     b.events.length = 0;
+    // 大技の直前: 残り1.5秒・1.0秒・0.5秒でカウントダウン音
+    const en = b.enemy!, ea = b.enemyAction!;
+    if (this.started && b.result === 'playing' && ea.big && en.stunLeft <= 0) {
+      const left = ea.chargeSec - en.gauge;
+      const step = left <= 0.5 ? 1 : left <= 1.0 ? 2 : left <= 1.5 ? 3 : 0;
+      if (step && step !== this.lastTick) { this.lastTick = step; this.sound2.warnTick(step); }
+    }
     this.sound2.intensity = this.started && b.result === 'playing' ? b.chain : 0;
     this.sound2.update();
     this.enemyShake = Math.max(0, this.enemyShake - dt);
@@ -237,6 +251,8 @@ export class BattleScene extends Phaser.Scene {
     g.fillStyle(COL.panel).fillRect(40, 204, 175, 14);
     g.fillStyle(low ? COL.miss : COL.item).fillRect(40, 204, 175 * (b.hp / RULES.playerMaxHp), 14);
     this.txt.hp.setText(`${b.hp} / ${RULES.playerMaxHp}`).setColor(low ? '#ff6a6a' : COL.text);
+    this.txt.inv.setText(b.invincible ? '無敵（テスト用）' : '');
+    if (b.invincible) g.lineStyle(2, 0xffd24a).strokeRect(38, 202, 179, 18);
 
     const buffs: string[] = [];
     if (b.buffs.power) buffs.push('威力2倍');
@@ -259,8 +275,8 @@ export class BattleScene extends Phaser.Scene {
     this.txt.time.setText(b.time.toFixed(1));
     this.txt.stats.setText([`S発動  ${b.stats.sCount}`, `使用枚数  ${b.stats.plays}`, `入れ替え  ${b.stats.skips}`, `ミス  ${b.stats.misses}`]);
     this.txt.help.setText(pad
-      ? ['△○✕□: カードを出す', '十字キー: キープ / 解除', 'R1・L1: 入れ替え', 'L2・R2: アイテム', 'OPTIONS: やり直し']
-      : ['W D S A: カードを出す（上 右 下 左）', '矢印キー: キープ / 解除', 'スペース: 入れ替え', 'Q・E: アイテム', 'R: やり直し　M: 消音']);
+      ? ['△○✕□: カードを出す', '十字キー: キープ / 解除', 'R1・L1: 入れ替え', 'L2・R2: アイテム', 'OPTIONS: やり直し', 'タッチパッド: 無敵（テスト）']
+      : ['W D S A: カードを出す（上 右 下 左）', '矢印キー: キープ / 解除', 'スペース: 入れ替え', 'Q・E: アイテム', 'R: やり直し　M: 消音　T: 無敵（テスト）']);
     this.txt.audio.setText(this.sound2.muted ? '音: 消音中（Mキーで戻す）' : this.sound2.ready ? '' : '音: 画面を1回クリックするか、キーを押すと鳴ります');
     const ps = this.input2.padStatus;
     this.txt.pad.setText({
@@ -318,6 +334,19 @@ export class BattleScene extends Phaser.Scene {
     // 被弾の赤いフラッシュ
     this.fx.clear();
     if (this.hurt > 0) this.fx.fillStyle(0xff2a2a, Math.min(0.35, this.hurt * 0.7)).fillRect(0, 0, W, H);
+    // 大技の予告: 画面の縁が赤く点滅する。発動が近いほど速く、太くなる
+    const danger = this.started && b.result === 'playing' && big;
+    if (danger) {
+      const left = act.chargeSec - e.gauge, near = left <= 1.5;
+      const pulse = 0.5 + 0.5 * Math.sin(b.time * (near ? 22 : 9));
+      const th = (near ? 22 : 12) + pulse * (near ? 12 : 6);
+      const alpha = (near ? 0.5 : 0.28) + pulse * 0.3;
+      this.fx.fillStyle(0xff2a2a, alpha);
+      this.fx.fillRect(0, 0, W, th).fillRect(0, H - th, W, th).fillRect(0, th, th, H - th * 2).fillRect(W - th, th, th, H - th * 2);
+      // 手札のまわりにも赤い輪（視線がカードにあっても見える位置）
+      this.fx.lineStyle(near ? 6 : 3, 0xff2a2a, alpha).strokeCircle(CX, CY, RING + 14 + pulse * 6);
+    }
+    this.txt.danger.setText(danger ? `！ 大技まで ${Math.max(0, act.chargeSec - e.gauge).toFixed(1)} 秒` : '');
 
     // 開始前・終了後
     this.txt.hint.setText(this.started ? '' : ['カードを出すと開始', `${pad ? 'L2・R2' : 'Q・E'} でアイテムを変更`]);

@@ -6,13 +6,14 @@ export type Action =
   | { kind: 'item'; slot: number }
   | { kind: 'skip' }
   | { kind: 'mute' }
+  | { kind: 'invincible' }
   | { kind: 'restart' };
 
 const KEYS: Record<string, Action> = {
   KeyW: { kind: 'card', slot: 0 }, KeyD: { kind: 'card', slot: 1 }, KeyS: { kind: 'card', slot: 2 }, KeyA: { kind: 'card', slot: 3 },
   ArrowUp: { kind: 'keep', slot: 0 }, ArrowRight: { kind: 'keep', slot: 1 }, ArrowDown: { kind: 'keep', slot: 2 }, ArrowLeft: { kind: 'keep', slot: 3 },
   KeyQ: { kind: 'item', slot: 0 }, KeyE: { kind: 'item', slot: 1 },
-  Space: { kind: 'skip' }, KeyR: { kind: 'restart' }, KeyM: { kind: 'mute' },
+  Space: { kind: 'skip' }, KeyR: { kind: 'restart' }, KeyM: { kind: 'mute' }, KeyT: { kind: 'invincible' },
 };
 // 標準配置のゲームパッド
 const PAD: Record<number, Action> = {
@@ -20,6 +21,7 @@ const PAD: Record<number, Action> = {
   12: { kind: 'keep', slot: 0 }, 15: { kind: 'keep', slot: 1 }, 13: { kind: 'keep', slot: 2 }, 14: { kind: 'keep', slot: 3 },
   6: { kind: 'item', slot: 0 }, 7: { kind: 'item', slot: 1 },
   5: { kind: 'skip' }, 4: { kind: 'skip' }, 9: { kind: 'restart' },
+  17: { kind: 'invincible' },   // タッチパッド押し込み（テスト用の無敵切り替え）
 };
 
 export class Input {

@@ -120,7 +120,18 @@ export class Sound {
   /** 敵が大技を溜め始めた */
   warn() {
     if (!this.ready) return;
-    for (let i = 0; i < 3; i++) this.tone(this.seBus, 'square', 880, 880, 0.09, 0.12, i * 0.16);
+    // サイレン: 上がって下がる音を2回
+    for (let i = 0; i < 2; i++) {
+      this.tone(this.seBus, 'sawtooth', 520, 1040, 0.22, 0.2, i * 0.44);
+      this.tone(this.seBus, 'sawtooth', 1040, 520, 0.22, 0.2, i * 0.44 + 0.22);
+    }
+  }
+  /** 大技の直前のカウントダウン。step は残り回数（3→2→1）で、近いほど高い音 */
+  warnTick(step: number) {
+    if (!this.ready) return;
+    const f = [0, 1568, 1174.7, 880][step] ?? 880;
+    this.tone(this.seBus, 'square', f, f, 0.11, 0.2);
+    this.tone(this.seBus, 'square', f * 2, f * 2, 0.06, 0.08);
   }
   win() {
     if (!this.ready) return;

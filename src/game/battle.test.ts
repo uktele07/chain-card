@@ -264,6 +264,16 @@ describe('敵', () => {
     expect(lose.hp).toBe(0);
   });
 
+  it('無敵中は敵の攻撃でHPが減らない。解除すると減る', () => {
+    const b = new Battle(defs, rules, seeded(), [], enemy);
+    b.invincible = true;
+    wait(b, 5.1);
+    expect(b.hp).toBe(100);
+    b.invincible = false;
+    wait(b, 2.0);
+    expect(b.hp).toBe(93);
+  });
+
   it('標準の敵データが読める', () => {
     const b = new Battle(defs, realRules, seeded(), [], golem);
     expect(b.enemy!.hp).toBe(golem.hp);

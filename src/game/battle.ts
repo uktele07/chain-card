@@ -79,6 +79,7 @@ export class Battle {
   chargeTotal = 0;
   lock = 0;                // 入力を受け付けない残り秒
   missLock = false;        // 直近のロックが誤入力によるものか
+  invincible = false;      // テスト用: 敵の攻撃でHPが減らない
   autoSkipWait = 0;        // 出せるカードがない状態が続いている秒数
   buffs = { power: 0, levelx: 0 };
   sandLeft = 0;
@@ -134,9 +135,10 @@ export class Battle {
     e.gauge += dt;
     const a = this.enemyAction!;
     if (e.gauge < a.chargeSec) return;
-    this.hp = Math.max(0, this.hp - a.damage);
-    this.stats.taken += a.damage;
-    this.events.push({ kind: 'enemyAttack', name: a.name, damage: a.damage, big: !!a.big });
+    const damage = this.invincible ? 0 : a.damage;
+    this.hp = Math.max(0, this.hp - damage);
+    this.stats.taken += damage;
+    this.events.push({ kind: 'enemyAttack', name: a.name, damage, big: !!a.big });
     e.gauge = 0;
     e.actionIndex = (e.actionIndex + 1) % e.def.actions.length;
     if (this.hp <= 0) { this.result = 'lost'; this.events.push({ kind: 'lose' }); return; }
