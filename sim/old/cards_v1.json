@@ -1,0 +1,34 @@
+{
+  "rules": {
+    "deckSize": 30,
+    "handSize": 4,
+    "chainTimerSec": 3.0,
+    "chainDecay": "skipOnly",
+    "chargeSec": 1.0,
+    "fullConsumeChargeSec": 0.5,
+    "misinputStunSec": 0.3,
+    "maxCopies": 3,
+    "maxLv3": 6,
+    "maxLv4": 2
+  },
+  "cards": [
+    { "id": "slash",       "name": "スラッシュ",       "type": "attack", "lv": 1, "atk": 6,  "hit": 95, "hits": 1, "copies": 3 },
+    { "id": "jab",         "name": "クイックジャブ",   "type": "attack", "lv": 1, "atk": 4,  "hit": 100, "hits": 1, "copies": 3 },
+    { "id": "double",      "name": "ダブルエッジ",     "type": "attack", "lv": 1, "atk": 3,  "hit": 90, "hits": 2, "copies": 2 },
+    { "id": "heavy",       "name": "ヘビースイング",   "type": "attack", "lv": 2, "atk": 12, "hit": 90, "hits": 1, "copies": 3 },
+    { "id": "reckless",    "name": "捨て身",           "type": "attack", "lv": 2, "atk": 20, "hit": 70, "hits": 1, "selfDamageOnMiss": 5, "copies": 2 },
+    { "id": "crescent",    "name": "クレセント",       "type": "attack", "lv": 3, "atk": 22, "hit": 80, "hits": 1, "copies": 2 },
+    { "id": "vital",       "name": "急所狙い",         "type": "attack", "lv": 3, "atk": 18, "hit": 90, "hits": 1, "copies": 1 },
+    { "id": "meteor",      "name": "メテオブレイク",   "type": "attack", "lv": 4, "atk": 50, "hit": 70, "hits": 1, "copies": 1 },
+
+    { "id": "weaken",      "name": "ウィークン",       "type": "spell",  "lv": 1, "effect": { "target": "enemy", "kind": "defDown", "value": 1, "durationSec": 5 }, "copies": 2 },
+    { "id": "blind",       "name": "ブラインド",       "type": "spell",  "lv": 2, "effect": { "target": "enemy", "kind": "hitDown", "value": 15, "durationSec": 6 }, "copies": 2 },
+    { "id": "poison",      "name": "ポイズン",         "type": "spell",  "lv": 2, "effect": { "target": "enemy", "kind": "poison", "value": 1, "durationSec": 8 }, "copies": 1 },
+    { "id": "slow",        "name": "スロウ",           "type": "spell",  "lv": 3, "effect": { "target": "enemy", "kind": "slow", "value": 50, "durationSec": 5 }, "copies": 2 },
+    { "id": "timestop",    "name": "タイムストップ",   "type": "spell",  "lv": 4, "effect": { "target": "enemy", "kind": "stop", "durationSec": 3 }, "copies": 1 },
+
+    { "id": "heal",        "name": "ヒール",           "type": "spell",  "lv": 1, "effect": { "target": "self", "kind": "heal", "value": 5 }, "copies": 2 },
+    { "id": "brave",       "name": "ブレイブ",         "type": "spell",  "lv": 2, "effect": { "target": "self", "kind": "atkUp", "value": 2, "durationSec": 8 }, "copies": 2 },
+    { "id": "mirage",      "name": "ミラージュ",       "type": "spell",  "lv": 3, "effect": { "target": "self", "kind": "evaUp", "value": 20, "durationSec": 6 }, "copies": 1 }
+  ]
+}

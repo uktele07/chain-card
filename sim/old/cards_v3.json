@@ -1,0 +1,30 @@
+{
+  "rules": {
+    "deckSize": 30,
+    "handSize": 4,
+    "chainTimerSec": 3.0,
+    "chainDecay": "skipOnly",
+    "chargeSec": 1.0,
+    "fullConsumeChargeSec": 0.5,
+    "misinputStunSec": 0.3,
+    "playLockSec": 0.12,
+    "keepCountsAsConsumed": true,
+    "itemsOneShot": true,
+    "playerMaxHp": 100,
+    "trialSec": 45
+  },
+  "cards": [
+    { "id": "atk1", "name": "アタックC", "type": "attack", "lv": 1, "power": 1,  "copies": 11 },
+    { "id": "atk2", "name": "アタックB", "type": "attack", "lv": 2, "power": 2,  "copies": 7 },
+    { "id": "atk3", "name": "アタックA", "type": "attack", "lv": 3, "power": 3,  "copies": 4 },
+    { "id": "atkS", "name": "アタックS", "type": "attack", "lv": 4, "power": 10, "copies": 2 },
+
+    { "id": "area",   "name": "エリア",  "type": "spell", "effect": "area",   "desc": "次のアタックを\n全体化", "copies": 1 },
+    { "id": "levelx", "name": "レベルX", "type": "spell", "effect": "levelx", "desc": "次のアタックは\nレベル無視", "copies": 1 },
+    { "id": "power",  "name": "パワー",  "type": "spell", "effect": "power",  "desc": "次のアタックは\n威力2倍", "copies": 1 },
+
+    { "id": "potion", "name": "回復薬", "type": "item", "effect": "heal",  "value": 20, "desc": "HPを20回復", "copies": 1 },
+    { "id": "flash",  "name": "閃光弾", "type": "item", "effect": "flash", "stunSec": 1, "desc": "敵全体を1秒スタン\n行動ゲージをリセット", "copies": 1 },
+    { "id": "sand",   "name": "星の砂", "type": "item", "effect": "sand",  "durationSec": 10, "desc": "10秒間 入れ替え0秒\nチェインが下がらない", "copies": 1 }
+  ]
+}

@@ -1,0 +1,14 @@
+import Phaser from 'phaser';
+import { BattleScene } from './scenes/BattleScene';
+import { W, H, ZOOM } from './game/display';
+
+new Phaser.Game({
+  type: Phaser.AUTO,
+  parent: 'game',
+  width: W * ZOOM,
+  height: H * ZOOM,
+  backgroundColor: '#0d1017',
+  render: { antialias: true, roundPixels: false },
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+  scene: [BattleScene],
+});

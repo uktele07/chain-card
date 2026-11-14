@@ -1,0 +1,42 @@
+{
+  "rules": {
+    "deckSize": 30,
+    "handSize": 4,
+    "chainTimerSec": 4.0,
+    "allowStepDown": true,
+    "chargeSec": 1.0,
+    "fullConsumeChargeSec": 0.5,
+    "autoSkipDelaySec": 0.35,
+    "misinputStunSec": 0.3,
+    "playLockSec": 0.12,
+    "keepCountsAsConsumed": true,
+    "playerMaxHp": 100,
+    "defaultItems": ["potion", "flash"],
+    "defaultEnemy": "golem"
+  },
+  "cards": [
+    { "id": "atk1", "name": "アタックC", "type": "attack", "lv": 1, "power": 1,  "copies": 13 },
+    { "id": "atk2", "name": "アタックB", "type": "attack", "lv": 2, "power": 2,  "copies": 8 },
+    { "id": "atk3", "name": "アタックA", "type": "attack", "lv": 3, "power": 3,  "copies": 5 },
+    { "id": "atkS", "name": "アタックS", "type": "attack", "lv": 4, "power": 10, "copies": 2 },
+
+    { "id": "levelx", "name": "レベルX", "type": "spell", "effect": "levelx", "desc": "次のアタックは\nレベル無視", "copies": 1 },
+    { "id": "power",  "name": "パワー",  "type": "spell", "effect": "power",  "desc": "次のアタックは\n威力2倍", "copies": 1 }
+  ],
+  "items": [
+    { "id": "potion", "name": "回復薬", "effect": "heal",  "value": 20, "desc": "HPを20回復" },
+    { "id": "flash",  "name": "閃光弾", "effect": "flash", "stunSec": 1, "desc": "スタン＋行動リセット" },
+    { "id": "sand",   "name": "星の砂", "effect": "sand",  "durationSec": 10, "desc": "10秒 入れ替え0秒" }
+  ],
+  "enemies": [
+    {
+      "id": "golem", "name": "訓練ゴーレム", "hp": 120,
+      "actions": [
+        { "name": "パンチ",     "chargeSec": 4.0, "damage": 6 },
+        { "name": "パンチ",     "chargeSec": 4.0, "damage": 6 },
+        { "name": "パンチ",     "chargeSec": 4.0, "damage": 6 },
+        { "name": "叩きつけ",   "chargeSec": 5.0, "damage": 18, "big": true }
+      ]
+    }
+  ]
+}

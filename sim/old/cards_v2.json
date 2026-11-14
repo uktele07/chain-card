@@ -1,0 +1,25 @@
+{
+  "rules": {
+    "deckSize": 30,
+    "handSize": 4,
+    "chainTimerSec": 3.0,
+    "chainDecay": "skipOnly",
+    "lv4ResetsChain": false,
+    "spellsHaveLevel": false,
+    "spellsStack": true,
+    "chargeSec": 1.0,
+    "fullConsumeChargeSec": 0.5,
+    "misinputStunSec": 0.3
+  },
+  "cards": [
+    { "id": "atk1", "name": "アタックLv1", "type": "attack", "lv": 1, "power": 1, "copies": 11 },
+    { "id": "atk2", "name": "アタックLv2", "type": "attack", "lv": 2, "power": 2, "copies": 7 },
+    { "id": "atk3", "name": "アタックLv3", "type": "attack", "lv": 3, "power": 3, "copies": 4 },
+    { "id": "atk4", "name": "アタックLv4", "type": "attack", "lv": 4, "power": 7, "copies": 2 },
+
+    { "id": "aoe",    "name": "全体化",   "type": "spell", "effect": "aoe",    "copies": 2 },
+    { "id": "drain",  "name": "吸収",     "type": "spell", "effect": "drain",  "copies": 2 },
+    { "id": "tbd",    "name": "(未定)",   "type": "spell", "effect": "tbd",    "copies": 1 },
+    { "id": "double", "name": "威力2倍",  "type": "spell", "effect": "double", "copies": 1 }
+  ]
+}
