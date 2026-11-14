@@ -6,7 +6,7 @@
     "allowStepDown": true,
     "sResetsChain": true,
     "chargeSec": 1.0,
-    "fullConsumeChargeSec": 0.5,
+    "fullConsumeChargeSec": 0.3,
     "autoSkipDelaySec": 0.35,
     "misinputStunSec": 0.3,
     "playLockSec": 0.12,
@@ -17,7 +17,14 @@
       "flash",
       "awake"
     ],
-    "resumeCountSec": 1.0
+    "resumeCountSec": 1.0,
+    "keepConsumeChargeSec": 1.0,
+    "autoChargeSec": 0.65,
+    "defaultSpells": [
+      "double",
+      "levelx"
+    ],
+    "maxSpells": 2
   },
   "cards": [
     {
@@ -53,19 +60,43 @@
       "copies": 2
     },
     {
-      "id": "levelx",
-      "name": "レベルX",
-      "type": "spell",
-      "effect": "levelx",
-      "desc": "次のアタックは\nレベル無視",
-      "copies": 1
-    },
-    {
       "id": "double",
       "name": "ダブル",
       "type": "spell",
       "effect": "double",
+      "mark": "×2",
       "desc": "次のアタックを\n2回",
+      "long": "次に出すアタックを2回当てる。",
+      "copies": 1
+    },
+    {
+      "id": "levelx",
+      "name": "レベルX",
+      "type": "spell",
+      "effect": "levelx",
+      "mark": "X",
+      "desc": "次のアタックは\nレベル無視",
+      "long": "次に出すアタックは、レベルの順番を無視して出せる。",
+      "copies": 1
+    },
+    {
+      "id": "drain",
+      "name": "ドレイン",
+      "type": "spell",
+      "effect": "drain",
+      "mark": "吸",
+      "desc": "次のアタックで\nHPを吸収",
+      "long": "次に出すアタックで与えたダメージと同じだけ、HPを回復する。",
+      "copies": 1
+    },
+    {
+      "id": "rankup",
+      "name": "ランクアップ",
+      "type": "spell",
+      "effect": "rankup",
+      "mark": "↑",
+      "desc": "次のアタックを\n1段上に",
+      "long": "次に出すアタックを1段上のレベルとして扱う。A なら S の威力になる。",
       "copies": 1
     }
   ],
@@ -146,6 +177,11 @@
         "S": 18,
         "A": 24,
         "B": 33
+      },
+      "drop": {
+        "id": "slime_core",
+        "name": "スライムの核",
+        "price": 20
       }
     },
     {
@@ -180,6 +216,11 @@
         "S": 27,
         "A": 37,
         "B": 51
+      },
+      "drop": {
+        "id": "golem_shard",
+        "name": "ゴーレムの欠片",
+        "price": 50
       }
     },
     {
@@ -220,6 +261,11 @@
         "S": 31,
         "A": 40,
         "B": 53
+      },
+      "drop": {
+        "id": "dragon_scale",
+        "name": "竜の鱗",
+        "price": 100
       }
     },
     {
@@ -227,7 +273,7 @@
       "name": "魔王",
       "rank": "魔",
       "hp": 155,
-      "unlock": "all",
+      "unlock": "prev",
       "actions": [
         {
           "name": "斬撃",
@@ -266,7 +312,146 @@
         "S": 35,
         "A": 45,
         "B": 58
+      },
+      "drop": {
+        "id": "maou_horn",
+        "name": "魔王の角",
+        "price": 200
       }
+    },
+    {
+      "id": "kami",
+      "name": "理の神",
+      "rank": "神",
+      "hp": 200,
+      "unlock": "prev",
+      "drop": {
+        "id": "kami_tear",
+        "name": "理の欠片",
+        "price": 400
+      },
+      "actions": [
+        {
+          "name": "裁き",
+          "chargeSec": 3.8,
+          "damage": 7
+        },
+        {
+          "name": "裁き",
+          "chargeSec": 3.8,
+          "damage": 7
+        },
+        {
+          "name": "天罰",
+          "chargeSec": 5.0,
+          "damage": 24,
+          "big": true
+        },
+        {
+          "name": "光輪",
+          "chargeSec": 3.2,
+          "damage": 6
+        },
+        {
+          "name": "光輪",
+          "chargeSec": 3.2,
+          "damage": 6
+        },
+        {
+          "name": "終焉",
+          "chargeSec": 5.8,
+          "damage": 30,
+          "big": true
+        }
+      ],
+      "rankSec": {
+        "S": 40,
+        "A": 50,
+        "B": 60
+      }
+    }
+  ],
+  "weapons": [
+    {
+      "id": "sword",
+      "name": "鋼の剣",
+      "power": [
+        1,
+        2,
+        3,
+        10
+      ],
+      "price": 0,
+      "desc": "クセのない初期装備。"
+    },
+    {
+      "id": "axe",
+      "name": "鋼の斧",
+      "power": [
+        2,
+        3,
+        4,
+        20
+      ],
+      "attackWaitSec": 0.5,
+      "price": 150,
+      "desc": "一撃が重い。アタックを出すたびに0.5秒待つ。"
+    },
+    {
+      "id": "bow",
+      "name": "鋼の弓",
+      "power": [
+        1,
+        1,
+        1,
+        10
+      ],
+      "chargeMod": -0.5,
+      "price": 300,
+      "desc": "入れ替えが0.5秒速い。B と A の威力は低い。"
+    },
+    {
+      "id": "durandal",
+      "name": "デュランダル",
+      "power": [
+        1,
+        3,
+        5,
+        15
+      ],
+      "price": null,
+      "desc": "鋼の剣の上位にあたる名剣。"
+    }
+  ],
+  "armors": [
+    {
+      "id": "leather",
+      "name": "皮の衣",
+      "def": 0,
+      "price": 0,
+      "desc": "軽い初期装備。"
+    },
+    {
+      "id": "iron",
+      "name": "鉄の鎧",
+      "def": 3,
+      "chargeMod": 0.5,
+      "price": 300,
+      "desc": "ダメージを3減らす。重く、入れ替えが0.5秒遅い。"
+    },
+    {
+      "id": "light",
+      "name": "ライトプレート",
+      "def": 2,
+      "price": 500,
+      "desc": "ダメージを2減らす。動きを妨げない。"
+    },
+    {
+      "id": "magic",
+      "name": "魔法の衣",
+      "def": 4,
+      "price": null,
+      "desc": "ダメージを4減らす。"
     }
   ]
 }

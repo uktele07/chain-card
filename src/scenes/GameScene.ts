@@ -6,13 +6,27 @@ import { Sound } from '../game/audio';
 import { W, H, ZOOM } from '../game/display';
 import { Layer } from '../game/ui';
 import { iconKey, loadArt, monsterKey } from '../game/art';
-import { clearSave, loadSave, rankOf, rankValue, storeSave, type Rank, type SaveData } from '../game/save';
+import { clearSave, loadSave, rankOf, rankValue, storeSave, type Rank, type SaveConfig, type SaveData } from '../game/save';
+import { buildDeck, gearOf, type ArmorDef, type WeaponDef } from '../game/loadout';
 
-const RULES = data.rules as unknown as Rules & { defaultItems: string[]; resumeCountSec: number };
+const RULES = data.rules as unknown as Rules & { defaultItems: string[]; defaultSpells: string[]; maxSpells: number; resumeCountSec: number };
+type SpellDef = CardDef & { mark: string; long: string };
 const DEFS = data.cards as CardDef[];
+const ATTACKS = DEFS.filter(c => c.type === 'attack');
+const SPELLS = DEFS.filter(c => c.type === 'spell') as SpellDef[];
+const WEAPONS = data.weapons as WeaponDef[];
+const ARMORS = data.armors as ArmorDef[];
 const ITEMS = data.items as (ItemDef & { short: string })[];
 const ENEMIES = data.enemies as EnemyDef[];
 const itemOf = (id: string | null) => ITEMS.find(d => d.id === id) ?? null;
+const SAVE_CONFIG: SaveConfig = {
+  items: ITEMS.map(d => d.id), defaultItems: RULES.defaultItems,
+  spells: SPELLS.map(d => d.id), defaultSpells: RULES.defaultSpells, maxSpells: RULES.maxSpells,
+  weapons: WEAPONS.map(d => d.id), armors: ARMORS.map(d => d.id), startWeapon: WEAPONS[0].id, startArmor: ARMORS[0].id,
+};
+const SHOP = [...WEAPONS.filter(w => w.price).map(w => ({ kind: 'weapon' as const, def: w })), ...ARMORS.filter(a => a.price).map(a => ({ kind: 'armor' as const, def: a }))];
+const MARK: Record<string, string> = Object.fromEntries(SPELLS.map(c => [c.effect!, c.mark]));
+const powerText = (p: number[]) => `威力  C ${p[0]}　B ${p[1]}　A ${p[2]}　S ${p[3]}`;
 
 const C = {
   bg: '#0d1017', panel: '#171c26', deep: '#10141c', line: '#2c3442', text: '#e6e9ef', dim: '#8a93a3', faint: '#59606e',
@@ -21,7 +35,7 @@ const C = {
 };
 const CHAIN_COL = ['#3a4250', '#5fb0e8', '#6fd08a', '#f2a23a', '#ff5a4a'];
 const RANK_COL: Record<string, string> = { S: '#ff5a4a', A: '#f2a23a', B: '#6fd08a', C: '#5fb0e8' };
-const ENEMY_COL: Record<string, string> = { slime: '#5fb0e8', golem: '#6fd08a', dragon: '#ff5a4a', maou: '#b9a3ea' };
+const ENEMY_COL: Record<string, string> = { slime: '#5fb0e8', golem: '#6fd08a', dragon: '#ff5a4a', maou: '#b9a3ea', kami: '#ffd24a' };
 
 const CX = 480, CY = 326, CW = 100, CH = 104, RING = 46;
 const POS = [{ x: CX, y: CY - 104 }, { x: CX + 134, y: CY }, { x: CX, y: CY + 104 }, { x: CX - 134, y: CY }];
@@ -32,12 +46,13 @@ const MON = { x: 808, y: 330, size: 258 };
 const RESULT_WAIT = 0.8;
 
 type Base = 'list' | 'ready' | 'fight' | 'result';
-type Overlay = 'menu' | 'equip' | 'help' | 'reset' | 'pause' | 'resume';
+type Overlay = 'menu' | 'equip' | 'deck' | 'shop' | 'help' | 'reset' | 'pause' | 'resume';
 const MENU: { label: string; off?: boolean; act?: Overlay | 'close' }[] = [
-  { label: '装備', act: 'equip' }, { label: 'カード編集', off: true }, { label: '設定', off: true },
+  { label: '装備', act: 'equip' }, { label: 'カード編集', act: 'deck' }, { label: 'ショップ', act: 'shop' }, { label: '設定', off: true },
   { label: '操作説明', act: 'help' }, { label: 'セーブリセット', act: 'reset' }, { label: '閉じる', act: 'close' },
 ];
 const PAUSE = ['戦闘再開', '最初からやり直す', '戦闘終了'];
+const EQUIP_ROWS = ['武器', '防具', 'アクセサリ', 'アイテム 1', 'アイテム 2', 'アイテム 3'];
 
 export class GameScene extends Phaser.Scene {
   private input2!: Input;
@@ -49,7 +64,8 @@ export class GameScene extends Phaser.Scene {
 
   private base: Base = 'list';
   private overlays: Overlay[] = [];
-  private cur = { list: 0, menu: 0, pause: 0, result: 0, reset: 0, slot: 0, opt: 0 };
+  private cur = { list: 0, menu: 0, pause: 0, result: 0, reset: 0, slot: 0, opt: 0, deck: 0, shop: 0 };
+  private gained: { name: string; price: number } | null = null;   // 直前の戦闘で手に入れた換金アイテム
   private equipFocus: 'slots' | 'options' = 'slots';
   private enemy: EnemyDef = ENEMIES[0];
   private invincible = false;       // テスト用。画面を移っても維持する
@@ -66,7 +82,7 @@ export class GameScene extends Phaser.Scene {
     this.L = [new Layer(this, 0), new Layer(this, 100), new Layer(this, 200)];
     this.fx = this.add.graphics().setDepth(60);
     loadArt(this, ZOOM);
-    this.save = loadSave(RULES.defaultItems, ITEMS.map(d => d.id));
+    this.save = loadSave(SAVE_CONFIG);
     this.input.on('pointerdown', () => this.snd.unlock());
     window.addEventListener('keydown', () => this.snd.unlock());
     const w = window as unknown as Record<string, unknown>;
@@ -76,10 +92,14 @@ export class GameScene extends Phaser.Scene {
 
   // ---------------- 状態 ----------------
   private get top(): Base | Overlay { return this.overlays[this.overlays.length - 1] ?? this.base; }
-  private unlocked(e: EnemyDef) { return e.unlock !== 'all' || ENEMIES.every(o => o === e || o.unlock || this.save.records[o.id]); }
+  /** 一覧でこれより前の敵をすべて倒していれば出現 */
+  private unlocked(e: EnemyDef) { return e.unlock !== 'prev' || ENEMIES.slice(0, ENEMIES.indexOf(e)).every(o => this.save.records[o.id]); }
+  private get weapon() { return WEAPONS.find(w => w.id === this.save.weapon) ?? WEAPONS[0]; }
+  private get armor() { return ARMORS.find(a => a.id === this.save.armor) ?? ARMORS[0]; }
+  private sellList() { return ENEMIES.map(e => e.drop).filter((d): d is NonNullable<EnemyDef['drop']> => !!d && (this.save.loot[d.id] ?? 0) > 0); }
 
   private newBattle() {
-    this.battle = new Battle(DEFS, RULES, Math.random, this.save.items.map(itemOf), this.enemy);
+    this.battle = new Battle(buildDeck(DEFS, this.save.spells, RULES.maxSpells), RULES, Math.random, this.save.items.map(itemOf), this.enemy, gearOf(this.weapon, this.armor));
     this.battle.invincible = this.invincible;
     this.battle.events.length = 0;
     this.lastTick = 0; this.hurt = 0;
@@ -98,6 +118,7 @@ export class GameScene extends Phaser.Scene {
     this.resultWait = RESULT_WAIT;
     this.cur.result = won ? 1 : 0;      // 勝ち→一覧に戻る / 負け→もう一度
     this.outcome = { rank: null, newBest: false };
+    this.gained = null;
     this.snd.stopBgm();
     if (!won) { this.snd.lose(); return; }
     this.snd.win();
@@ -109,6 +130,8 @@ export class GameScene extends Phaser.Scene {
       bestTime: newBest ? b.time : old.bestTime,
       bestRank: !old || rankValue(rank) > rankValue(old.bestRank) ? rank : old.bestRank,
     };
+    const drop = this.enemy.drop;
+    if (drop) { this.save.loot[drop.id] = (this.save.loot[drop.id] ?? 0) + 1; this.gained = drop; }
     storeSave(this.save);
     this.outcome = { rank, newBest };
   }
@@ -181,6 +204,8 @@ export class GameScene extends Phaser.Scene {
           else if (act) {
             this.snd.uiOk();
             if (act === 'equip') { this.cur.slot = 0; this.equipFocus = 'slots'; }
+            if (act === 'deck') this.cur.deck = 0;
+            if (act === 'shop') this.cur.shop = 0;
             if (act === 'reset') this.cur.reset = 0;
             this.overlays.push(act);
           }
@@ -189,21 +214,51 @@ export class GameScene extends Phaser.Scene {
 
       case 'equip':
         if (this.equipFocus === 'slots') {
-          if (b === 'up') this.move('slot', -1, 3);
-          else if (b === 'down') this.move('slot', 1, 3);
-          else if (ok) { this.equipFocus = 'options'; this.cur.opt = 1 + ITEMS.findIndex(d => d.id === this.save.items[this.cur.slot]); this.snd.uiOk(); }
+          if (b === 'up') this.move('slot', -1, EQUIP_ROWS.length, i => i === 2);
+          else if (b === 'down') this.move('slot', 1, EQUIP_ROWS.length, i => i === 2);
+          else if (ok) { this.equipFocus = 'options'; this.cur.opt = Math.max(0, this.equipOptions().findIndex(o => o.on)); this.snd.uiOk(); }
           else if (back) { this.snd.uiBack(); this.pop(); }
         } else {
-          const n = ITEMS.length + 1;
-          if (b === 'up') this.move('opt', -1, n);
-          else if (b === 'down') this.move('opt', 1, n);
-          else if (ok) {
-            this.save.items[this.cur.slot] = this.cur.opt === 0 ? null : ITEMS[this.cur.opt - 1].id;
-            storeSave(this.save);
-            this.equipFocus = 'slots'; this.snd.uiOk();
-          } else if (back) { this.equipFocus = 'slots'; this.snd.uiBack(); }
+          const opts = this.equipOptions();
+          if (b === 'up') this.move('opt', -1, opts.length);
+          else if (b === 'down') this.move('opt', 1, opts.length);
+          else if (ok) { opts[this.cur.opt].pick(); storeSave(this.save); this.equipFocus = 'slots'; this.snd.uiOk(); }
+          else if (back) { this.equipFocus = 'slots'; this.snd.uiBack(); }
         }
         break;
+
+      case 'deck':
+        if (b === 'up') this.move('deck', -1, SPELLS.length);
+        else if (b === 'down') this.move('deck', 1, SPELLS.length);
+        else if (back || b === 'options') { this.snd.uiBack(); this.pop(); }
+        else if (ok) {
+          const id = SPELLS[this.cur.deck].id, sp = this.save.spells;
+          if (sp.includes(id)) { this.save.spells = sp.filter(x => x !== id); this.snd.uiBack(); }
+          else if (sp.length >= RULES.maxSpells) this.snd.miss();          // 2枚まで
+          else { this.save.spells = SPELLS.map(c => c.id).filter(x => x === id || sp.includes(x)); this.snd.uiOk(); }
+          storeSave(this.save);
+        }
+        break;
+
+      case 'shop': {
+        const sell = this.sellList(), n = SHOP.length + sell.length;
+        if (b === 'up') this.move('shop', -1, n);
+        else if (b === 'down') this.move('shop', 1, n);
+        else if (back || b === 'options') { this.snd.uiBack(); this.pop(); }
+        else if (ok) {
+          if (this.cur.shop < SHOP.length) {
+            const g = SHOP[this.cur.shop], own = g.kind === 'weapon' ? this.save.weapons : this.save.armors;
+            if (own.includes(g.def.id) || this.save.gold < (g.def.price ?? 0)) this.snd.miss();
+            else { this.save.gold -= g.def.price ?? 0; own.push(g.def.id); this.snd.item('heal'); }
+          } else {
+            const d = sell[this.cur.shop - SHOP.length];
+            if (!d) this.snd.miss();
+            else { this.save.gold += d.price * this.save.loot[d.id]; delete this.save.loot[d.id]; this.snd.uiOk(); this.cur.shop = Math.min(this.cur.shop, SHOP.length + sell.length - 2); }
+          }
+          storeSave(this.save);
+        }
+        break;
+      }
 
       case 'help':
         if (ok || back || b === 'options') { this.snd.uiBack(); this.pop(); }
@@ -214,12 +269,30 @@ export class GameScene extends Phaser.Scene {
         else if (back || (ok && this.cur.reset === 0)) { this.snd.uiBack(); this.pop(); }
         else if (ok) {
           clearSave();
-          this.save = loadSave(RULES.defaultItems, ITEMS.map(d => d.id));
+          this.save = loadSave(SAVE_CONFIG);
           this.cur.list = 0; this.enemy = ENEMIES[0];
           this.snd.uiOk(); this.toList(); this.newBattle();
         }
         break;
     }
+  }
+
+  /** 装備画面で、選んでいる枠にセットできるものの一覧 */
+  private equipOptions(): { id: string | null; name: string; on: boolean; note: string; desc: string; pick: () => void }[] {
+    const s = this.save, row = this.cur.slot;
+    if (row === 0) return WEAPONS.filter(w => s.weapons.includes(w.id)).map(w => ({ id: null, name: w.name, on: s.weapon === w.id, note: s.weapon === w.id ? '装備中' : '', desc: `${powerText(w.power)}　　${w.desc}`, pick: () => { s.weapon = w.id; } }));
+    if (row === 1) return ARMORS.filter(a => s.armors.includes(a.id)).map(a => ({ id: null, name: a.name, on: s.armor === a.id, note: s.armor === a.id ? '装備中' : '', desc: `防御 +${a.def}　　${a.desc}`, pick: () => { s.armor = a.id; } }));
+    const k = row - 3;
+    return [null, ...ITEMS].map(o => {
+      const at = o ? s.items.indexOf(o.id) : -1;
+      return {
+        id: o ? o.id : 'none', name: o ? o.name : 'はずす', on: (o ? o.id : null) === s.items[k],
+        note: at === k ? 'セット中' : at >= 0 ? `アイテム ${at + 1} と入れ替え` : '',
+        desc: o ? o.desc ?? '' : 'この枠を空にする。',
+        // 同じアイテムは1つだけ: ほかの枠にあるものを選んだら、枠を入れ替える
+        pick: () => { if (at >= 0 && at !== k) s.items[at] = s.items[k]; s.items[k] = o ? o.id : null; },
+      };
+    });
   }
 
   // ---------------- 毎フレーム ----------------
@@ -255,7 +328,8 @@ export class GameScene extends Phaser.Scene {
         this.snd.item(e.effect);
         const it = bt.items[e.slot];
         this.popup(e.effect === 'heal' ? '+20 HP' : it ? it.def.name : '', '#7fe0a0', 20, 180 + e.slot * 62, 150);
-      } else if (e.kind === 'chainBreak') { this.snd.chainBreak(); this.popup('チェイン切れ', C.warn, 15, CY - RING - 8, CX); }
+      } else if (e.kind === 'heal') { if (e.amount > 0) this.popup(`+${e.amount} HP`, '#7fe0a0', 20, 486, CX - 120); }
+      else if (e.kind === 'chainBreak') { this.snd.chainBreak(); this.popup('チェイン切れ', C.warn, 15, CY - RING - 8, CX); }
       else if (e.kind === 'enemyCharge') { this.lastTick = 0; if (e.big && this.base === 'fight') this.snd.warn(); }
       else if (e.kind === 'enemyAttack') {
         this.hurt = e.big ? 0.6 : 0.35;
@@ -300,6 +374,8 @@ export class GameScene extends Phaser.Scene {
       const l = this.L[Math.min(2, i + 1)];
       if (o === 'menu') this.drawMenu(l);
       else if (o === 'equip') this.drawEquip(l);
+      else if (o === 'deck') this.drawDeck(l);
+      else if (o === 'shop') this.drawShop(l);
       else if (o === 'help') this.drawHelp(l);
       else if (o === 'reset') this.drawReset(l);
       else if (o === 'pause') this.drawPause(l);
@@ -327,24 +403,25 @@ export class GameScene extends Phaser.Scene {
   // --- 敵の一覧 ---
   private drawList(l: Layer) {
     l.text(40, 40, '敵を選ぶ', 24, C.text, 'start', true);
+    l.text(920, 40, `所持金  ${this.save.gold} G`, 16, C.keep, 'end', true);
     ENEMIES.forEach((e, i) => {
-      const y = 72 + i * 80, on = i === this.cur.list, open = this.unlocked(e), rec = this.save.records[e.id];
-      l.rect(40, y, 400, 70, { fill: on ? C.sel : C.panel, stroke: on ? C.white : C.line, sw: on ? 3 : 2, rx: 10 });
-      l.rect(54, y + 14, 42, 42, { fill: open ? ENEMY_COL[e.id] ?? C.dim : C.ng, rx: 8, alpha: 0.9 });
-      l.text(75, y + 35, open ? e.rank ?? '' : '？', 19, open ? C.ink : C.dim, 'middle', true);
-      if (on) this.cursor(l, 26, y + 35);
+      const y = 68 + i * 66 - 6, on = i === this.cur.list, open = this.unlocked(e), rec = this.save.records[e.id];
+      l.rect(40, y, 400, 58, { fill: on ? C.sel : C.panel, stroke: on ? C.white : C.line, sw: on ? 3 : 2, rx: 10 });
+      l.rect(54, y + 9, 40, 40, { fill: open ? ENEMY_COL[e.id] ?? C.dim : C.ng, rx: 8, alpha: 0.9 });
+      l.text(74, y + 29, open ? e.rank ?? '' : '？', 18, open ? C.ink : C.dim, 'middle', true);
+      if (on) this.cursor(l, 26, y + 29);
       if (!open) {
-        l.text(112, y + 24, '？？？', 18, C.dim, 'start', true);
-        l.text(112, y + 50, '出現条件: すべての敵を撃破', 12, C.dim, 'start');
+        l.text(110, y + 19, '？？？', 17, C.dim, 'start', true);
+        l.text(110, y + 41, '出現条件: ここまでの敵をすべて撃破', 11, C.dim, 'start');
         return;
       }
-      l.text(112, y + 24, e.name, 18, C.text, 'start', true);
-      l.text(112, y + 50, `HP ${e.hp}`, 12, C.dim, 'start');
+      l.text(110, y + 19, e.name, 17, C.text, 'start', true);
+      l.text(110, y + 41, `HP ${e.hp}`, 11, C.dim, 'start');
       if (rec) {
-        this.rankBadge(l, 408, y + 35, rec.bestRank, 34);
-        l.text(378, y + 24, '自己ベスト', 10, C.dim, 'end');
-        l.text(378, y + 48, `${rec.bestTime.toFixed(1)}秒`, 15, C.text, 'end', true);
-      } else l.text(424, y + 35, '未撃破', 14, C.faint, 'end', true);
+        this.rankBadge(l, 410, y + 29, rec.bestRank, 32);
+        l.text(382, y + 19, '自己ベスト', 10, C.dim, 'end');
+        l.text(382, y + 40, `${rec.bestTime.toFixed(1)}秒`, 15, C.text, 'end', true);
+      } else l.text(424, y + 29, '未撃破', 14, C.faint, 'end', true);
     });
     l.text(40, 414, 'セット中のアイテム', 12, C.dim, 'start');
     this.save.items.forEach((id, i) => {
@@ -361,7 +438,7 @@ export class GameScene extends Phaser.Scene {
     if (!open) {
       l.text(494, 106, '？？？', 24, C.dim, 'start', true);
       l.text(494, 290, 'まだ姿を見せていない。', 14, C.dim, 'start');
-      l.text(494, 318, 'ほかの敵をすべて倒すと現れる。', 14, C.dim, 'start');
+      l.text(494, 318, 'ここまでの敵をすべて倒すと現れる。', 14, C.dim, 'start');
     } else {
       l.text(494, 106, e.name, 24, C.text, 'start', true);
       l.text(494, 136, `HP ${e.hp}`, 15, C.dim, 'start', true);
@@ -378,6 +455,7 @@ export class GameScene extends Phaser.Scene {
       });
       const sec = e.actions.reduce((s, a) => s + a.chargeSec, 0), dmg = e.actions.reduce((s, a) => s + a.damage, 0);
       l.text(494, 474, beaten ? `1巡 約${Math.round(sec)}秒で ${dmg} ダメージ` : '撃破すると、間隔とダメージが分かります', 12, C.dim, 'start');
+      if (e.drop) l.text(896, 474, beaten ? `戦利品  ${e.drop.name}（${e.drop.price} G）` : '戦利品  ？？？', 12, C.dim, 'end');
     }
     this.guide(l, '↑↓ 選ぶ　　○ 決定　　OPTIONS メニュー', '↑↓ 選ぶ　　Enter 決定　　Esc メニュー');
   }
@@ -433,7 +511,7 @@ export class GameScene extends Phaser.Scene {
       l.rect(lx, ty, CW, CH, { fill: c.type === 'spell' ? C.spell : C.attack, rx: 9, alpha: ok ? 0.95 : 0.22 });
       l.rect(lx, ty, CW, CH, { stroke: slot.kept ? C.keep : ok ? C.white : C.ng, sw: slot.kept ? 5 : 3, rx: 9 });
       l.text(p.x, p.y - 14, this.cardBig(c), 38, C.text, 'middle', true, al);
-      l.text(p.x, p.y + 18, c.type === 'attack' ? `威力 ${c.power}` : c.name, 12, C.text, 'middle', false, al);
+      l.text(p.x, p.y + 18, c.type === 'attack' ? `威力 ${b.powerOf(c.lv!)}` : c.name, 12, C.text, 'middle', false, al);
       if (c.type === 'spell') l.text(p.x, p.y + 38, c.desc ?? '', 9, '#f2f4f8', 'middle', false, al);
       l.text(lx + 13, ty + 13, GLY[i], 13, C.white, 'middle', false, al);
       if (slot.kept) l.text(lx + CW - 22, ty + 13, 'KEEP', 10, C.keep, 'middle', true);
@@ -452,12 +530,13 @@ export class GameScene extends Phaser.Scene {
       if (!hidden) {
         const ratio = b.chain > 0 ? b.chainTimer / RULES.chainTimerSec : 0;
         l.arc(CX, CY, RING, ratio, ratio < 0.34 ? C.miss : col, 6);
-        l.text(CX, CY - 27, locked ? 'ミス' : b.charging && b.chargeTotal > 0.2 ? '補充中' : 'CHAIN', 10, locked ? C.miss : C.dim, 'middle', true);
+        const waiting = !locked && b.lock > 0.15;   // 斧などの待ち
+        l.text(CX, CY - 27, locked ? 'ミス' : waiting ? '構え' : b.charging && b.chargeTotal > 0.2 ? '補充中' : 'CHAIN', 10, locked ? C.miss : waiting ? C.keep : C.dim, 'middle', true);
         l.text(CX, CY - 1, locked ? '✕' : b.chain > 0 ? LEVEL_LABELS[b.chain] : '–', 36, locked ? C.miss : b.chain > 0 ? col : C.dim, 'middle', true).setScale(1 + this.ringPulse * 1.2);
         // 次のアタックにかかる効果（カードと同じ記号）
-        const marks = [b.buffs.double ? '×2' : '', b.buffs.levelx ? 'X' : ''].filter(Boolean);
+        const marks = (Object.keys(MARK) as (keyof typeof b.buffs)[]).filter(k => b.buffs[k] > 0).map(k => MARK[k]);
         marks.forEach((m, i) => {
-          const mw = 26, x0 = CX - (marks.length * (mw + 4) - 4) / 2 + i * (mw + 4);
+          const mw = marks.length > 2 ? 20 : 26, gap = marks.length > 2 ? 2 : 4, x0 = CX - (marks.length * (mw + gap) - gap) / 2 + i * (mw + gap);
           l.rect(x0, CY + 17, mw, 18, { fill: C.spell, rx: 6 });
           l.text(x0 + mw / 2, CY + 26, m, 12, C.white, 'middle', true);
         });
@@ -512,13 +591,13 @@ export class GameScene extends Phaser.Scene {
       this.fx.lineStyle(near ? 5 : 3, 0xff2a2a, alpha).strokeCircle(CX, CY, RING + 12 + pulse * 5);
     }
   }
-  private cardBig(c: Card) { return c.type === 'attack' ? LEVEL_LABELS[c.lv!] : c.effect === 'double' ? '×2' : 'X'; }
+  private cardBig(c: Card) { return c.type === 'attack' ? LEVEL_LABELS[c.lv!] : MARK[c.effect!] ?? '?'; }
 
   // --- 結果 ---
   private drawResult(l: Layer) {
     const b = this.battle, won = b.result === 'won';
     this.dim(l, 0.5);
-    l.rect(CX - 230, 150, 460, 330, { fill: C.panel, stroke: won ? C.line : C.miss, rx: 12 });
+    l.rect(CX - 230, 150, 460, 336, { fill: C.panel, stroke: won ? C.line : C.miss, rx: 12 });
     l.text(CX, 190, won ? `${this.enemy.name} 討伐` : '敗北', 24, won ? C.text : C.warn, 'middle', true);
     if (won) {
       l.text(CX - 190, 252, '撃破タイム', 13, C.dim, 'start');
@@ -526,11 +605,13 @@ export class GameScene extends Phaser.Scene {
       if (this.outcome.rank) this.rankBadge(l, CX + 164, 252, this.outcome.rank, 52);
       if (this.outcome.newBest) { l.rect(CX + 16, 280, 104, 22, { fill: C.keep, rx: 11 }); l.text(CX + 68, 291, '自己ベスト更新', 11, C.ink, 'middle', true); }
       else if (b.usedInvincible) l.text(CX + 120, 291, '無敵を使ったため記録なし', 11, C.keep, 'end');
-      l.line(CX - 190, 318, CX + 190, 318, C.line);
-      l.text(CX - 190, 344, '残りHP', 13, C.dim, 'start');
-      l.text(CX + 190, 344, b.hp, 16, C.text, 'end', true);
-      l.text(CX - 190, 376, '最大ダメージ（1ターン）', 13, C.dim, 'start');
-      l.text(CX + 190, 376, b.stats.maxTurn, 16, C.text, 'end', true);
+      l.line(CX - 190, 314, CX + 190, 314, C.line);
+      l.text(CX - 190, 336, '残りHP', 13, C.dim, 'start');
+      l.text(CX + 190, 336, b.hp, 16, C.text, 'end', true);
+      l.text(CX - 190, 362, '最大ダメージ（1ターン）', 13, C.dim, 'start');
+      l.text(CX + 190, 362, b.stats.maxTurn, 16, C.text, 'end', true);
+      l.text(CX - 190, 388, '戦利品', 13, C.dim, 'start');
+      l.text(CX + 190, 388, this.gained ? `${this.gained.name} ×1` : 'なし', 15, this.gained ? C.keep : C.faint, 'end', true);
     } else {
       l.text(CX - 190, 262, `${this.enemy.name} の残りHP`, 13, C.dim, 'start');
       l.text(CX + 190, 262, `${b.enemy!.hp} / ${this.enemy.hp}`, 22, C.text, 'end', true);
@@ -543,19 +624,19 @@ export class GameScene extends Phaser.Scene {
     const ready = this.resultWait <= 0;
     ['もう一度', '一覧に戻る'].forEach((label, i) => {
       const on = ready && i === this.cur.result, x = i === 0 ? CX - 206 : CX + 10;
-      l.rect(x, 410, 196, 44, { fill: on ? C.sel : undefined, stroke: on ? C.white : C.line, rx: 8 });
-      l.text(x + 98, 432, label, 16, C.text, 'middle', on, ready ? 1 : 0.4);
+      l.rect(x, 418, 196, 44, { fill: on ? C.sel : undefined, stroke: on ? C.white : C.line, rx: 8 });
+      l.text(x + 98, 440, label, 16, C.text, 'middle', on, ready ? 1 : 0.4);
     });
     this.guide(l, '←→ 選ぶ　　○ 決定', '←→ 選ぶ　　Enter 決定');
   }
 
   // --- メニュー類 ---
   private panel(l: Layer, title: string, rows: { label: string; off?: boolean; note?: string }[], sel: number, y0: number, w = 340) {
-    const h = 74 + rows.length * 50, x = CX - w / 2;
+    const pitch = rows.length > 6 ? 46 : 50, h = 74 + rows.length * pitch, x = CX - w / 2;
     l.rect(x, y0, w, h, { fill: C.panel, stroke: C.line, rx: 12 });
     l.text(CX, y0 + 34, title, 18, C.text, 'middle', true);
     rows.forEach((r, i) => {
-      const y = y0 + 62 + i * 50, on = i === sel;
+      const y = y0 + 62 + i * pitch, on = i === sel;
       if (on) { l.rect(x + 20, y, w - 40, 40, { fill: C.sel, stroke: C.white, rx: 8 }); this.cursor(l, x + 38, y + 20); }
       l.text(x + 58, y + 20, r.label, 16, r.off ? C.faint : C.text, 'start', on);
       if (r.note) l.text(x + w - 34, y + 20, r.note, 11, C.faint, 'end');
@@ -563,7 +644,7 @@ export class GameScene extends Phaser.Scene {
   }
   private drawMenu(l: Layer) {
     this.dim(l);
-    this.panel(l, 'メニュー', MENU.map(m => ({ label: m.label, off: m.off, note: m.off ? '準備中' : undefined })), this.cur.menu, 76);
+    this.panel(l, 'メニュー', MENU.map(m => ({ label: m.label, off: m.off, note: m.off ? '準備中' : undefined })), this.cur.menu, 44);
     this.guide(l, '↑↓ 選ぶ　　○ 決定　　✕ / OPTIONS 閉じる', '↑↓ 選ぶ　　Enter 決定　　Backspace / Esc 閉じる');
   }
   private drawPause(l: Layer) {
@@ -594,40 +675,120 @@ export class GameScene extends Phaser.Scene {
   private drawEquip(l: Layer) {
     l.rect(0, 0, W, H, { fill: C.bg });
     l.text(40, 40, '装備', 24, C.text, 'start', true);
-    const slots = this.equipFocus === 'slots';
-    ['武器', '防具', 'アクセサリ'].forEach((name, i) => {
-      const y = 78 + i * 56;
-      l.rect(40, y, 400, 46, { fill: C.panel, stroke: C.line, rx: 8, alpha: 0.6 });
-      l.text(60, y + 23, name, 14, C.faint, 'start');
-      l.text(424, y + 23, '準備中', 16, C.faint, 'end', true);
-    });
-    this.save.items.forEach((id, i) => {
-      const y = 246 + i * 56, on = i === this.cur.slot, it = itemOf(id);
-      l.rect(40, y, 400, 46, { fill: on ? C.sel : C.panel, stroke: on ? C.white : C.line, sw: on && slots ? 3 : 2, rx: 8 });
-      l.text(60, y + 23, `アイテム ${i + 1}`, 14, C.dim, 'start');
-      l.text(424, y + 23, it ? it.name : 'なし', 16, it ? C.text : C.faint, 'end', true);
-      if (it) l.image(iconKey(id), 424 - it.name.length * 16 - 22, y + 23, 28);
+    const slots = this.equipFocus === 'slots', s = this.save;
+    const value = (i: number) => (i === 0 ? this.weapon.name : i === 1 ? this.armor.name : i === 2 ? '準備中' : itemOf(s.items[i - 3])?.name ?? 'なし');
+    EQUIP_ROWS.forEach((name, i) => {
+      const y = 78 + i * 56, on = i === this.cur.slot, off = i === 2, v = value(i), empty = off || v === 'なし';
+      l.rect(40, y, 400, 46, { fill: on ? C.sel : C.panel, stroke: on ? C.white : C.line, sw: on && slots ? 3 : 2, rx: 8, alpha: off ? 0.6 : 1 });
+      l.text(60, y + 23, name, 14, off ? C.faint : C.dim, 'start');
+      l.text(424, y + 23, v, 16, empty ? C.faint : C.text, 'end', true);
+      if (i >= 3 && !empty) l.image(iconKey(s.items[i - 3]), 424 - v.length * 16 - 22, y + 23, 28);
       if (on && slots) this.cursor(l, 26, y + 23);
     });
+    const opts = this.equipOptions(), shown = slots ? Math.max(0, opts.findIndex(o => o.on)) : this.cur.opt;
     l.rect(470, 78, 450, 326, { fill: C.panel, stroke: C.line, rx: 12, alpha: slots ? 0.55 : 1 });
-    l.text(494, 104, `アイテム ${this.cur.slot + 1} にセットするもの`, 12, C.dim, 'start');
-    const opts: (ItemDef | null)[] = [null, ...ITEMS];
-    const shown = slots ? 1 + ITEMS.findIndex(d => d.id === this.save.items[this.cur.slot]) : this.cur.opt;
+    l.text(494, 104, `${EQUIP_ROWS[this.cur.slot]} にセットするもの`, 12, C.dim, 'start');
     opts.forEach((o, i) => {
       const y = 122 + i * 46, on = i === shown, al = slots ? 0.55 : 1;
       if (on) { l.rect(486, y, 418, 40, { fill: C.sel, stroke: slots ? C.line : C.white, rx: 8 }); if (!slots) this.cursor(l, 500, y + 20); }
-      l.image(iconKey(o ? o.id : null), 532, y + 20, 30, al);
-      l.text(560, y + 20, o ? o.name : 'はずす', 16, C.text, 'start', on, al);
-      const n = o ? this.save.items.filter(id => id === o.id).length : 0;
-      if (n) l.text(888, y + 20, n > 1 ? `セット中 ×${n}` : 'セット中', 11, C.dim, 'end');
+      if (o.id) l.image(iconKey(o.id === 'none' ? null : o.id), 532, y + 20, 30, al);
+      l.text(o.id ? 560 : 520, y + 20, o.name, 16, C.text, 'start', on, al);
+      if (o.note) l.text(888, y + 20, o.note, 11, C.dim, 'end');
     });
     const d = opts[shown];
     l.rect(470, 416, 450, 76, { fill: C.deep, stroke: C.line, rx: 10 });
-    l.image(iconKey(d ? d.id : null), 506, 454, 44);
-    l.text(542, 440, d ? d.name : 'はずす', 15, C.text, 'start', true);
-    l.text(542, 468, d ? d.desc ?? '' : 'この枠を空にする。', 12, C.dim, 'start');
+    if (d?.id) l.image(iconKey(d.id === 'none' ? null : d.id), 506, 454, 44);
+    l.text(d?.id ? 542 : 494, 440, d?.name ?? '', 15, C.text, 'start', true);
+    l.text(d?.id ? 542 : 494, 468, d?.desc ?? '', 12, C.dim, 'start');
     this.guide(l, slots ? '↑↓ 選ぶ　　○ 変更　　✕ 戻る' : '↑↓ 選ぶ　　○ セット　　✕ やめる', slots ? '↑↓ 選ぶ　　Enter 変更　　Backspace 戻る' : '↑↓ 選ぶ　　Enter セット　　Backspace やめる');
   }
+
+  private drawDeck(l: Layer) {
+    l.rect(0, 0, W, H, { fill: C.bg });
+    const sp = this.save.spells, fill = RULES.maxSpells - sp.length, p = this.weapon.power;
+    l.text(40, 40, 'カード編集', 24, C.text, 'start', true);
+    l.text(920, 40, `デッキ 30枚　（アタック ${28 + fill}　スペル ${sp.length}）`, 14, C.dim, 'end');
+    // 左: アタック（枚数は固定。威力は武器で決まる）
+    l.text(40, 86, `アタック（枚数は固定。威力は ${this.weapon.name} のもの）`, 12, C.dim, 'start');
+    ATTACKS.forEach((c, i) => {
+      const y = 102 + i * 58, n = c.copies + (c.lv === 1 ? fill : 0);
+      l.rect(40, y, 400, 48, { fill: C.panel, stroke: C.line, rx: 8 });
+      l.rect(52, y + 8, 32, 32, { fill: C.attack, rx: 6 });
+      l.text(68, y + 24, LEVEL_LABELS[c.lv!], 18, C.text, 'middle', true);
+      l.text(100, y + 24, `威力 ${p[c.lv! - 1]}`, 15, C.text, 'start');
+      l.text(424, y + 24, `× ${n}`, 17, C.text, 'end', true);
+      if (c.lv === 1 && fill > 0) l.text(360, y + 24, `スペルの空き +${fill}`, 11, C.dim, 'end');
+    });
+    // 右: スペル（2枚まで、重複なし）
+    l.text(470, 86, `スペル（${RULES.maxSpells}枚まで。同じものは入れられない）`, 12, C.dim, 'start');
+    SPELLS.forEach((c, i) => {
+      const y = 102 + i * 58, on = i === this.cur.deck, inDeck = sp.includes(c.id);
+      l.rect(470, y, 450, 48, { fill: on ? C.sel : C.panel, stroke: on ? C.white : C.line, sw: on ? 3 : 2, rx: 8 });
+      if (on) this.cursor(l, 456, y + 24);
+      l.rect(482, y + 8, 32, 32, { fill: C.spell, rx: 6, alpha: inDeck ? 1 : 0.35 });
+      l.text(498, y + 24, c.mark, 15, C.text, 'middle', true, inDeck ? 1 : 0.6);
+      l.text(530, y + 24, c.name, 16, inDeck ? C.text : C.dim, 'start', inDeck);
+      l.rect(826, y + 12, 78, 24, { fill: inDeck ? C.item : undefined, stroke: inDeck ? undefined : C.ng, sw: 1.5, rx: 12 });
+      l.text(865, y + 24, inDeck ? '入っている' : '入れていない', 10, inDeck ? C.ink : C.faint, 'middle', inDeck);
+    });
+    const d = SPELLS[this.cur.deck];
+    l.rect(470, 346, 450, 76, { fill: C.deep, stroke: C.line, rx: 10 });
+    l.text(494, 370, d.name, 15, C.text, 'start', true);
+    l.text(494, 398, d.long, 12, C.dim, 'start');
+    l.text(40, 346, 'スペルは、次に出すアタック1枚にかかる。', 12, C.dim, 'start');
+    l.text(40, 368, '続けて出せば、効果は重なる。', 12, C.dim, 'start');
+    if (sp.length < RULES.maxSpells) l.text(40, 398, `スペルが${RULES.maxSpells}枚より少ない分は、C で埋まる。`, 12, C.keep, 'start');
+    this.guide(l, '↑↓ 選ぶ　　○ 入れる / 外す　　✕ 戻る', '↑↓ 選ぶ　　Enter 入れる / 外す　　Backspace 戻る');
+  }
+
+  private drawShop(l: Layer) {
+    l.rect(0, 0, W, H, { fill: C.bg });
+    const s = this.save, sell = this.sellList();
+    l.text(40, 40, 'ショップ', 24, C.text, 'start', true);
+    l.text(920, 40, `所持金  ${s.gold} G`, 16, C.keep, 'end', true);
+    l.text(40, 80, '買う', 12, C.dim, 'start', true);
+    SHOP.forEach((g, i) => {
+      const y = 94 + i * 46, on = i === this.cur.shop, own = (g.kind === 'weapon' ? s.weapons : s.armors).includes(g.def.id), poor = !own && s.gold < (g.def.price ?? 0);
+      l.rect(40, y, 400, 40, { fill: on ? C.sel : C.panel, stroke: on ? C.white : C.line, sw: on ? 3 : 2, rx: 8 });
+      if (on) this.cursor(l, 26, y + 20);
+      l.text(58, y + 20, g.kind === 'weapon' ? '武器' : '防具', 11, C.dim, 'start');
+      l.text(100, y + 20, g.def.name, 16, own ? C.dim : C.text, 'start', on);
+      l.text(424, y + 20, own ? '購入済み' : `${g.def.price} G`, 15, own ? C.faint : poor ? C.warn : C.keep, 'end', true);
+    });
+    const y0 = 94 + SHOP.length * 46 + 22;
+    l.text(40, y0, '売る（討伐で手に入れた物）', 12, C.dim, 'start', true);
+    if (!sell.length) l.text(58, y0 + 34, '売れる物を持っていない。敵を倒すと手に入る。', 13, C.faint, 'start');
+    sell.forEach((d, i) => {
+      const y = y0 + 14 + i * 46, on = SHOP.length + i === this.cur.shop, n = s.loot[d.id];
+      l.rect(40, y, 400, 40, { fill: on ? C.sel : C.panel, stroke: on ? C.white : C.line, sw: on ? 3 : 2, rx: 8 });
+      if (on) this.cursor(l, 26, y + 20);
+      l.text(58, y + 20, `${d.name} ×${n}`, 16, C.text, 'start', on);
+      l.text(424, y + 20, `+${d.price * n} G`, 15, C.item, 'end', true);
+    });
+    // 右: 選んでいる品の説明
+    l.rect(470, 80, 450, 240, { fill: C.panel, stroke: C.line, rx: 12 });
+    const g = SHOP[this.cur.shop], d = sell[this.cur.shop - SHOP.length];
+    if (g) {
+      const own = (g.kind === 'weapon' ? s.weapons : s.armors).includes(g.def.id);
+      l.text(494, 114, g.def.name, 22, C.text, 'start', true);
+      l.text(896, 114, own ? '購入済み' : `${g.def.price} G`, 18, own ? C.faint : C.keep, 'end', true);
+      if (g.kind === 'weapon') {
+        l.text(494, 160, powerText(g.def.power), 15, C.text, 'start', true);
+        l.text(494, 190, `いまの ${this.weapon.name}:  ${powerText(this.weapon.power)}`, 12, C.dim, 'start');
+      } else {
+        l.text(494, 160, `防御 +${g.def.def}（受けるダメージを ${g.def.def} 減らす。最低1は受ける）`, 14, C.text, 'start', true);
+        l.text(494, 190, `いまの ${this.armor.name}:  防御 +${this.armor.def}`, 12, C.dim, 'start');
+      }
+      l.text(494, 232, g.def.desc, 13, C.dim, 'start');
+      l.text(494, 286, own ? 'メニューの「装備」で身に着けられる。' : s.gold < (g.def.price ?? 0) ? `あと ${(g.def.price ?? 0) - s.gold} G 足りない。` : '○ で買う。買った物は「装備」で身に着ける。', 12, own ? C.dim : s.gold < (g.def.price ?? 0) ? C.warn : C.keep, 'start');
+    } else if (d) {
+      l.text(494, 114, d.name, 22, C.text, 'start', true);
+      l.text(494, 160, `1個 ${d.price} G　　持っている数 ${s.loot[d.id]}`, 15, C.text, 'start', true);
+      l.text(494, 232, '○ で、持っている分をすべて売る。', 13, C.dim, 'start');
+    }
+    this.guide(l, '↑↓ 選ぶ　　○ 買う / 売る　　✕ 戻る', '↑↓ 選ぶ　　Enter 買う / 売る　　Backspace 戻る');
+  }
+
   private drawHelp(l: Layer) {
     l.rect(0, 0, W, H, { fill: C.bg });
     l.text(40, 40, '操作説明', 24, C.text, 'start', true);
@@ -644,9 +805,9 @@ export class GameScene extends Phaser.Scene {
     });
     const rules = [
       'カードは C → B → A → S の順に出す。同じレベル、1つ下、C はいつでも出せる。S を出すとチェインはなくなる。',
-      'スペル（ダブル・レベルX）は、次に出すアタック1枚にかかる。',
+      'スペルは、次に出すアタック1枚にかかる。デッキに入れるスペルは「カード編集」で選ぶ。',
       '入れ替えるとチェインが1段下がる。キープ以外を使い切れば下がらない。出せるカードがなくなると自動で入れ替わる。',
-      'アイテムは3つまでセットでき、それぞれ1戦に1回使える。',
+      'アイテムは3つまでセットでき、それぞれ1戦に1回使える。敵を倒すと、ショップで売れる物が手に入る。',
     ];
     l.text(40, 392, 'ルール', 12, C.dim, 'start', true);
     rules.forEach((r, i) => l.text(40, 416 + i * 22, r, 12, C.text, 'start'));

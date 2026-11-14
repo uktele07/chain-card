@@ -34,12 +34,13 @@ npm run dev
 
 ## 構成
 
-- `data/cards.json`: カード、アイテム、敵、ルールの数値
+- `data/cards.json`: カード、アイテム、武器、防具、敵、ルールの数値
 - `src/game/battle.ts`: 戦闘ルール本体（描画に依存しない）
 - `src/game/input.ts`: キーボードとゲームパッドの入力
 - `src/game/audio.ts`: 効果音とBGM（その場で合成）
 - `src/game/ui.ts`: 描画の土台（毎フレーム描き直す層）
 - `src/game/art.ts`: 敵とアイテムの仮の絵（SVGの図形）
-- `src/game/save.ts`: セーブデータ（セットしたアイテム、敵ごとの記録）
+- `src/game/save.ts`: セーブデータ（装備、デッキのスペル、お金、持ち物、敵ごとの記録）
+- `src/game/loadout.ts`: デッキと装備補正の組み立て
 - `src/scenes/GameScene.ts`: 全画面（敵の一覧、戦闘、結果、メニュー、装備）
-- `sim/`: シミュレーション（`sim/old/` は過去のルール用）
+- `sim/`: シミュレーション（`run.ts` が実行口、`battlesim.ts` が自動プレイヤー、`sim/old/` は過去のルール用）

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import data from '../../data/cards.json';
-import { Battle, type Card, type CardDef, type EnemyDef, type ItemDef, type Rules } from './battle';
+import { Battle, type Card, type CardDef, type EnemyDef, type Gear, type ItemDef, type Rules } from './battle';
 
 const realRules = data.rules as unknown as Rules;
 // 既存のテストは自動入れ替えを止めた状態で確かめる（自動入れ替えは専用のテストで見る）
@@ -23,6 +23,7 @@ function setHand(b: Battle, ids: string[]) {
   });
 }
 const total = (b: Battle) => b.pool.length + b.pending.length + b.slots.filter(s => s.card).length;
+const ALL = defs.reduce((n, d) => n + d.copies, 0);   // テストでは全種類のカードを山札に入れている
 const wait = (b: Battle, sec: number) => { for (let t = 0; t < sec; t += 0.01) b.update(0.01); };
 
 describe('レベル順', () => {
@@ -111,7 +112,7 @@ describe('スキップとキープ', () => {
     wait(b, 0.9); expect(b.charging).toBe(true);
     wait(b, 0.2); expect(b.charging).toBe(false);
     expect(b.slots.every(s => s.card)).toBe(true);
-    expect(total(b)).toBe(30);
+    expect(total(b)).toBe(ALL);
   });
 
   it('キープしたカードはスキップしても同じ場所に残る', () => {
@@ -133,7 +134,8 @@ describe('スキップとキープ', () => {
     b.press(1); wait(b, 0.2); b.press(2); wait(b, 0.2); b.press(3);
     expect(b.charging).toBe(true);
     expect(b.chain).toBe(2);
-    wait(b, 0.6);
+    expect(b.chargeTotal).toBeCloseTo(1.0);     // キープを残した使い切りは1秒
+    wait(b, 1.1);
     expect(b.charging).toBe(false);
     expect(b.chain).toBe(2);
     expect(b.slots[0].card!.id).toBe('atkS');
@@ -147,7 +149,7 @@ describe('スキップとキープ', () => {
     expect(b.press(0)).toBe('played');
     wait(b, 1);
     expect(b.slots.every(s => s.card)).toBe(true);
-    expect(total(b)).toBe(30);
+    expect(total(b)).toBe(ALL);
   });
 });
 
@@ -160,7 +162,7 @@ describe('アイテム', () => {
     expect(b.useItem(0)).toBe(false);
     expect(b.useItem(1)).toBe(true);
     expect(b.hp).toBe(90);
-    expect(total(b)).toBe(30);                 // デッキの枚数には影響しない
+    expect(total(b)).toBe(ALL);                 // デッキの枚数には影響しない
   });
 
   it('アイテムは誤入力の硬直中でも使える', () => {
@@ -242,7 +244,8 @@ describe('アイテム', () => {
     setHand(b, ['atk1', 'atk2', 'atk3', 'atkS']);
     for (let i = 0; i < 4; i++) { b.press(i); wait(b, 0.2); }
     expect(b.stats.maxTurn).toBe(16);
-    wait(b, 0.6);
+    expect(b.chargeTotal).toBeCloseTo(0.3);     // 4枚すべて使い切ると0.3秒
+    wait(b, 0.4);
     setHand(b, ['atk1', 'atk1', 'atk1', 'atk1']);
     b.press(0);
     expect(b.turnDamage).toBe(1);
@@ -276,6 +279,10 @@ describe('自動入れ替え', () => {
     expect(b.stats.autoSkips).toBe(1);
     expect(b.chain).toBe(0);
     expect(b.charging).toBe(true);
+    wait(b, 0.4);
+    expect(b.charging).toBe(true);
+    wait(b, 0.2);                              // 手詰まりから合計1.0秒ほどで配り直される
+    expect(b.charging).toBe(false);
   });
 
   it('出せるカードが1枚でもあれば入れ替わらない。キープしたカードは残る', () => {
@@ -349,8 +356,79 @@ describe('敵', () => {
   });
 });
 
-it('デッキは30枚で、内訳が設計どおり', () => {
-  expect(defs.reduce((n, d) => n + d.copies, 0)).toBe(30);
+describe('追加のスペル', () => {
+  it('ドレインは、次のアタックで与えたダメージと同じだけ回復する（ダブルなら2回分）', () => {
+    const b = new Battle(defs, rules, seeded());
+    setHand(b, ['drain', 'double', 'atk1', 'atk2']);
+    b.hp = 50;
+    b.press(0); wait(b, 0.2); b.press(1); wait(b, 0.2); b.press(2); wait(b, 0.2);
+    expect(b.hp).toBe(52);
+    b.press(3);
+    expect(b.hp).toBe(52);                     // 効果は1枚で切れる
+  });
+
+  it('ランクアップは、次のアタックを1段上として扱う。出せるかどうかは元のレベルで決まる', () => {
+    const b = new Battle(defs, rules, seeded());
+    setHand(b, ['rankup', 'atk3', 'atk1', 'atk1']);
+    b.press(0); wait(b, 0.2);
+    expect(b.press(1)).toBe('miss'); wait(b, 0.4);     // チェインなしでAは出せないまま
+    expect(b.press(2)).toBe('played'); wait(b, 0.2);   // C が B 扱いになる
+    expect(b.stats.damage).toBe(2);
+    expect(b.chain).toBe(2);
+    const c = new Battle(defs, rules, seeded());
+    setHand(c, ['rankup', 'atk3', 'atkS', 'atk1']);
+    c.chain = 2; c.chainTimer = 4;
+    c.press(0); wait(c, 0.2);
+    expect(c.press(1)).toBe('played');                 // A が S 扱い: 威力10、チェインはリセット
+    expect(c.stats.damage).toBe(10);
+    expect(c.chain).toBe(0);
+    expect(c.stats.sCount).toBe(1);
+  });
+});
+
+describe('装備', () => {
+  const gear = (g: Gear) => new Battle(defs, rules, seeded(), [], { id: 't', name: 't', hp: 999, actions: [{ name: 'a', chargeSec: 2, damage: 7 }, { name: 'b', chargeSec: 2, damage: 2 }] }, g);
+
+  it('武器でレベルごとの威力が変わる', () => {
+    const b = gear({ power: [2, 3, 4, 20] });
+    setHand(b, ['atk1', 'atk2', 'atk3', 'atkS']);
+    for (let i = 0; i < 4; i++) { b.press(i); wait(b, 0.2); }
+    expect(b.stats.damage).toBe(29);
+  });
+
+  it('斧は、アタックを出すたびに0.5秒待つ。スペルの後は待たない', () => {
+    const b = gear({ attackWaitSec: 0.5 });
+    setHand(b, ['atk1', 'atk1', 'double', 'atk1']);
+    b.press(0); wait(b, 0.3);
+    expect(b.press(1)).toBe('ignored');
+    wait(b, 0.25);
+    expect(b.press(1)).toBe('played'); wait(b, 0.55);
+    b.press(2); wait(b, 0.15);
+    expect(b.press(3)).toBe('played');
+  });
+
+  it('入れ替え時間の増減は、スキップにも使い切りにもかかる（0秒より短くはならない）', () => {
+    const bow = gear({ chargeMod: -0.5 });
+    bow.skip();
+    expect(bow.chargeTotal).toBeCloseTo(0.5);
+    wait(bow, 0.6);
+    setHand(bow, ['atk1', 'atk1', 'atk1', 'atk1']);
+    for (let i = 0; i < 4; i++) { bow.press(i); wait(bow, 0.2); }
+    expect(bow.charging).toBe(false);          // 0.3 - 0.5 → 0秒: すぐ配られる
+    const iron = gear({ chargeMod: 0.5 });
+    iron.skip();
+    expect(iron.chargeTotal).toBeCloseTo(1.5);
+  });
+
+  it('防具は受けるダメージを減らす。最低でも1は受ける', () => {
+    const b = gear({ def: 3 });
+    wait(b, 2.05); expect(b.hp).toBe(96);
+    wait(b, 2.0); expect(b.hp).toBe(95);
+  });
+});
+
+it('デッキはアタック28枚（固定）とスペル2枚で30枚になる', () => {
   expect(def('atk1').copies + def('atk2').copies + def('atk3').copies + def('atkS').copies).toBe(28);
-  expect(defs.some(d => d.effect === 'area')).toBe(false);
+  expect(defs.filter(d => d.type === 'spell').map(d => d.id)).toEqual(['double', 'levelx', 'drain', 'rankup']);
+  expect(28 + (data.rules.maxSpells as number)).toBe(30);
 });

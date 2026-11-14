@@ -6,7 +6,7 @@
     "dev": "vite --host",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
-    "sim": "vite-node sim/battlesim.ts",
+    "sim": "vite-node sim/run.ts",
     "page": "SINGLE=1 vite build && node scripts/build-page.mjs"
   },
   "dependencies": {

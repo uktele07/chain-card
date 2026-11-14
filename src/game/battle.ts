@@ -8,7 +8,7 @@ export interface CardDef {
   type: CardType;
   lv?: number;        // アタックのみ: 1=C 2=B 3=A 4=S
   power?: number;
-  effect?: string;    // スペルのみ: levelx / double
+  effect?: string;    // スペルのみ: levelx / double / drain / rankup
   desc?: string;
   copies: number;
 }
@@ -32,7 +32,16 @@ export interface EnemyAction { name: string; chargeSec: number; damage: number; 
 export interface EnemyDef {
   id: string; name: string; rank?: string; hp: number; actions: EnemyAction[];
   rankSec?: { S: number; A: number; B: number };   // 撃破タイムがこの秒数以内ならそのランク
-  unlock?: 'all';                                   // ほかの敵をすべて倒すと出現
+  unlock?: 'prev';                                  // 一覧でこれより前の敵をすべて倒すと出現
+  drop?: { id: string; name: string; price: number };   // 討伐で手に入る換金アイテム
+}
+
+/** 装備による補正（武器と防具をまとめたもの） */
+export interface Gear {
+  power?: number[];        // 武器: レベルごとの威力 [C, B, A, S]
+  attackWaitSec?: number;  // 武器: アタックを出した後、次のカードを出せるまでの待ち
+  chargeMod?: number;      // 入れ替え時間に足す秒数（マイナスなら速くなる）
+  def?: number;            // 防具: 受けるダメージを減らす量（最低1は受ける）
 }
 export interface EnemyState { def: EnemyDef; hp: number; actionIndex: number; gauge: number; stunLeft: number }
 
@@ -41,9 +50,11 @@ export interface Rules {
   chainTimerSec: number;
   allowStepDown: boolean;       // 1つ下のレベルも出せる（チェインはそのレベルに戻る）
   sResetsChain: boolean;        // Sを出すとチェインがなくなる（次はCから）
-  chargeSec: number;
-  fullConsumeChargeSec: number;
-  autoSkipDelaySec: number;     // 出せるカードがないとき、自動で入れ替えるまでの時間
+  chargeSec: number;            // スキップしたときの入れ替え時間
+  fullConsumeChargeSec: number; // 4枚すべて使い切ったとき
+  keepConsumeChargeSec: number; // キープを残して使い切ったとき
+  autoSkipDelaySec: number;     // 出せるカードがないとき、自動で入れ替えが始まるまでの時間
+  autoChargeSec: number;        // 自動で入れ替えるときの入れ替え時間（上と合わせて合計の待ちになる）
   misinputStunSec: number;
   playLockSec: number;
   keepCountsAsConsumed: boolean;
@@ -56,6 +67,7 @@ export type BattleEvent =
   | { kind: 'hit'; slot: number; damage: number; lv: number; index: number; hits: number }
   | { kind: 'spell'; slot: number; effect: string }
   | { kind: 'item'; slot: number; effect: string }
+  | { kind: 'heal'; amount: number }
   | { kind: 'keep'; slot: number; on: boolean }
   | { kind: 'miss'; slot: number }
   | { kind: 'skip'; auto: boolean }
@@ -72,6 +84,7 @@ export const MAX_CHAIN = 4;
 export class Battle {
   readonly rules: Rules;
   private rng: () => number;
+  private basePower: Record<number, number> = {};
   pool: Card[] = [];       // 山札
   pending: Card[] = [];    // 使用済み・スキップ済み。次の補充が終わったら山札に戻る
   slots: Slot[] = [];
@@ -88,7 +101,8 @@ export class Battle {
   missLock = false;        // 直近のロックが誤入力によるものか
   invincible = false;      // テスト用: 敵の攻撃でHPが減らない
   autoSkipWait = 0;        // 出せるカードがない状態が続いている秒数
-  buffs = { double: 0, levelx: 0 };
+  buffs = { double: 0, levelx: 0, drain: 0, rankup: 0 };
+  gear: Gear = {};
   sandLeft = 0;
   sandScale = 1;           // 時の砂の効果中、入れ替え時間に掛ける倍率
   rageLeft = 0;            // 強化薬の残り秒
@@ -100,8 +114,9 @@ export class Battle {
   stats = { damage: 0, plays: 0, skips: 0, autoSkips: 0, misses: 0, sCount: 0, fullConsumes: 0, maxTurn: 0, chainBreaks: 0, taken: 0 };
   events: BattleEvent[] = [];
 
-  constructor(defs: CardDef[], rules: Rules, rng: () => number = Math.random, items: (ItemDef | null)[] = [], enemy: EnemyDef | null = null) {
+  constructor(defs: CardDef[], rules: Rules, rng: () => number = Math.random, items: (ItemDef | null)[] = [], enemy: EnemyDef | null = null, gear: Gear = {}) {
     this.rules = rules;
+    this.gear = gear;
     this.rng = rng;
     this.hp = rules.playerMaxHp;
     this.items = items.map(def => (def ? { def, used: false } : null));
@@ -111,7 +126,10 @@ export class Battle {
       this.announceAction();
     }
     let uid = 0;
-    for (const d of defs) for (let i = 0; i < d.copies; i++) this.pool.push({ ...d, uid: uid++ });
+    for (const d of defs) {
+      if (d.type === 'attack') this.basePower[d.lv!] = d.power!;
+      for (let i = 0; i < d.copies; i++) this.pool.push({ ...d, uid: uid++ });
+    }
     for (let i = 0; i < rules.handSize; i++) this.slots.push({ card: null, kept: false });
     this.refill(true);
   }
@@ -150,7 +168,7 @@ export class Battle {
     e.gauge += dt;
     const a = this.enemyAction!;
     if (e.gauge < a.chargeSec) return;
-    const damage = this.invincible ? 0 : a.damage;
+    const damage = this.invincible ? 0 : Math.max(1, a.damage - (this.gear.def ?? 0));
     this.hp = Math.max(0, this.hp - damage);
     this.stats.taken += damage;
     this.events.push({ kind: 'enemyAttack', name: a.name, damage, big: !!a.big });
@@ -168,6 +186,11 @@ export class Battle {
     if (!stuck) { this.autoSkipWait = 0; return; }
     this.autoSkipWait += dt;
     if (this.autoSkipWait >= this.rules.autoSkipDelaySec) { this.autoSkipWait = 0; this.doSkip(true); }
+  }
+
+  /** そのレベルのアタックの威力（武器で決まる） */
+  powerOf(lv: number): number {
+    return this.gear.power?.[lv - 1] ?? this.basePower[lv] ?? 0;
   }
 
   canPlay(card: Card): boolean {
@@ -194,17 +217,25 @@ export class Battle {
     this.lock = this.rules.playLockSec;
 
     if (card.type === 'attack') {
+      // ランクアップ: 1段上のレベルとして扱う（威力もチェインも）。出せるかどうかは元のレベルで決まる
+      const lv = Math.min(MAX_CHAIN, card.lv! + (this.buffs.rankup > 0 ? 1 : 0));
       // ダブル: 同じアタックを2回当てる。強化薬は1回ごとに乗る
       const hits = this.buffs.double > 0 ? 2 : 1;
-      const per = card.power! + (this.rageLeft > 0 ? this.rageBonus : 0);
+      const per = this.powerOf(lv) + (this.rageLeft > 0 ? this.rageBonus : 0);
       const damage = per * hits;
       this.stats.damage += damage;
       this.turnDamage += damage;
       this.stats.maxTurn = Math.max(this.stats.maxTurn, this.turnDamage);
-      if (card.lv === MAX_CHAIN) this.stats.sCount++;
-      for (let h = 0; h < hits; h++) this.events.push({ kind: 'hit', slot: i, damage: per, lv: card.lv!, index: h, hits });
-      this.buffs = { double: 0, levelx: 0 };
-      this.chain = card.lv === MAX_CHAIN && this.rules.sResetsChain ? 0 : card.lv!;
+      if (lv === MAX_CHAIN) this.stats.sCount++;
+      for (let h = 0; h < hits; h++) this.events.push({ kind: 'hit', slot: i, damage: per, lv, index: h, hits });
+      if (this.buffs.drain > 0) {   // ドレイン: 与えたダメージと同じだけ回復
+        const before = this.hp;
+        this.hp = Math.min(this.rules.playerMaxHp, this.hp + damage);
+        this.events.push({ kind: 'heal', amount: this.hp - before });
+      }
+      this.buffs = { double: 0, levelx: 0, drain: 0, rankup: 0 };
+      this.chain = lv === MAX_CHAIN && this.rules.sResetsChain ? 0 : lv;
+      this.lock = Math.max(this.lock, this.gear.attackWaitSec ?? 0);   // 斧など: 次のカードまでの待ち
       if (this.enemy) {
         this.enemy.hp = Math.max(0, this.enemy.hp - damage);
         if (this.enemy.hp <= 0) { this.result = 'won'; this.events.push({ kind: 'win' }); }
@@ -282,7 +313,7 @@ export class Battle {
     this.stats.skips++;
     if (auto) this.stats.autoSkips++;
     this.events.push({ kind: 'skip', auto });
-    this.startCharge(false);
+    this.startCharge(auto ? this.rules.autoChargeSec : this.rules.chargeSec);
     return true;
   }
 
@@ -291,12 +322,16 @@ export class Battle {
     const hasEmpty = this.slots.some(s => !s.card);
     if (!hasEmpty) return;
     const left = this.slots.filter(s => s.card && !(this.rules.keepCountsAsConsumed && s.kept)).length;
-    if (left === 0) { this.stats.fullConsumes++; this.startCharge(true); }
+    if (left > 0) return;
+    // 使い切り: 4枚とも出したときは速く、キープを残したときは通常の速さ。どちらもチェインは下がらない
+    const all = this.slots.every(s => !s.card);
+    this.stats.fullConsumes++;
+    this.startCharge(all ? this.rules.fullConsumeChargeSec : this.rules.keepConsumeChargeSec);
   }
 
-  private startCharge(full: boolean) {
+  private startCharge(sec: number) {
     this.charging = true;
-    this.chargeTotal = (full ? this.rules.fullConsumeChargeSec : this.rules.chargeSec) * (this.sandLeft > 0 ? this.sandScale : 1);
+    this.chargeTotal = Math.max(0, sec + (this.gear.chargeMod ?? 0)) * (this.sandLeft > 0 ? this.sandScale : 1);
     this.chargeLeft = this.chargeTotal;
     if (this.chargeTotal === 0) this.refill(false);
   }

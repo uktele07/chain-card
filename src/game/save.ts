@@ -1,7 +1,20 @@
-// セーブデータ（ブラウザに保存）: セットしたアイテムと、敵ごとの記録
+// セーブデータ（ブラウザに保存）: 装備、デッキのスペル、持ち物、お金、敵ごとの記録
 export type Rank = 'S' | 'A' | 'B' | 'C';
 export interface EnemyRecord { bestTime: number; bestRank: Rank }
-export interface SaveData { items: (string | null)[]; records: Record<string, EnemyRecord> }
+export interface SaveData {
+  items: (string | null)[];        // セットしたアイテム（3枠、重複なし）
+  spells: string[];                // デッキに入れるスペル
+  weapon: string; armor: string;   // 装備中
+  weapons: string[]; armors: string[];   // 持っている武器・防具
+  gold: number;
+  loot: Record<string, number>;    // 換金アイテムの個数
+  records: Record<string, EnemyRecord>;
+}
+export interface SaveConfig {
+  items: string[]; defaultItems: (string | null)[];
+  spells: string[]; defaultSpells: string[]; maxSpells: number;
+  weapons: string[]; armors: string[]; startWeapon: string; startArmor: string;
+}
 
 const KEY = 'chain-card-save-v1';
 const RANKS: Rank[] = ['C', 'B', 'A', 'S'];
@@ -12,20 +25,41 @@ export function rankOf(sec: number, th?: { S: number; A: number; B: number }): R
   return sec <= th.S ? 'S' : sec <= th.A ? 'A' : sec <= th.B ? 'B' : 'C';
 }
 
-export function loadSave(defaults: (string | null)[], validItems: string[]): SaveData {
-  const fresh: SaveData = { items: [...defaults], records: {} };
+function fresh(c: SaveConfig): SaveData {
+  return { items: [...c.defaultItems], spells: [...c.defaultSpells], weapon: c.startWeapon, armor: c.startArmor, weapons: [c.startWeapon], armors: [c.startArmor], gold: 0, loot: {}, records: {} };
+}
+const uniq = <T>(a: T[]) => a.filter((x, i) => a.indexOf(x) === i);
+
+/** 保存内容を読む。足りない項目や古い形式は、初期値で補う */
+export function loadSave(c: SaveConfig): SaveData {
+  const f = fresh(c);
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return fresh;
+    if (!raw) return f;
     const d = JSON.parse(raw) as Partial<SaveData>;
-    const items = Array.isArray(d.items) ? d.items.slice(0, 3).map(x => (typeof x === 'string' && validItems.includes(x) ? x : null)) : fresh.items;
+    // アイテム: 3枠。同じものが重なっていたら、2つ目以降は「なし」にする
+    const seen = new Set<string>();
+    const items = (Array.isArray(d.items) ? d.items : f.items).slice(0, 3).map(x => {
+      if (typeof x !== 'string' || !c.items.includes(x) || seen.has(x)) return null;
+      seen.add(x); return x;
+    });
     while (items.length < 3) items.push(null);
+    const spells = Array.isArray(d.spells) ? uniq(d.spells.filter(x => c.spells.includes(x))).slice(0, c.maxSpells) : f.spells;
+    const weapons = uniq([c.startWeapon, ...(Array.isArray(d.weapons) ? d.weapons.filter(x => c.weapons.includes(x)) : [])]);
+    const armors = uniq([c.startArmor, ...(Array.isArray(d.armors) ? d.armors.filter(x => c.armors.includes(x)) : [])]);
     const records: Record<string, EnemyRecord> = {};
     for (const [k, v] of Object.entries(d.records ?? {})) {
       if (v && typeof v.bestTime === 'number' && RANKS.includes(v.bestRank)) records[k] = { bestTime: v.bestTime, bestRank: v.bestRank };
     }
-    return { items, records };
-  } catch { return fresh; }   // 保存が使えない環境でも、そのまま遊べるようにする
+    const loot: Record<string, number> = {};
+    for (const [k, v] of Object.entries(d.loot ?? {})) if (typeof v === 'number' && v > 0) loot[k] = Math.floor(v);
+    return {
+      items, spells, weapons, armors, records, loot,
+      weapon: weapons.includes(d.weapon ?? '') ? d.weapon! : c.startWeapon,
+      armor: armors.includes(d.armor ?? '') ? d.armor! : c.startArmor,
+      gold: typeof d.gold === 'number' && d.gold > 0 ? Math.floor(d.gold) : 0,
+    };
+  } catch { return f; }   // 保存が使えない環境でも、そのまま遊べるようにする
 }
 export function storeSave(d: SaveData) { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch { /* 保存できなくても続行 */ } }
 export function clearSave() { try { localStorage.removeItem(KEY); } catch { /* 同上 */ } }
