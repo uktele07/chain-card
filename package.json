@@ -7,12 +7,15 @@
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
     "sim": "vite-node sim/run.ts",
-    "page": "SINGLE=1 vite build && node scripts/build-page.mjs"
+    "page": "SINGLE=1 vite build && node scripts/build-page.mjs",
+    "e2e": "vitest run --config vitest.e2e.config.ts",
+    "check": "npm test && npm run build && npm run e2e"
   },
   "dependencies": {
     "phaser": "^3.90.0"
   },
   "devDependencies": {
+    "playwright": "^1.63.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vite-node": "^6.0.0",
