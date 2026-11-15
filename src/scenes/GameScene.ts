@@ -45,7 +45,9 @@ const MON = { x: 808, y: 330, size: 258 };
 const RESULT_WAIT = 0.8;
 
 type Base = 'list' | 'ready' | 'fight' | 'result';
-type Overlay = 'menu' | 'equip' | 'deck' | 'shop' | 'help' | 'reset' | 'pause' | 'resume';
+type Overlay = 'menu' | 'equip' | 'deck' | 'shop' | 'confirm' | 'help' | 'reset' | 'pause' | 'resume';
+/** 売買の確認。buy=購入 / sell=個数を選んで売る / sellAll=戦利品をすべて売る */
+type Deal = { kind: 'buy'; index: number } | { kind: 'sell'; id: string; qty: number } | { kind: 'sellAll' };
 const MENU: { label: string; off?: boolean; act?: Overlay | 'close' }[] = [
   { label: '装備', act: 'equip' }, { label: 'カード編集', act: 'deck' }, { label: 'ショップ', act: 'shop' }, { label: '設定', off: true },
   { label: '操作説明', act: 'help' }, { label: 'セーブリセット', act: 'reset' }, { label: '閉じる', act: 'close' },
@@ -65,6 +67,8 @@ export class GameScene extends Phaser.Scene {
   private overlays: Overlay[] = [];
   private cur = { list: 0, menu: 0, pause: 0, result: 0, reset: 0, slot: 0, opt: 0, deck: 0, shop: 0, sell: 0 };
   private shopTab: 0 | 1 = 0;       // 0=買う 1=売る
+  private deal: Deal | null = null;
+  private dealCursor = 0;           // 0=実行 1=やめる
   private gained: { name: string; price: number } | null = null;   // 直前の戦闘で手に入れた換金アイテム
   private equipFocus: 'slots' | 'options' = 'slots';
   private enemy: EnemyDef = ENEMIES[0];
@@ -79,7 +83,7 @@ export class GameScene extends Phaser.Scene {
   create() {
     this.cameras.main.setOrigin(0, 0).setZoom(ZOOM);
     this.input2 = new Input();
-    this.L = [new Layer(this, 0), new Layer(this, 100), new Layer(this, 200)];
+    this.L = [new Layer(this, 0), new Layer(this, 100), new Layer(this, 200), new Layer(this, 300)];
     this.fx = this.add.graphics().setDepth(60);
     loadArt(this, ZOOM);
     this.save = loadSave(SAVE_CONFIG);
@@ -241,7 +245,7 @@ export class GameScene extends Phaser.Scene {
         break;
 
       case 'shop': {
-        const sell = this.sellList();
+        const sell = this.sellList(), sellRows = sell.length ? sell.length + 1 : 0;   // 最後の行は「すべて売る」
         if (b === 'skip' || b === 'left' || b === 'right') { this.shopTab = this.shopTab ? 0 : 1; this.snd.uiMove(); }   // L1 / R1: 買う ⇔ 売る
         else if (back || b === 'options') { this.snd.uiBack(); this.pop(); }
         else if (this.shopTab === 0) {
@@ -250,16 +254,50 @@ export class GameScene extends Phaser.Scene {
           else if (ok) {
             const g = SHOP[this.cur.shop], own = g.kind === 'weapon' ? this.save.weapons : this.save.armors;
             if (own.includes(g.def.id) || this.save.gold < (g.def.price ?? 0)) this.snd.miss();
-            else { this.save.gold -= g.def.price ?? 0; own.push(g.def.id); this.snd.item('heal'); storeSave(this.save); }
+            else this.openDeal({ kind: 'buy', index: this.cur.shop });
           }
         } else {
-          if (b === 'up' && sell.length) this.move('sell', -1, sell.length);
-          else if (b === 'down' && sell.length) this.move('sell', 1, sell.length);
+          if (b === 'up' && sellRows) this.move('sell', -1, sellRows);
+          else if (b === 'down' && sellRows) this.move('sell', 1, sellRows);
           else if (ok) {
-            const d = sell[this.cur.sell];
-            if (!d) this.snd.miss();
-            else { this.save.gold += d.price * this.save.loot[d.id]; delete this.save.loot[d.id]; this.snd.uiOk(); this.cur.sell = Math.max(0, Math.min(this.cur.sell, sell.length - 2)); storeSave(this.save); }
+            if (!sellRows) this.snd.miss();
+            else if (this.cur.sell >= sell.length) this.openDeal({ kind: 'sellAll' });
+            else this.openDeal({ kind: 'sell', id: sell[this.cur.sell].id, qty: 1 });
           }
+        }
+        break;
+      }
+
+      case 'confirm': {
+        const d = this.deal;
+        if (!d) { this.pop(); break; }
+        if (b === 'left' || b === 'right') { this.dealCursor = this.dealCursor ? 0 : 1; this.snd.uiMove(); }
+        else if (d.kind === 'sell' && (b === 'up' || b === 'down')) {       // 上下で売る個数を変える
+          const max = this.save.loot[d.id] ?? 1;
+          d.qty = ((d.qty - 1 + (b === 'up' ? 1 : -1) + max) % max) + 1;
+          this.snd.uiMove();
+        } else if (back || (ok && this.dealCursor === 1)) { this.snd.uiBack(); this.deal = null; this.pop(); }
+        else if (ok) {
+          const sv = this.save;
+          if (d.kind === 'buy') {
+            const g = SHOP[d.index];
+            sv.gold -= g.def.price ?? 0;
+            (g.kind === 'weapon' ? sv.weapons : sv.armors).push(g.def.id);
+            this.snd.item('heal');
+          } else {
+            for (const x of this.sellList()) {
+              if (d.kind === 'sell' && x.id !== d.id) continue;
+              const n = d.kind === 'sell' ? Math.min(d.qty, sv.loot[x.id]) : sv.loot[x.id];
+              sv.gold += x.price * n;
+              sv.loot[x.id] -= n;
+              if (sv.loot[x.id] <= 0) delete sv.loot[x.id];
+            }
+            const left = this.sellList().length;
+            this.cur.sell = Math.max(0, Math.min(this.cur.sell, left));     // 行が減ったらカーソルを収める
+            this.snd.uiOk();
+          }
+          storeSave(sv);
+          this.deal = null; this.pop();
         }
         break;
       }
@@ -281,11 +319,13 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private openDeal(d: Deal) { this.deal = d; this.dealCursor = 0; this.overlays.push('confirm'); this.snd.uiOk(); }
+
   /** 装備画面で、選んでいる枠にセットできるものの一覧 */
-  private equipOptions(): { id: string | null; name: string; on: boolean; note: string; desc: string; power?: number[]; pick: () => void }[] {
+  private equipOptions(): { id: string | null; name: string; on: boolean; note: string; desc: string; power?: number[]; def?: number; pick: () => void }[] {
     const s = this.save, row = this.cur.slot;
     if (row === 0) return WEAPONS.filter(w => s.weapons.includes(w.id)).map(w => ({ id: null, name: w.name, on: s.weapon === w.id, note: s.weapon === w.id ? '装備中' : '', desc: w.desc, power: w.power, pick: () => { s.weapon = w.id; } }));
-    if (row === 1) return ARMORS.filter(a => s.armors.includes(a.id)).map(a => ({ id: null, name: a.name, on: s.armor === a.id, note: s.armor === a.id ? '装備中' : '', desc: `被ダメージ −${a.def}${a.def > 0 ? '（最低1）' : ''}。${a.desc}`, pick: () => { s.armor = a.id; } }));
+    if (row === 1) return ARMORS.filter(a => s.armors.includes(a.id)).map(a => ({ id: null, name: a.name, on: s.armor === a.id, note: s.armor === a.id ? '装備中' : '', desc: a.desc, def: a.def, pick: () => { s.armor = a.id; } }));
     const k = row - 3;
     return [null, ...ITEMS].map(o => {
       const at = o ? s.items.indexOf(o.id) : -1;
@@ -371,22 +411,22 @@ export class GameScene extends Phaser.Scene {
   private draw() {
     for (const l of this.L) l.begin();
     this.fx.clear();
-    const [a, b, c] = this.L;
+    const [a, b] = this.L;
     if (this.base === 'list') this.drawList(a);
     else this.drawBattle(a);
     if (this.base === 'result') this.drawResult(b);
     this.overlays.forEach((o, i) => {
-      const l = this.L[Math.min(2, i + 1)];
+      const l = this.L[Math.min(3, i + 1)];
       if (o === 'menu') this.drawMenu(l);
       else if (o === 'equip') this.drawEquip(l);
       else if (o === 'deck') this.drawDeck(l);
       else if (o === 'shop') this.drawShop(l);
+      else if (o === 'confirm') this.drawConfirm(l);
       else if (o === 'help') this.drawHelp(l);
       else if (o === 'reset') this.drawReset(l);
       else if (o === 'pause') this.drawPause(l);
       else if (o === 'resume') this.drawResume(l);
     });
-    void c;
     for (const l of this.L) l.end();
   }
 
@@ -726,11 +766,23 @@ export class GameScene extends Phaser.Scene {
       if (o.note) l.text(898, y, o.note, 11, C.dim, 'end');
     });
     const d = opts[shown];
-    l.rect(470, 416, 450, 76, { fill: C.deep, stroke: C.line, rx: 10 });
-    if (d?.id) l.image(iconKey(d.id === 'none' ? null : d.id), 506, 454, 44);
-    l.text(d?.id ? 542 : 494, d?.power ? 436 : 440, d?.name ?? '', 15, C.text, 'start', true);
-    if (d?.power) { this.powerChips(l, 690, 436, d.power); l.text(494, 470, d.desc, 12, C.dim, 'start'); }
-    else l.text(d?.id ? 542 : 494, 468, d?.desc ?? '', 12, C.dim, 'start');
+    l.rect(470, 400, 450, 96, { fill: C.deep, stroke: C.line, rx: 10 });
+    if (d && (d.power || d.def !== undefined)) {
+      // 武器・防具: ショップと同じく、選んでいる物と現在の装備を上下にそろえて比べる
+      const same = d.on;
+      l.text(494, 422, d.name, 14, C.text, 'start', true);
+      if (d.power) this.powerChips(l, 660, 422, d.power); else l.text(660, 422, `被ダメージ −${d.def}${d.def ? '（最低1）' : ''}`, 15, C.text, 'start', true);
+      if (same) l.text(494, 448, '装備中', 12, C.dim, 'start');
+      else {
+        l.text(494, 448, `現在: ${d.power ? this.weapon.name : this.armor.name}`, 12, C.dim, 'start');
+        if (d.power) this.powerChips(l, 660, 448, this.weapon.power, 0.6); else l.text(660, 448, `被ダメージ −${this.armor.def}`, 15, C.dim, 'start', true);
+      }
+      l.text(494, 476, d.desc, 12, C.dim, 'start');
+    } else {
+      if (d?.id) l.image(iconKey(d.id === 'none' ? null : d.id), 506, 448, 44);
+      l.text(d?.id ? 542 : 494, 434, d?.name ?? '', 15, C.text, 'start', true);
+      l.text(d?.id ? 542 : 494, 462, d?.desc ?? '', 12, C.dim, 'start');
+    }
     this.guide(l, slots ? '↑↓ 選ぶ　　○ 変更　　✕ 戻る' : '↑↓ 選ぶ　　○ セット　　✕ やめる', slots ? '↑↓ 選ぶ　　Enter 変更　　Backspace 戻る' : '↑↓ 選ぶ　　Enter セット　　Backspace やめる');
   }
 
@@ -810,8 +862,8 @@ export class GameScene extends Phaser.Scene {
         l.text(494, 196, `現在: ${this.armor.name}`, 12, C.dim, 'start');
         l.text(660, 196, `被ダメージ −${this.armor.def}`, 15, C.dim, 'start', true);
       }
-      l.text(494, 240, g.def.desc, 13, C.dim, 'start');
-      l.text(494, 296, own ? '「装備」で着けられる。' : s.gold < price ? `あと ${price - s.gold} G 足りない。` : `${this.pad ? '○' : 'Enter'} で購入。「装備」で着ける。`, 12, own ? C.dim : s.gold < price ? C.warn : C.keep, 'start');
+      l.text(494, 240, g.def.desc, 12, C.dim, 'start');
+      l.text(494, 296, own ? '「装備」で着けられる。' : s.gold < price ? `あと ${price - s.gold} G 足りない。` : '買った物は「装備」で着ける。', 12, own ? C.dim : s.gold < price ? C.warn : C.keep, 'start');
     } else if (!sell.length) {
       l.rect(40, 80, 400, 100, { fill: C.panel, stroke: C.line, rx: 12 });
       l.text(60, 116, '売れる物がない。', 14, C.dim, 'start');
@@ -819,22 +871,72 @@ export class GameScene extends Phaser.Scene {
       l.text(494, 114, '売る', 22, C.dim, 'start', true);
       l.text(494, 160, '戦利品をお金に換えられる。', 13, C.dim, 'start');
     } else {
-      const ys = this.rows(l, 40, 80, 400, 44, sell.length, this.cur.sell, { heads: { 0: '戦利品' } });
+      const total = sell.reduce((n, d) => n + d.price * s.loot[d.id], 0), cur = Math.min(this.cur.sell, sell.length);
+      const ys = this.rows(l, 40, 80, 400, 44, sell.length + 1, cur, { heads: { 0: '戦利品' } });
       sell.forEach((d, i) => {
-        l.text(80, ys[i], d.name, 16, C.text, 'start', i === this.cur.sell);
+        l.text(80, ys[i], d.name, 16, C.text, 'start', i === cur);
         l.text(320, ys[i], `×${s.loot[d.id]}`, 13, C.dim, 'end');
-        l.text(418, ys[i], `+${d.price * s.loot[d.id]} G`, 15, C.item, 'end', true);
+        l.text(418, ys[i], `${d.price} G`, 15, C.keep, 'end', true);
       });
-      const d = sell[Math.min(this.cur.sell, sell.length - 1)], from = ENEMIES.find(e => e.drop?.id === d.id);
-      l.text(494, 114, d.name, 22, C.text, 'start', true);
-      l.text(494, 160, `1個 ${d.price} G`, 15, C.text, 'start', true);
-      l.text(494, 190, `所持 ${s.loot[d.id]}個`, 13, C.dim, 'start');
-      if (from) l.text(494, 240, `${from.name} の戦利品。`, 13, C.dim, 'start');
-      l.text(494, 296, `${this.pad ? '○' : 'Enter'} ですべて売る（+${d.price * s.loot[d.id]} G）。`, 12, C.keep, 'start');
+      l.text(80, ys[sell.length], 'すべて売る', 16, C.text, 'start', cur === sell.length);
+      l.text(418, ys[sell.length], `+${total} G`, 15, C.item, 'end', true);
+      const d = sell[cur];
+      if (d) {
+        const from = ENEMIES.find(e => e.drop?.id === d.id);
+        l.text(494, 114, d.name, 22, C.text, 'start', true);
+        l.text(494, 160, `1個 ${d.price} G`, 15, C.text, 'start', true);
+        l.text(494, 190, `所持 ${s.loot[d.id]}個`, 13, C.dim, 'start');
+        if (from) l.text(494, 240, `${from.name} の戦利品。`, 13, C.dim, 'start');
+        l.text(494, 296, '個数を選んで売る。', 12, C.keep, 'start');
+      } else {
+        l.text(494, 114, 'すべて売る', 22, C.text, 'start', true);
+        l.text(494, 160, `合計 +${total} G`, 15, C.text, 'start', true);
+        l.text(494, 190, sell.map(x => `${x.name} ×${s.loot[x.id]}`).join('　'), 12, C.dim, 'start');
+        l.text(494, 296, '持っている戦利品をまとめて売る。', 12, C.keep, 'start');
+      }
     }
     this.guide(l,
       buying ? '↑↓ 選ぶ　　○ 買う　　L1 / R1 売る　　✕ 戻る' : '↑↓ 選ぶ　　○ 売る　　L1 / R1 買う　　✕ 戻る',
       buying ? '↑↓ 選ぶ　　Enter 買う　　←→ 売る　　Backspace 戻る' : '↑↓ 選ぶ　　Enter 売る　　←→ 買う　　Backspace 戻る');
+  }
+
+  /** 売買の確認。売るときは、ここで個数も選ぶ */
+  private drawConfirm(l: Layer) {
+    const d = this.deal, s = this.save;
+    if (!d) return;
+    this.dim(l, 0.6);
+    l.rect(CX - 250, 150, 500, 250, { fill: C.panel, stroke: C.line, rx: 12 });
+    let act = '買う', after = s.gold;
+    if (d.kind === 'buy') {
+      const g = SHOP[d.index], price = g.def.price ?? 0;
+      after = s.gold - price;
+      l.text(CX, 188, `${g.def.name} を買いますか？`, 19, C.text, 'middle', true);
+      l.text(CX, 244, `${price} G`, 26, C.keep, 'middle', true);
+    } else if (d.kind === 'sell') {
+      const x = this.sellList().find(v => v.id === d.id), max = s.loot[d.id] ?? 0, price = x?.price ?? 0;
+      act = '売る'; after = s.gold + price * d.qty;
+      l.text(CX, 188, `${x?.name ?? ''} を売りますか？`, 19, C.text, 'middle', true);
+      l.text(CX - 150, 244, '個数', 13, C.dim, 'start');
+      l.text(CX - 46, 244, '▼', 14, max > 1 ? C.text : C.faint);
+      l.text(CX, 244, d.qty, 26, C.text, 'middle', true);
+      l.text(CX + 46, 244, '▲', 14, max > 1 ? C.text : C.faint);
+      l.text(CX + 150, 244, `/ ${max}`, 13, C.dim, 'end');
+      l.text(CX, 280, `+${price * d.qty} G`, 18, C.item, 'middle', true);
+    } else {
+      const list = this.sellList(), total = list.reduce((n, x) => n + x.price * s.loot[x.id], 0);
+      act = '売る'; after = s.gold + total;
+      l.text(CX, 188, '戦利品をすべて売りますか？', 19, C.text, 'middle', true);
+      l.text(CX, 226, list.map(x => `${x.name} ×${s.loot[x.id]}`).join('　'), 12, C.dim);
+      l.text(CX, 262, `+${total} G`, 26, C.item, 'middle', true);
+    }
+    l.text(CX, 312, `所持金  ${s.gold} G  →  ${after} G`, 13, C.dim);
+    [act, 'やめる'].forEach((label, i) => {
+      const on = i === this.dealCursor, x = i === 0 ? CX - 216 : CX + 10;
+      l.rect(x, 338, 206, 44, { fill: on ? C.sel : undefined, stroke: on ? C.white : C.line, rx: 8 });
+      l.text(x + 103, 360, label, 16, C.text, 'middle', on);
+    });
+    const qty = d.kind === 'sell';
+    this.guide(l, `${qty ? '↑↓ 個数　　' : ''}←→ 選ぶ　　○ 決定　　✕ やめる`, `${qty ? '↑↓ 個数　　' : ''}←→ 選ぶ　　Enter 決定　　Backspace やめる`);
   }
 
   private drawHelp(l: Layer) {
