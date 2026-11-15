@@ -4,11 +4,9 @@ import type { CardDef, Gear } from './battle';
 export interface WeaponDef { id: string; name: string; power: number[]; attackWaitSec?: number; chargeMod?: number; price: number | null; desc: string }
 export interface ArmorDef { id: string; name: string; def: number; chargeMod?: number; price: number | null; desc: string }
 
-/** アタック28枚（固定）＋選んだスペル。スペルが上限より少ない分はCで埋めて30枚にする */
-export function buildDeck(cards: CardDef[], spells: string[], maxSpells: number): CardDef[] {
-  return cards
-    .filter(c => c.type === 'attack' || spells.includes(c.id))
-    .map(c => (c.type === 'attack' && c.lv === 1 ? { ...c, copies: c.copies + maxSpells - spells.length } : c));
+/** アタック28枚（固定）＋選んだスペル。スペルを入れなければ、その分デッキは少なくなる（28〜30枚） */
+export function buildDeck(cards: CardDef[], spells: string[]): CardDef[] {
+  return cards.filter(c => c.type === 'attack' || spells.includes(c.id));
 }
 
 export function gearOf(weapon: WeaponDef | undefined, armor: ArmorDef | undefined): Gear {

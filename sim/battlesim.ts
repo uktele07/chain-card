@@ -11,7 +11,7 @@ export const SKILLS = { '初心者': { play: 0.8, read: 0.5, keep: 0.4 }, '普�
 export type Skill = { play: number; read: number; keep: number };
 export interface Setup { items?: string[]; weapon?: string; armor?: string; spells?: string[]; keepS?: boolean; gear?: Gear }
 
-const deckOf = (spells: string[]) => buildDeck(CARDS, spells, data.rules.maxSpells as number);
+const deckOf = (spells: string[]) => buildDeck(CARDS, spells);
 const gear = (weapon = 'sword', armor = 'leather'): Gear =>
   gearOf((data.weapons as WeaponDef[]).find(x => x.id === weapon), (data.armors as ArmorDef[]).find(x => x.id === armor));
 
