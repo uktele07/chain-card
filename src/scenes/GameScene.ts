@@ -285,7 +285,7 @@ export class GameScene extends Phaser.Scene {
   private equipOptions(): { id: string | null; name: string; on: boolean; note: string; desc: string; power?: number[]; pick: () => void }[] {
     const s = this.save, row = this.cur.slot;
     if (row === 0) return WEAPONS.filter(w => s.weapons.includes(w.id)).map(w => ({ id: null, name: w.name, on: s.weapon === w.id, note: s.weapon === w.id ? '装備中' : '', desc: w.desc, power: w.power, pick: () => { s.weapon = w.id; } }));
-    if (row === 1) return ARMORS.filter(a => s.armors.includes(a.id)).map(a => ({ id: null, name: a.name, on: s.armor === a.id, note: s.armor === a.id ? '装備中' : '', desc: `防御 +${a.def}　　${a.desc}`, pick: () => { s.armor = a.id; } }));
+    if (row === 1) return ARMORS.filter(a => s.armors.includes(a.id)).map(a => ({ id: null, name: a.name, on: s.armor === a.id, note: s.armor === a.id ? '装備中' : '', desc: `被ダメージ −${a.def}${a.def > 0 ? '（最低1）' : ''}。${a.desc}`, pick: () => { s.armor = a.id; } }));
     const k = row - 3;
     return [null, ...ITEMS].map(o => {
       const at = o ? s.items.indexOf(o.id) : -1;
@@ -487,7 +487,7 @@ export class GameScene extends Phaser.Scene {
         } else l.text(880, y + h / 2, '？？？', 13, C.faint, 'end');
       });
       const sec = e.actions.reduce((s, a) => s + a.chargeSec, 0), dmg = e.actions.reduce((s, a) => s + a.damage, 0);
-      l.text(494, 474, beaten ? `1巡 約${Math.round(sec)}秒・計 ${dmg} ダメージ` : '討伐すると、間隔とダメージが分かる。', 12, C.dim, 'start');
+      if (beaten) l.text(494, 474, `1巡 約${Math.round(sec)}秒・計 ${dmg} ダメージ`, 12, C.dim, 'start');
       if (e.drop) l.text(896, 474, beaten ? `戦利品  ${e.drop.name}（${e.drop.price} G）` : '戦利品  ？？？', 12, C.dim, 'end');
     }
     this.guide(l, '↑↓ 選ぶ　　○ 決定　　OPTIONS メニュー', '↑↓ 選ぶ　　Enter 決定　　Esc メニュー');
@@ -799,12 +799,16 @@ export class GameScene extends Phaser.Scene {
       l.text(494, 114, g.def.name, 22, C.text, 'start', true);
       l.text(896, 114, own ? '購入済み' : `${price} G`, 18, own ? C.faint : C.keep, 'end', true);
       if (g.kind === 'weapon') {
-        this.powerChips(l, 494, 160, g.def.power);
+        // 選んでいる武器と、いまの武器を上下にそろえて比べる
+        l.text(494, 162, g.def.name, 13, C.text, 'start', true);
+        this.powerChips(l, 660, 162, g.def.power);
         l.text(494, 196, `現在: ${this.weapon.name}`, 12, C.dim, 'start');
-        this.powerChips(l, 640, 196, this.weapon.power, 0.6);
+        this.powerChips(l, 660, 196, this.weapon.power, 0.6);
       } else {
-        l.text(494, 160, `防御 +${g.def.def}　　被ダメージ −${g.def.def}（最低1）`, 15, C.text, 'start', true);
-        l.text(494, 196, `現在: ${this.armor.name}　防御 +${this.armor.def}`, 12, C.dim, 'start');
+        l.text(494, 162, g.def.name, 13, C.text, 'start', true);
+        l.text(660, 162, `被ダメージ −${g.def.def}（最低1）`, 15, C.text, 'start', true);
+        l.text(494, 196, `現在: ${this.armor.name}`, 12, C.dim, 'start');
+        l.text(660, 196, `被ダメージ −${this.armor.def}`, 15, C.dim, 'start', true);
       }
       l.text(494, 240, g.def.desc, 13, C.dim, 'start');
       l.text(494, 296, own ? '「装備」で着けられる。' : s.gold < price ? `あと ${price - s.gold} G 足りない。` : `${this.pad ? '○' : 'Enter'} で購入。「装備」で着ける。`, 12, own ? C.dim : s.gold < price ? C.warn : C.keep, 'start');

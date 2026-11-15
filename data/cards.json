@@ -438,21 +438,21 @@
       "def": 3,
       "chargeMod": 0.5,
       "price": 300,
-      "desc": "被ダメージ −3。入れ替えが0.5秒遅い。"
+      "desc": "入れ替えが0.5秒遅い。"
     },
     {
       "id": "light",
       "name": "ライトプレート",
       "def": 2,
       "price": 500,
-      "desc": "被ダメージ −2。"
+      "desc": ""
     },
     {
       "id": "magic",
       "name": "魔法の衣",
       "def": 4,
       "price": null,
-      "desc": "被ダメージ −4。"
+      "desc": ""
     }
   ]
 }
