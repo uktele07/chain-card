@@ -28,6 +28,8 @@ npm run dev
 ```
 
 - `npm test`: ルールのテスト
+- `npm run e2e`: 画面を通しで動かすテスト（先に `npm run build` が必要。初回は `npx playwright install chromium`）
+- `npm run check`: 上の2つとビルドをまとめて実行
 - `npm run sim`: 自動プレイヤーによる勝率のシミュレーション
 - `npm run build`: 公開用のビルド（`dist/`）。main に push すると GitHub Pages へ自動で公開されます
 - `npm run page`: 1ファイルにまとめた版（`dist-single/`）
@@ -42,5 +44,8 @@ npm run dev
 - `src/game/art.ts`: 敵とアイテムの仮の絵（SVGの図形）
 - `src/game/save.ts`: セーブデータ（装備、デッキのスペル、お金、持ち物、敵ごとの記録）
 - `src/game/loadout.ts`: デッキと装備補正の組み立て
-- `src/scenes/GameScene.ts`: 全画面（敵の一覧、戦闘、結果、メニュー、装備）
+- `src/game/content.ts`: データを型付きで取り出す場所
+- `src/scenes/GameScene.ts`: 状態と入力（どの画面にいるか、ボタンで何が起きるか）
+- `src/screens/`: 画面ごとの描画（`list` `battle` `result` `menus` `equip` `deck` `shop` `help`）と共通部品（`common`）
+- `e2e/`: 画面を通しで動かすテスト
 - `sim/`: シミュレーション（`run.ts` が実行口、`battlesim.ts` が自動プレイヤー、`sim/old/` は過去のルール用）
