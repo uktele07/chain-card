@@ -1,4 +1,6 @@
 // セーブデータ（ブラウザに保存）: 装備、デッキのスペル、持ち物、お金、敵ごとの記録
+import type { RunState } from './dungeon';
+
 export type Rank = 'S' | 'A' | 'B' | 'C';
 export interface EnemyRecord { bestTime: number; bestRank: Rank }
 export interface SaveData {
@@ -6,6 +8,9 @@ export interface SaveData {
   spells: string[];                // デッキに入れるスペル
   weapon: string; armor: string;   // 装備中
   weapons: string[]; armors: string[];   // 持っている武器・防具
+  accessory: string | null; accessories: string[];   // 装備中のアクセサリと、持っているアクセサリ
+  cleared: Record<string, boolean>;      // 踏破したダンジョン
+  run: RunState | null;                  // 探索の途中経過（続きから再開するため）
   gold: number;
   loot: Record<string, number>;    // 換金アイテムの個数
   records: Record<string, EnemyRecord>;
@@ -14,6 +19,7 @@ export interface SaveConfig {
   items: string[]; defaultItems: (string | null)[];
   spells: string[]; defaultSpells: string[]; maxSpells: number;
   weapons: string[]; armors: string[]; startWeapon: string; startArmor: string;
+  accessories: string[]; dungeons: string[];
 }
 
 const KEY = 'chain-card-save-v1';
@@ -26,7 +32,7 @@ export function rankOf(sec: number, th?: { S: number; A: number; B: number }): R
 }
 
 function fresh(c: SaveConfig): SaveData {
-  return { items: [...c.defaultItems], spells: [...c.defaultSpells], weapon: c.startWeapon, armor: c.startArmor, weapons: [c.startWeapon], armors: [c.startArmor], gold: 0, loot: {}, records: {} };
+  return { items: [...c.defaultItems], spells: [...c.defaultSpells], weapon: c.startWeapon, armor: c.startArmor, weapons: [c.startWeapon], armors: [c.startArmor], accessory: null, accessories: [], cleared: {}, run: null, gold: 0, loot: {}, records: {} };
 }
 const uniq = <T>(a: T[]) => a.filter((x, i) => a.indexOf(x) === i);
 
@@ -53,8 +59,14 @@ export function loadSave(c: SaveConfig): SaveData {
     }
     const loot: Record<string, number> = {};
     for (const [k, v] of Object.entries(d.loot ?? {})) if (typeof v === 'number' && v > 0) loot[k] = Math.floor(v);
+    const accessories = uniq(Array.isArray(d.accessories) ? d.accessories.filter(x => c.accessories.includes(x)) : []);
+    const cleared: Record<string, boolean> = {};
+    for (const id of c.dungeons) if (d.cleared?.[id]) cleared[id] = true;
+    const r = d.run;
+    const run = r && c.dungeons.includes(r.dungeon) && typeof r.pos === 'number' && typeof r.hp === 'number' && Array.isArray(r.used) ? r : null;
     return {
-      items, spells, weapons, armors, records, loot,
+      items, spells, weapons, armors, records, loot, accessories, cleared, run,
+      accessory: accessories.includes(d.accessory ?? '') ? d.accessory! : null,
       weapon: weapons.includes(d.weapon ?? '') ? d.weapon! : c.startWeapon,
       armor: armors.includes(d.armor ?? '') ? d.armor! : c.startArmor,
       gold: typeof d.gold === 'number' && d.gold > 0 ? Math.floor(d.gold) : 0,

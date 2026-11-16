@@ -22,6 +22,7 @@ const PAD: Record<number, Btn> = {
 export class Input {
   private queue: Btn[] = [];
   private padDown = new Set<number>();
+  private keyDown = new Set<Btn>();
   padConnected = false;
   /** ok=使用中 / none=未検出 / blocked=このページでは使えない / nonstandard=ボタン配置が標準でない */
   padStatus: 'ok' | 'none' | 'blocked' | 'nonstandard' = 'none';
@@ -31,8 +32,18 @@ export class Input {
       const b = KEYS[e.code];
       if (!b) return;
       e.preventDefault();
+      this.keyDown.add(b);
       if (!e.repeat) this.queue.push(b);
     });
+    window.addEventListener('keyup', e => { const b = KEYS[e.code]; if (b) this.keyDown.delete(b); });
+    window.addEventListener('blur', () => this.keyDown.clear());
+  }
+
+  /** いま押しっぱなしになっているか（画面を動かすときなどに使う） */
+  held(b: Btn): boolean {
+    if (this.keyDown.has(b)) return true;
+    for (const i of this.padDown) if (PAD[i] === b) return true;
+    return false;
   }
 
   /** 毎フレーム呼ぶ。前回から新しく押されたボタンを返す */

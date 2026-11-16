@@ -134,7 +134,7 @@ describe('メニュー', () => {
     expect(await top(g.page)).toBe('equip');
     await key(g.page, 'Enter', 'ArrowDown', 'Enter');   // 武器 → 2つ目（斧）
     expect((await save(g.page)).weapon).toBe('axe');
-    await key(g.page, 'ArrowDown', 'ArrowDown', 'Enter');   // アイテム1（アクセサリは飛ばす）
+    await key(g.page, 'ArrowDown', 'ArrowDown', 'ArrowDown', 'Enter');   // アイテム1（武器 → 防具 → アクセサリ → アイテム1）
     const before = (await save(g.page)).items;
     const want = before[1];                             // アイテム2にある物を、アイテム1に選ぶ
     for (let i = 0; i < 8 && (await scene(g.page, s => s.equipOptions()[s.cur.opt].id)) !== want; i++) await key(g.page, 'ArrowDown');
@@ -228,5 +228,127 @@ describe('セーブデータ', () => {
     expect(s.spells).toEqual(['double']);
     expect(s.weapon).toBe('sword');                     // 持っていない武器は装備できない
     expect(s.gold).toBe(0);
+  });
+});
+
+describe('ダンジョン', () => {
+  /** 行き先をダンジョンに切り替えて、火の神殿に入る */
+  const enter = async () => { await key(g.page, 'ArrowRight', 'Enter'); await waitTop(g.page, 'board'); };
+  const mode = (m: string) => g.page.waitForFunction(x => (window as any).__scene.bmode === x, m);
+  /** サイコロの目と敵の抽選を固定する（v=0 なら 1 の目） */
+  const fix = (v: number) => g.page.evaluate(x => { (window as any).__scene.run.rng = () => x; }, v);
+
+  it('準備中のダンジョンには入れない。火の神殿に入ると盤面が出る', async () => {
+    g = await open();
+    await key(g.page, 'ArrowRight', 'ArrowDown', 'Enter');
+    expect(await top(g.page)).toBe('list');
+    await key(g.page, 'ArrowUp', 'Enter');
+    await waitTop(g.page, 'board');
+    expect(await scene(g.page, s => [s.run.state.pos, s.bmode])).toEqual([0, 'idle']);
+  });
+
+  it('サイコロで進み、モンスターのマスで戦う。HPとアイテムの使用を持ち越し、戦利品が入る', async () => {
+    g = await open();
+    await enter();
+    await scene(g.page, s => { s.run.state.pos = 1; });
+    await fix(0);
+    await key(g.page, 'Enter');
+    await mode('landed');
+    expect(await scene(g.page, s => [s.run.state.pos, s.effect.kind])).toEqual([2, 'monster']);
+    await key(g.page, 'Enter');
+    await waitTop(g.page, 'ready');
+    await key(g.page, 'Backspace');                    // 逃げられない
+    expect(await top(g.page)).toBe('ready');
+    await start(g.page);
+    await battle(g.page, b => { b.hp = 61; });
+    await key(g.page, 'KeyE');                          // 回復薬を使う（+20）
+    await win(g.page);
+    await key(g.page, 'Enter');
+    await waitTop(g.page, 'board');
+    const st = await scene(g.page, s => JSON.parse(JSON.stringify(s.run.state)));
+    expect(st.hp).toBe(81);
+    expect(st.used).toEqual([true, false, false]);
+    expect(st.pending).toBeNull();
+    const sv = await stored(g.page);
+    expect(sv.loot.fire_shard).toBe(1);
+    expect(sv.run.pos).toBe(2);
+    expect(sv.records.fire_lizard).toBeUndefined();     // ダンジョンの敵には記録を付けない
+  });
+
+  it('分かれ道は盤面の上で選ぶ。先を見ることもできる', async () => {
+    g = await open();
+    await enter();
+    await scene(g.page, s => { s.run.state.pos = 11; });
+    await fix(0);
+    await key(g.page, 'Enter');
+    await mode('choose');
+    await key(g.page, 'KeyA');
+    await mode('look');
+    await key(g.page, 'KeyA');
+    await mode('choose');
+    await key(g.page, 'ArrowDown');                     // 下の道（長い道）
+    expect(await scene(g.page, s => s.pick)).toBe(1);
+    await key(g.page, 'Enter');
+    await g.page.waitForFunction(() => (window as any).__scene.bmode !== 'moving' && (window as any).__scene.bmode !== 'choose');
+    expect(await scene(g.page, s => s.run.square.seg)).toBe('b1');
+  });
+
+  it('負けると入口に戻り、最大HPアップは消える', async () => {
+    g = await open();
+    await enter();
+    await scene(g.page, s => { s.run.state.pos = 1; s.run.state.maxBonus = 10; s.run.state.hp = 110; });
+    await fix(0);
+    await key(g.page, 'Enter');
+    await mode('landed');
+    await key(g.page, 'Enter');
+    await waitTop(g.page, 'ready');
+    expect(await battle(g.page, b => b.maxHp)).toBe(110);
+    await start(g.page);
+    await battle(g.page, b => { b.hp = 1; b.enemy.gauge = 99; });
+    await waitTop(g.page, 'result');
+    await g.page.waitForFunction(() => (window as any).__scene.resultWait <= 0);
+    await key(g.page, 'Enter');
+    await waitTop(g.page, 'board');
+    expect(await scene(g.page, s => [s.run.state.pos, s.run.state.hp, s.run.state.maxBonus])).toEqual([0, 100, 0]);
+  });
+
+  it('外に出ても、続きから再開できる', async () => {
+    g = await open();
+    await enter();
+    await scene(g.page, s => { s.run.state.pos = 4; s.run.state.hp = 55; s.keepRun(); });
+    await key(g.page, 'Escape', 'ArrowDown', 'ArrowDown', 'Enter');   // ダンジョンから出る
+    await waitTop(g.page, 'list');
+    expect((await stored(g.page)).run.pos).toBe(4);
+    await g.page.reload();
+    await ready(g.page);
+    await enter();
+    expect(await scene(g.page, s => [s.run.state.pos, s.run.state.hp])).toEqual([4, 55]);
+  });
+
+  it('ボスを討伐すると踏破。初回は炎の指輪、2回目は300G', async () => {
+    g = await open();
+    for (const first of [true, false]) {
+      await enter();
+      await scene(g.page, s => { s.run.state.pos = s.run.bossIndex - 1; s.run.state.midDone = true; });
+      await fix(0);
+      await key(g.page, 'Enter');
+      await mode('landed');
+      await key(g.page, 'Enter');
+      await waitTop(g.page, 'ready');
+      expect(await scene(g.page, s => s.enemy.id)).toBe('fire_beast');
+      await start(g.page);
+      await win(g.page);
+      await key(g.page, 'Enter');
+      await mode('cleared');
+      const sv = await stored(g.page);
+      expect(sv.run).toBeNull();
+      expect(sv.cleared.fire).toBe(true);
+      expect(sv.accessories).toEqual(['flame_ring']);
+      expect(sv.accessory).toBe('flame_ring');
+      expect(sv.gold).toBe(first ? 0 : 300);
+      await key(g.page, 'Enter');
+      await waitTop(g.page, 'list');
+      await key(g.page, 'ArrowLeft');                   // 討伐の一覧に戻しておく
+    }
   });
 });

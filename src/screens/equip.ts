@@ -10,10 +10,10 @@ export function drawEquip(gs: GameScene, l: Layer) {
   l.rect(0, 0, W, H, { fill: C.bg });
   l.text(40, 40, '装備', 24, C.text, 'start', true);
   const slots = gs.equipFocus === 'slots', s = gs.save;
-  const value = (i: number) => (i === 0 ? gs.weapon.name : i === 1 ? gs.armor.name : i === 2 ? '準備中' : itemOf(s.items[i - 3])?.name ?? 'なし');
+  const value = (i: number) => (i === 0 ? gs.weapon.name : i === 1 ? gs.armor.name : i === 2 ? gs.accessory?.name ?? 'なし' : itemOf(s.items[i - 3])?.name ?? 'なし');
   const ys = rows(l, 40, 72, 400, 50, EQUIP_ROWS.length, gs.cur.slot, { heads: { 0: '装備', 3: 'アイテム（重複不可）' }, active: slots });
   EQUIP_ROWS.forEach((name, i) => {
-    const y = ys[i], off = i === 2, v = value(i), empty = off || v === 'なし';
+    const y = ys[i], off = false, v = value(i), empty = off || v === 'なし';
     l.text(80, y, name, 14, off ? C.faint : C.dim, 'start');
     l.text(418, y, v, 16, empty ? C.faint : C.text, 'end', i === gs.cur.slot && !empty);
     if (i >= 3 && !empty) l.image(iconKey(s.items[i - 3]), 418 - v.length * 16 - 20, y, 26);

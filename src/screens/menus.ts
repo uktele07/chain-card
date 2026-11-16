@@ -1,7 +1,7 @@
 // 画面: メニュー、ポーズ、再開待ち、セーブリセット、売買の確認
 import type { Layer } from '../game/ui';
 import { SHOP } from '../game/content';
-import { C, CX, CY, MENU, PAUSE, guide, dim, panel } from './common';
+import { C, CX, CY, MENU, PAUSE, PAUSE_DUNGEON, guide, dim, panel } from './common';
 import type { GameScene } from '../scenes/GameScene';
 
 export function drawMenu(gs: GameScene, l: Layer) {
@@ -12,7 +12,8 @@ export function drawMenu(gs: GameScene, l: Layer) {
 
 export function drawPause(gs: GameScene, l: Layer) {
   dim(l, 0.6);
-  panel(l, 'PAUSE', PAUSE.map((label, i) => ({ label, note: i === 2 ? '一覧に戻る' : undefined })), gs.cur.pause, 150);
+  if (gs.inRun) panel(l, 'PAUSE', PAUSE_DUNGEON.map((label, i) => ({ label, note: i === 1 ? '敗北になる' : undefined })), gs.cur.pause, 170);
+  else panel(l, 'PAUSE', PAUSE.map((label, i) => ({ label, note: i === 2 ? '一覧に戻る' : undefined })), gs.cur.pause, 150);
   guide(gs, l, '↑↓ 選ぶ　　○ 決定　　✕ / OPTIONS 再開', '↑↓ 選ぶ　　Enter 決定　　Backspace / Esc 再開');
 }
 

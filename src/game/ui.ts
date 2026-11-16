@@ -42,12 +42,13 @@ export class Layer {
     return t;
   }
 
-  image(key: string, x: number, y: number, size: number, alpha = 1, tint?: number) {
+  /** 絵を中心 (x, y) に置く。h を省くと正方形 */
+  image(key: string, x: number, y: number, size: number, alpha = 1, tint?: number, h = size) {
     if (!this.scene.textures.exists(key)) return;
     let im = this.imgs[this.ii];
     if (!im) { im = this.scene.add.image(0, 0, key).setDepth(this.depth + 1); this.imgs.push(im); }
     if (im.texture.key !== key) im.setTexture(key);
-    im.setPosition(x, y).setDisplaySize(size, size).setAlpha(alpha).setVisible(true);
+    im.setPosition(x, y).setDisplaySize(size, h).setAlpha(alpha).setVisible(true);
     if (tint === undefined) im.clearTint(); else im.setTint(tint);
     this.ii++;
   }
@@ -71,6 +72,12 @@ export class Layer {
     this.g.beginPath();
     this.g.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, ratio), false);
     this.g.strokePath();
+  }
+  /** (x, y) を中心に、angle（ラジアン。0で右向き）を向いた三角 */
+  tri(x: number, y: number, size: number, angle: number, fill: string, alpha = 1) {
+    const p = (a: number, r: number) => [x + Math.cos(angle + a) * r, y + Math.sin(angle + a) * r];
+    const [ax, ay] = p(0, size), [bx, by] = p(2.4, size * 0.9), [cx, cy] = p(-2.4, size * 0.9);
+    this.g.fillStyle(hex(fill), alpha).fillTriangle(ax, ay, bx, by, cx, cy);
   }
   line(x1: number, y1: number, x2: number, y2: number, color: string, sw = 1.5) {
     this.g.lineStyle(sw, hex(color)).lineBetween(x1, y1, x2, y2);

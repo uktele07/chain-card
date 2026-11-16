@@ -24,8 +24,9 @@ export function drawHelp(gs: GameScene, l: Layer) {
     '入れ替えるとチェインが1段下がる。使い切れば下がらない。4枚目がアタックなら +1 ダメージ。',
     '出せるカードがなくなると、自動で入れ替わる。',
     'アイテムは3つまで。それぞれ1戦に1回。',
+    'ダンジョンでは、HPとアイテムの使用を次の戦闘に持ち越す。マスの効果で回復・復活する。',
   ];
   l.text(40, 380, 'ルール', 12, C.dim, 'start', true);
-  rules.forEach((r, i) => l.text(40, 402 + i * 21, r, 12, C.text, 'start'));
+  rules.forEach((r, i) => l.text(40, 400 + i * 19, r, 12, C.text, 'start'));
   guide(gs, l, '✕ 戻る', 'Backspace 戻る');
 }

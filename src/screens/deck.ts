@@ -23,7 +23,7 @@ export function drawDeck(gs: GameScene, l: Layer) {
   // 左下: 威力のもとになる装備
   const ey = rows(l, 40, 330, 400, 44, 2, -1, { heads: { 0: '装備' } });
   l.text(60, ey[0], '武器', 13, C.dim, 'start'); l.text(150, ey[0], gs.weapon.name, 16, C.text, 'start', true);
-  l.text(60, ey[1], 'アクセサリ', 13, C.dim, 'start'); l.text(150, ey[1], 'なし', 16, C.faint, 'start', true);
+  l.text(60, ey[1], 'アクセサリ', 13, C.dim, 'start'); l.text(150, ey[1], gs.accessory?.name ?? 'なし', 16, gs.accessory ? C.text : C.faint, 'start', true);
   // 右: スペル（2枚まで、重複不可）。枠の下部に説明
   const sy = rows(l, 470, 72, 450, 50, SPELLS.length, gs.cur.deck, { heads: { 0: 'スペル（重複不可）' }, extra: 40 });
   const full = sp.length >= RULES.maxSpells;

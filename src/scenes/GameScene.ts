@@ -4,11 +4,12 @@ import { Input, type Btn } from '../game/input';
 import { Sound } from '../game/audio';
 import { ZOOM } from '../game/display';
 import { Layer } from '../game/ui';
-import { loadArt } from '../game/art';
+import { BOARD_PAD, loadArt, loadBoardArt, loadTempleArt } from '../game/art';
+import { DungeonRun, buildBoard, type DungeonDef, type Effect } from '../game/dungeon';
 import { clearSave, loadSave, rankOf, rankValue, storeSave, type Rank, type SaveData } from '../game/save';
 import { buildDeck, gearOf } from '../game/loadout';
-import { RULES, DEFS, SPELLS, WEAPONS, ARMORS, ITEMS, ENEMIES, itemOf, SAVE_CONFIG, SHOP } from '../game/content';
-import { C, CX, CY, RING, CARD_BTN, KEEP_BTN, MON, RESULT_WAIT, MENU, PAUSE, EQUIP_ROWS, type Base, type Overlay, type Deal } from '../screens/common';
+import { RULES, DEFS, SPELLS, WEAPONS, ARMORS, ITEMS, ENEMIES, ALL_ENEMIES, ACCESSORIES, DUNGEONS, enemyById, itemOf, SAVE_CONFIG, SHOP } from '../game/content';
+import { C, CX, CY, RING, CARD_BTN, KEEP_BTN, MON, RESULT_WAIT, MENU, PAUSE, PAUSE_DUNGEON, DMENU, EQUIP_ROWS, type Base, type Overlay, type Deal } from '../screens/common';
 import { drawList } from '../screens/list';
 import { drawBattle } from '../screens/battle';
 import { drawResult } from '../screens/result';
@@ -17,6 +18,9 @@ import { drawEquip } from '../screens/equip';
 import { drawDeck } from '../screens/deck';
 import { drawShop } from '../screens/shop';
 import { drawHelp } from '../screens/help';
+import { drawBoard, drawDMenu } from '../screens/board';
+
+export type BoardMode = 'idle' | 'rolling' | 'moving' | 'choose' | 'landed' | 'look' | 'cleared';
 
 /**
  * ゲーム全体の状態と入力を持つ。描画は src/screens/ の各画面に任せ、ここからは呼ぶだけ。
@@ -32,7 +36,23 @@ export class GameScene extends Phaser.Scene {
 
   base: Base = 'list';
   overlays: Overlay[] = [];
-  cur = { list: 0, menu: 0, pause: 0, result: 0, reset: 0, slot: 0, opt: 0, deck: 0, shop: 0, sell: 0 };
+  cur = { list: 0, menu: 0, pause: 0, result: 0, reset: 0, slot: 0, opt: 0, deck: 0, shop: 0, sell: 0, dlist: 0, dmenu: 0 };
+  listTab: 0 | 1 = 0;       // 0=討伐 1=ダンジョン
+  // --- ダンジョン ---
+  run: DungeonRun | null = null;
+  inRun = false;            // ダンジョンの中にいる（盤面か、その戦闘）
+  bmode: BoardMode = 'idle';
+  lookFrom: 'idle' | 'choose' = 'idle';
+  cam = { x: 0, y: 0 };     // 盤面のうち、画面の左上に映す位置
+  piece = { x: 0, y: 0 };   // 駒の位置（盤面の座標）
+  target: { x: number; y: number } | null = null;
+  landAfter = false;
+  diceFace = 0; rolled = 0; rollLeft = 0; landLeft = 0;
+  pick = 0;                 // 分かれ道で選んでいる行き先
+  effect: Effect | null = null;
+  reward: { accessory?: string; gold?: number } | null = null;
+  restartArmed = false;
+  private setCache = new Map<string, Set<number>>();
   shopTab: 0 | 1 = 0;       // 0=買う 1=売る
   deal: Deal | null = null;
   dealCursor = 0;           // 0=実行 1=やめる
@@ -53,6 +73,8 @@ export class GameScene extends Phaser.Scene {
     this.L = [new Layer(this, 0), new Layer(this, 100), new Layer(this, 200), new Layer(this, 300)];
     this.fx = this.add.graphics().setDepth(60);
     loadArt(this, ZOOM);
+    loadTempleArt(this, ZOOM);
+    for (const d of DUNGEONS) if (!d.locked) loadBoardArt(this, d, buildBoard(d), ZOOM);
     this.save = loadSave(SAVE_CONFIG);
     this.input.on('pointerdown', () => this.snd.unlock());
     window.addEventListener('keydown', () => this.snd.unlock());
@@ -67,10 +89,13 @@ export class GameScene extends Phaser.Scene {
   unlocked(e: EnemyDef) { return e.unlock !== 'prev' || ENEMIES.slice(0, ENEMIES.indexOf(e)).every(o => this.save.records[o.id]); }
   get weapon() { return WEAPONS.find(w => w.id === this.save.weapon) ?? WEAPONS[0]; }
   get armor() { return ARMORS.find(a => a.id === this.save.armor) ?? ARMORS[0]; }
-  sellList() { return ENEMIES.map(e => e.drop).filter((d): d is NonNullable<EnemyDef['drop']> => !!d && (this.save.loot[d.id] ?? 0) > 0); }
+  get accessory() { return ACCESSORIES.find(a => a.id === this.save.accessory); }
+  sellList() { return ALL_ENEMIES.map(e => e.drop).filter((d, i, a): d is NonNullable<EnemyDef['drop']> => !!d && (this.save.loot[d.id] ?? 0) > 0 && a.findIndex(o => o?.id === d.id) === i); }
 
   newBattle() {
-    this.battle = new Battle(buildDeck(DEFS, this.save.spells), RULES, Math.random, this.save.items.map(itemOf), this.enemy, gearOf(this.weapon, this.armor));
+    // ダンジョンの中では、HP・最大HP・アイテムの使用状況を引き継ぐ
+    const carry = this.inRun && this.run ? { hp: this.run.state.hp, maxHp: this.run.maxHp, used: this.run.state.used } : {};
+    this.battle = new Battle(buildDeck(DEFS, this.save.spells), RULES, Math.random, this.save.items.map(itemOf), this.enemy, gearOf(this.weapon, this.armor, this.accessory), carry);
     this.battle.invincible = this.invincible;
     this.battle.events.length = 0;
     this.lastTick = 0; this.hurt = 0;
@@ -91,6 +116,7 @@ export class GameScene extends Phaser.Scene {
     this.outcome = { rank: null, newBest: false };
     this.gained = null;
     this.snd.stopBgm();
+    if (this.inRun && this.run) { this.finishInRun(won); return; }
     if (!won) { this.snd.lose(); return; }
     this.snd.win();
     if (b.usedInvincible) return;        // 無敵を使った戦闘は、ランクも記録も付けない
@@ -105,6 +131,132 @@ export class GameScene extends Phaser.Scene {
     if (drop) { this.save.loot[drop.id] = (this.save.loot[drop.id] ?? 0) + 1; this.gained = drop; }
     storeSave(this.save);
     this.outcome = { rank, newBest };
+  }
+
+  // ---------------- ダンジョン ----------------
+  /** ダンジョンの戦闘が終わった。ランクや記録は付けない */
+  finishInRun(won: boolean) {
+    const run = this.run!, b = this.battle, sv = this.save;
+    if (!won) { this.snd.lose(); run.battleLost(); this.keepRun(); return; }
+    this.snd.win();
+    run.battleWon(b.hp, b.items.map(it => !!it?.used));
+    const drop = this.enemy.drop;
+    if (drop) { sv.loot[drop.id] = (sv.loot[drop.id] ?? 0) + 1; this.gained = drop; }
+    if (run.state.cleared) {
+      const id = run.def.id, rw = run.def.reward;
+      if (!sv.cleared[id] && !sv.accessories.includes(rw.accessory)) {      // 初回はアクセサリ。2回目以降はお金
+        sv.accessories.push(rw.accessory);
+        if (!sv.accessory) sv.accessory = rw.accessory;
+        this.reward = { accessory: rw.accessory };
+      } else { sv.gold += rw.gold; this.reward = { gold: rw.gold }; }
+      sv.cleared[id] = true;
+    }
+    this.keepRun();
+  }
+  /** 途中経過を保存する（踏破したら消す）。マスに止まるたび・戦闘のたびに呼ぶ */
+  keepRun() {
+    if (!this.run) return;
+    const st = this.run.state;
+    this.save.run = st.cleared ? null : { ...st, used: [...st.used] };
+    storeSave(this.save);
+  }
+  sqPos(i: number) { const r = this.run!, q = r.board[i], G = r.def.cell; return { x: q.x * G + G / 2, y: q.y * G + G / 2 }; }
+  private bfs(key: string, from: number, depth: number): Set<number> {
+    const k = `${key}:${from}:${this.run!.state.midDone}`, hit = this.setCache.get(k);
+    if (hit) return hit;
+    const run = this.run!, out = new Set<number>(), q: [number, number][] = [[from, 0]];
+    while (q.length) {
+      const [i, d] = q.shift()!;
+      if (d >= depth) continue;
+      for (const n of run.board[i].next) {
+        if (out.has(n)) continue;
+        out.add(n);
+        const kind = run.board[n].kind, gate = kind === 'boss' || (kind === 'mid' && !run.state.midDone);
+        if (!(gate && depth < 99)) q.push([n, d + 1]);     // 関所では必ず止まるので、その先には届かない
+      }
+    }
+    if (this.setCache.size > 200) this.setCache.clear();
+    this.setCache.set(k, out);
+    return out;
+  }
+  /** このマスより先にあるマス（通り過ぎたマスを薄く描くため） */
+  aheadOf(pos: number) { return this.bfs('a', pos, 99); }
+  /** サイコロ1回で届くマス */
+  reachOf(pos: number) { return this.bfs('r', pos, 6); }
+
+  enterDungeon(def: DungeonDef) {
+    const saved = this.save.run?.dungeon === def.id ? this.save.run : undefined;
+    this.run = new DungeonRun(def, RULES.playerMaxHp, this.save.items.map(x => !!x), Math.random, saved);
+    this.inRun = true; this.reward = null; this.setCache.clear();
+    this.toBoard();
+  }
+  toBoard() {
+    const run = this.run!, st = run.state;
+    this.base = 'board'; this.overlays = []; this.snd.stopBgm(); this.snd.intensity = 0;
+    this.piece = this.sqPos(st.pos); this.target = null; this.effect = null; this.diceFace = 0;
+    this.cam = this.camTarget();
+    if (st.cleared) this.bmode = 'cleared';
+    else if (st.pending) {       // 戦闘の途中で閉じていたら、その敵からやり直す
+      const k = run.square.kind;
+      this.effect = { kind: 'monster', enemy: st.pending, rank: k === 'mid' ? 'mid' : k === 'boss' ? 'boss' : 'zako' };
+      this.bmode = 'landed';
+    } else if (st.steps > 0) this.advance();
+    else this.bmode = 'idle';
+    this.keepRun();
+  }
+  leaveDungeon() { this.keepRun(); this.run = null; this.inRun = false; this.toList(); }
+  camTarget() {
+    const d = this.run!.def, G = d.cell, P = BOARD_PAD;
+    return { x: Phaser.Math.Clamp(this.piece.x - 480, -P, d.size[0] * G + P - 960), y: Phaser.Math.Clamp(this.piece.y - 262, -P, d.size[1] * G + P - 540) };
+  }
+  /** 1マス進める。分かれ道なら選ぶ画面にする */
+  advance(choice?: number) {
+    const run = this.run!, r = run.step(choice);
+    if (r === 'choose') { this.bmode = 'choose'; this.pick = 0; return; }
+    this.bmode = 'moving'; this.target = this.sqPos(run.state.pos); this.landAfter = r === 'landed';
+  }
+  land() {
+    const eff = this.run!.land();
+    this.effect = eff; this.keepRun();
+    if (eff.kind === 'none' && !eff.random) { this.bmode = 'idle'; this.effect = null; this.diceFace = 0; return; }
+    this.bmode = 'landed'; this.landLeft = 1.8;
+    if (eff.kind === 'monster') this.snd.warn();
+    else if (eff.kind === 'event') this.snd.enemyHit(false);
+    else if (eff.kind === 'none') this.snd.uiBack();
+    else this.snd.item('heal');
+  }
+  closeLanded() {
+    const eff = this.effect;
+    if (eff?.kind === 'monster') { this.snd.uiOk(); this.toReady(enemyById(eff.enemy)); return; }
+    this.bmode = 'idle'; this.effect = null; this.diceFace = 0;
+  }
+  updateBoard(dt: number) {
+    const run = this.run;
+    if (!run || this.base !== 'board') return;
+    const d = run.def, G = d.cell, P = BOARD_PAD;
+    if (this.top === 'board') {
+      if (this.bmode === 'rolling') {
+        this.rollLeft -= dt; this.diceFace = 1 + Math.floor(this.clock * 20) % 6;
+        if (this.rollLeft <= 0) { this.rolled = run.roll(); this.diceFace = this.rolled; this.keepRun(); this.advance(); }
+      } else if (this.bmode === 'moving' && this.target) {
+        const dx = this.target.x - this.piece.x, dy = this.target.y - this.piece.y, dist = Math.hypot(dx, dy), stepLen = 340 * dt;
+        if (dist <= stepLen) {
+          this.piece = this.target; this.target = null; this.snd.uiMove();
+          if (this.landAfter) this.land(); else this.advance();
+        } else { this.piece = { x: this.piece.x + dx / dist * stepLen, y: this.piece.y + dy / dist * stepLen }; }
+      } else if (this.bmode === 'landed' && this.effect && this.effect.kind !== 'monster') {
+        this.landLeft -= dt;
+        if (this.landLeft <= 0) this.closeLanded();
+      } else if (this.bmode === 'look') {
+        const v = 560 * dt, i = this.input2;
+        this.cam.x = Phaser.Math.Clamp(this.cam.x + ((i.held('right') ? v : 0) - (i.held('left') ? v : 0)), -P, d.size[0] * G + P - 960);
+        this.cam.y = Phaser.Math.Clamp(this.cam.y + ((i.held('down') ? v : 0) - (i.held('up') ? v : 0)), -P, d.size[1] * G + P - 540);
+      }
+    }
+    if (this.bmode !== 'look') {
+      const t = this.camTarget(), k = Math.min(1, dt * 7);
+      this.cam.x += (t.x - this.cam.x) * k; this.cam.y += (t.y - this.cam.y) * k;
+    }
   }
 
   // ---------------- 入力 ----------------
@@ -123,7 +275,16 @@ export class GameScene extends Phaser.Scene {
 
     switch (this.top) {
       case 'list':
-        if (b === 'up') this.move('list', -1, ENEMIES.length);
+        if (b === 'skip' || b === 'left' || b === 'right') { this.listTab = this.listTab ? 0 : 1; this.snd.uiMove(); }   // L1 / R1: 討伐 ⇔ ダンジョン
+        else if (this.listTab === 1 && b !== 'options') {
+          if (b === 'up') this.move('dlist', -1, DUNGEONS.length);
+          else if (b === 'down') this.move('dlist', 1, DUNGEONS.length);
+          else if (ok) {
+            const d = DUNGEONS[this.cur.dlist];
+            if (d.locked) this.snd.miss(); else { this.snd.uiOk(); this.enterDungeon(d); }
+          }
+        }
+        else if (b === 'up') this.move('list', -1, ENEMIES.length);
         else if (b === 'down') this.move('list', 1, ENEMIES.length);
         else if (ok) {
           const e = ENEMIES[this.cur.list];
@@ -133,9 +294,42 @@ export class GameScene extends Phaser.Scene {
 
       case 'ready':
         if (ok) { this.base = 'fight'; this.snd.startBgm(); this.snd.refill(); }   // 開始するだけ。○のカードは出さない
-        else if (back) { this.snd.uiBack(); this.toList(); }
         else if (b === 'l2') { if (bt.cycleItem()) this.snd.uiMove(); }
+        else if (this.inRun) { if (back || b === 'options') this.snd.miss(); }      // ダンジョンでは逃げられず、装備も変えられない
+        else if (back) { this.snd.uiBack(); this.toList(); }
         else if (b === 'options') { this.cur.menu = 0; this.overlays.push('menu'); this.snd.uiOk(); }
+        break;
+
+      case 'board': {
+        const run = this.run!, m = this.bmode;
+        if (m === 'look') { if (b === 'square' || back) { this.bmode = this.lookFrom; this.snd.uiBack(); } break; }
+        if (m === 'cleared') { if (ok) { this.snd.uiOk(); this.leaveDungeon(); } break; }
+        if (m === 'landed') { if (ok) this.closeLanded(); break; }
+        if (m !== 'idle' && m !== 'choose') break;      // サイコロと移動の間は待つ
+        if (b === 'options') { this.cur.dmenu = 0; this.restartArmed = false; this.overlays.push('dmenu'); this.snd.uiOk(); }
+        else if (b === 'square') { this.lookFrom = m; this.bmode = 'look'; this.snd.uiOk(); }
+        else if (m === 'idle') { if (ok) { this.bmode = 'rolling'; this.rollLeft = 0.45; this.snd.refill(); } }
+        else if (ok) { this.snd.uiOk(); this.advance(run.options()[this.pick]); }
+        else {
+          // 押した向きにいちばん近い行き先を選ぶ
+          const v = b === 'up' ? [0, -1] : b === 'down' ? [0, 1] : b === 'left' ? [-1, 0] : b === 'right' ? [1, 0] : null;
+          if (!v) break;
+          const from = this.sqPos(run.state.pos), dots = run.options().map(o => { const p = this.sqPos(o); return (p.x - from.x) * v[0] + (p.y - from.y) * v[1]; });
+          const best = dots.indexOf(Math.max(...dots));
+          if (dots[best] > 0 && best !== this.pick) { this.pick = best; this.snd.uiMove(); }
+        }
+        break;
+      }
+
+      case 'dmenu':
+        if (b === 'up' || b === 'down') { this.move('dmenu', b === 'up' ? -1 : 1, DMENU.length); this.restartArmed = false; }
+        else if (back || b === 'options' || (ok && this.cur.dmenu === 3)) { this.snd.uiBack(); this.pop(); }
+        else if (ok && this.cur.dmenu === 0) { this.snd.uiOk(); this.overlays.push('help'); }
+        else if (ok && this.cur.dmenu === 1) {
+          if (!this.restartArmed) { this.restartArmed = true; this.snd.uiMove(); }      // 押し間違いを防ぐため、2回押して実行
+          else { this.snd.uiOk(); this.save.run = null; this.enterDungeon(this.run!.def); }
+        }
+        else if (ok && this.cur.dmenu === 2) { this.snd.uiBack(); this.leaveDungeon(); }
         break;
 
       case 'fight': {
@@ -150,8 +344,9 @@ export class GameScene extends Phaser.Scene {
       }
 
       case 'pause':
-        if (b === 'up') this.move('pause', -1, PAUSE.length);
-        else if (b === 'down') this.move('pause', 1, PAUSE.length);
+        if (b === 'up') this.move('pause', -1, this.inRun ? PAUSE_DUNGEON.length : PAUSE.length);
+        else if (b === 'down') this.move('pause', 1, this.inRun ? PAUSE_DUNGEON.length : PAUSE.length);
+        else if (this.inRun && ok && this.cur.pause === 1) { this.snd.uiBack(); this.run!.battleLost(); this.leaveDungeon(); }   // 戦闘の途中で出ると、負けた扱い
         else if (back || b === 'options' || (ok && this.cur.pause === 0)) { this.overlays = ['resume']; this.resumeLeft = RULES.resumeCountSec; this.snd.count(); }
         else if (ok && this.cur.pause === 1) { this.snd.uiOk(); this.toReady(this.enemy); }
         else if (ok && this.cur.pause === 2) { this.snd.uiBack(); this.toList(); }
@@ -161,7 +356,9 @@ export class GameScene extends Phaser.Scene {
 
       case 'result':
         if (this.resultWait > 0) break;
+        if (this.inRun) { if (ok) { this.snd.uiOk(); this.toBoard(); } break; }
         if (b === 'left' || b === 'right') this.move('result', b === 'left' ? -1 : 1, 2);
+        if (this.inRun) { if (ok) { this.snd.uiOk(); this.toBoard(); } break; }
         else if (ok) { this.snd.uiOk(); if (this.cur.result === 0) this.toReady(this.enemy); else this.toList(); }
         break;
 
@@ -185,8 +382,8 @@ export class GameScene extends Phaser.Scene {
 
       case 'equip':
         if (this.equipFocus === 'slots') {
-          if (b === 'up') this.move('slot', -1, EQUIP_ROWS.length, i => i === 2);
-          else if (b === 'down') this.move('slot', 1, EQUIP_ROWS.length, i => i === 2);
+          if (b === 'up') this.move('slot', -1, EQUIP_ROWS.length);
+          else if (b === 'down') this.move('slot', 1, EQUIP_ROWS.length);
           else if (ok) { this.equipFocus = 'options'; this.cur.opt = Math.max(0, this.equipOptions().findIndex(o => o.on)); this.snd.uiOk(); }
           else if (back) { this.snd.uiBack(); this.pop(); }
         } else {
@@ -279,7 +476,7 @@ export class GameScene extends Phaser.Scene {
         else if (ok) {
           clearSave();
           this.save = loadSave(SAVE_CONFIG);
-          this.cur.list = 0; this.enemy = ENEMIES[0];
+          this.cur.list = 0; this.enemy = ENEMIES[0]; this.run = null; this.inRun = false; this.listTab = 0; this.cur.dlist = 0;
           this.snd.uiOk(); this.toList(); this.newBattle();
         }
         break;
@@ -293,6 +490,7 @@ export class GameScene extends Phaser.Scene {
     const s = this.save, row = this.cur.slot;
     if (row === 0) return WEAPONS.filter(w => s.weapons.includes(w.id)).map(w => ({ id: null, name: w.name, on: s.weapon === w.id, note: s.weapon === w.id ? '装備中' : '', desc: w.desc, power: w.power, pick: () => { s.weapon = w.id; } }));
     if (row === 1) return ARMORS.filter(a => s.armors.includes(a.id)).map(a => ({ id: null, name: a.name, on: s.armor === a.id, note: s.armor === a.id ? '装備中' : '', desc: a.desc, def: a.def, pick: () => { s.armor = a.id; } }));
+    if (row === 2) return [null, ...ACCESSORIES.filter(a => s.accessories.includes(a.id))].map(a => ({ id: null, name: a ? a.name : 'なし', on: s.accessory === (a ? a.id : null), note: a && s.accessory === a.id ? '装備中' : '', desc: a ? a.desc : 'アクセサリを外す。', pick: () => { s.accessory = a ? a.id : null; } }));
     const k = row - 3;
     return [null, ...ITEMS].map(o => {
       const at = o ? s.items.indexOf(o.id) : -1;
@@ -319,6 +517,7 @@ export class GameScene extends Phaser.Scene {
       if (this.resumeLeft <= 0) { this.overlays = []; this.snd.startBgm(); }
     }
     this.resultWait = Math.max(0, this.resultWait - dt);
+    this.updateBoard(dt);
 
     for (const e of bt.events) {
       if (e.kind === 'hit') {
@@ -342,6 +541,7 @@ export class GameScene extends Phaser.Scene {
         this.popup(e.effect === 'heal' ? '+20 HP' : it ? it.def.name : '', '#7fe0a0', 20, 180 + e.slot * 62, 150);
       } else if (e.kind === 'heal') { if (e.amount > 0) this.popup(`+${e.amount} HP`, '#7fe0a0', 20, 486, CX - 120); }
       else if (e.kind === 'chainBreak') { this.snd.chainBreak(); this.popup('チェイン切れ', C.warn, 15, CY - RING - 8, CX); }
+      else if (e.kind === 'burn') this.popup(`やけど -${e.damage}`, '#ff8a2a', 16, 470, CX + 120);
       else if (e.kind === 'enemyCharge') { this.lastTick = 0; if (e.big && this.base === 'fight') this.snd.warn(); }
       else if (e.kind === 'enemyAttack') {
         this.hurt = e.big ? 0.6 : 0.35;
@@ -379,6 +579,14 @@ export class GameScene extends Phaser.Scene {
     for (const l of this.L) l.begin();
     this.fx.clear();
     const [a, b] = this.L;
+    if (this.base === 'board') {
+      // 盤面は3層を使う。メニューなどは、いちばん手前の1枚だけを最上層に描く
+      drawBoard(this, a, b, this.L[2]);
+      const o = this.top;
+      if (o === 'dmenu') drawDMenu(this, this.L[3]); else if (o === 'help') drawHelp(this, this.L[3]);
+      for (const l of this.L) l.end();
+      return;
+    }
     if (this.base === 'list') drawList(this, a);
     else drawBattle(this, a);
     if (this.base === 'result') drawResult(this, b);

@@ -92,11 +92,12 @@ export function drawBattle(gs: GameScene, l: Layer) {
   }
 
   // 自分のHP（手札の下）
-  const low = b.hp <= RULES.playerMaxHp * 0.3, hw = 320, hx = CX - hw / 2;
+  const low = b.hp <= b.maxHp * 0.3, hw = 320, hx = CX - hw / 2;
   l.text(hx, 500, b.invincible ? 'HP　無敵（テスト用）' : 'HP', 12, b.invincible ? C.keep : C.dim, 'start', true);
-  l.text(hx + hw, 500, `${b.hp} / ${RULES.playerMaxHp}`, 15, low ? '#ff6a6a' : C.text, 'end', true);
+  if (e.def.burn && !b.invincible) l.text(hx + 30, 500, `やけど（${e.def.burn.everySec}秒ごとに −${e.def.burn.damage}）`, 11, '#ff8a2a', 'start', true);
+  l.text(hx + hw, 500, `${b.hp} / ${b.maxHp}`, 15, low ? '#ff6a6a' : C.text, 'end', true);
   l.rect(hx, 512, hw, 14, { fill: C.panel, rx: 4 });
-  l.rect(hx, 512, hw * b.hp / RULES.playerMaxHp, 14, { fill: low ? C.miss : C.item, rx: 4 });
+  l.rect(hx, 512, hw * b.hp / b.maxHp, 14, { fill: low ? C.miss : C.item, rx: 4 });
 
   // アイテム（左）
   l.text(30, 178, 'アイテム', 12, C.dim, 'start', true);
@@ -126,7 +127,7 @@ export function drawBattle(gs: GameScene, l: Layer) {
     l.rect(30, y + 12, 240 * left / total, 6, { fill: col });
   });
 
-  if (ready) l.text(930, 520, gs.pad ? '✕ 戻る　　OPTIONS メニュー' : 'Backspace 戻る　　Esc メニュー', 12, C.dim, 'end');
+  if (ready && !gs.inRun) l.text(930, 520, gs.pad ? '✕ 戻る　　OPTIONS メニュー' : 'Backspace 戻る　　Esc メニュー', 12, C.dim, 'end');
 
   // 被弾の赤いフラッシュと、強い攻撃の予告（画面の縁と手札の中央が赤く点滅）
   if (gs.hurt > 0 && fight) gs.fx.fillStyle(0xff2a2a, Math.min(0.35, gs.hurt * 0.7)).fillRect(0, 0, W, H);

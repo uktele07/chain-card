@@ -1,14 +1,21 @@
 // 画面: 敵の一覧
-import { iconKey, monsterKey } from '../game/art';
+import { iconKey, monsterKey, templeKey } from '../game/art';
 import type { Layer } from '../game/ui';
-import { ENEMIES, itemOf } from '../game/content';
+import { DUNGEONS, ENEMIES, itemOf } from '../game/content';
 import { C, ENEMY_COL, guide, rankBadge, rows } from './common';
 import type { GameScene } from '../scenes/GameScene';
 
 // --- 敵の一覧 ---
 export function drawList(gs: GameScene, l: Layer) {
-  l.text(40, 40, '敵を選ぶ', 24, C.text, 'start', true);
+  l.text(40, 40, '行き先', 24, C.text, 'start', true);
+  ['討伐', 'ダンジョン'].forEach((t, i) => {
+    const x = 150 + i * 116, on = i === gs.listTab;
+    l.rect(x, 22, 108, 36, { fill: on ? C.sel : undefined, stroke: on ? C.white : C.line, sw: on ? 2 : 1.5, rx: 18 });
+    l.text(x + 54, 40, t, 16, on ? C.text : C.dim, 'middle', on);
+  });
+  l.text(396, 40, gs.pad ? 'L1 / R1 で切り替え' : '←→ で切り替え', 11, C.dim, 'start');
   l.text(920, 40, `所持金  ${gs.save.gold} G`, 16, C.keep, 'end', true);
+  if (gs.listTab === 1) { drawDungeons(gs, l); return; }
   const ys = rows(l, 40, 72, 400, 62, ENEMIES.length, gs.cur.list);
   ENEMIES.forEach((e, i) => {
     const y = ys[i], on = i === gs.cur.list, open = gs.unlocked(e), rec = gs.save.records[e.id];
@@ -60,5 +67,30 @@ export function drawList(gs: GameScene, l: Layer) {
     if (beaten) l.text(494, 474, `1巡 約${Math.round(sec)}秒・計 ${dmg} ダメージ`, 12, C.dim, 'start');
     if (e.drop) l.text(896, 474, beaten ? `戦利品  ${e.drop.name}（${e.drop.price} G）` : '戦利品  ？？？', 12, C.dim, 'end');
   }
-  guide(gs, l, '↑↓ 選ぶ　　○ 決定　　OPTIONS メニュー', '↑↓ 選ぶ　　Enter 決定　　Esc メニュー');
+  guide(gs, l, '↑↓ 選ぶ　　○ 決定　　L1 / R1 ダンジョン　　OPTIONS メニュー', '↑↓ 選ぶ　　Enter 決定　　←→ ダンジョン　　Esc メニュー');
+}
+
+// --- ダンジョンの一覧。右は絵だけ（説明は出さない） ---
+function drawDungeons(gs: GameScene, l: Layer) {
+  const ys = rows(l, 40, 72, 400, 62, DUNGEONS.length, gs.cur.dlist), sv = gs.save;
+  DUNGEONS.forEach((d, i) => {
+    const y = ys[i], on = i === gs.cur.dlist, open = !d.locked;
+    const state = !open ? '準備中' : sv.run?.dungeon === d.id ? '探索中' : sv.cleared[d.id] ? '踏破' : '未踏破';
+    l.rect(78, y - 20, 40, 40, { fill: open ? d.color : C.ng, rx: 8, alpha: 0.9 });
+    l.text(98, y, d.mark, 18, open ? C.ink : C.dim, 'middle', true);
+    l.text(134, y, d.name, 17, open ? C.text : C.dim, 'start', on && open);
+    l.text(418, y, state, 13, state === '探索中' ? C.keep : state === '踏破' ? C.item : C.faint, 'end', true);
+  });
+  l.text(40, 414, 'アイテム', 12, C.dim, 'start');
+  sv.items.forEach((id, i) => {
+    const it = itemOf(id), x = 40 + i * 136;
+    l.rect(x, 428, 128, 40, { fill: it ? C.itemBg : C.panel, stroke: it ? C.item : C.ng, sw: 1.5, rx: 8 });
+    l.image(iconKey(id), x + 22, 448, 26);
+    l.text(x + 42, 448, it ? it.name : 'なし', 13, it ? C.text : C.faint, 'start');
+  });
+  const d = DUNGEONS[gs.cur.dlist];
+  l.rect(470, 72, 450, 420, { fill: C.panel, stroke: C.line, rx: 12 });
+  if (d.locked) l.text(695, 282, '？', 96, C.ng, 'middle', true);
+  else l.image(templeKey(d.id), 695, 282, 446, 1, undefined, 416);
+  guide(gs, l, '↑↓ 選ぶ　　○ 入る　　L1 / R1 討伐　　OPTIONS メニュー', '↑↓ 選ぶ　　Enter 入る　　←→ 討伐　　Esc メニュー');
 }
