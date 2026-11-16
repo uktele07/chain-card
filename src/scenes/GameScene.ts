@@ -5,7 +5,7 @@ import { Sound } from '../game/audio';
 import { ZOOM } from '../game/display';
 import { Layer } from '../game/ui';
 import { BOARD_PAD, loadArt, loadBoardArt, loadTempleArt } from '../game/art';
-import { DungeonRun, buildBoard, type DungeonDef, type Effect } from '../game/dungeon';
+import { DungeonRun, type DungeonDef, type Effect } from '../game/dungeon';
 import { clearSave, loadSave, rankOf, rankValue, storeSave, type Rank, type SaveData } from '../game/save';
 import { buildDeck, gearOf } from '../game/loadout';
 import { RULES, DEFS, SPELLS, WEAPONS, ARMORS, ITEMS, ENEMIES, ALL_ENEMIES, ACCESSORIES, DUNGEONS, enemyById, itemOf, SAVE_CONFIG, SHOP } from '../game/content';
@@ -74,7 +74,6 @@ export class GameScene extends Phaser.Scene {
     this.fx = this.add.graphics().setDepth(60);
     loadArt(this, ZOOM);
     loadTempleArt(this, ZOOM);
-    for (const d of DUNGEONS) if (!d.locked) loadBoardArt(this, d, buildBoard(d), ZOOM);
     this.save = loadSave(SAVE_CONFIG);
     this.input.on('pointerdown', () => this.snd.unlock());
     window.addEventListener('keydown', () => this.snd.unlock());
@@ -188,6 +187,7 @@ export class GameScene extends Phaser.Scene {
     const saved = this.save.run?.dungeon === def.id ? this.save.run : undefined;
     this.run = new DungeonRun(def, RULES.playerMaxHp, this.save.items.map(x => !!x), Math.random, saved);
     this.inRun = true; this.reward = null; this.setCache.clear();
+    loadBoardArt(this, def, this.run.board, ZOOM);     // 大きな絵なので、入るときに作る（起動を重くしない）
     this.toBoard();
   }
   toBoard() {
