@@ -370,6 +370,154 @@
         "A": 47,
         "B": 58
       }
+    },
+    {
+      "id": "fire_lizard",
+      "name": "火トカゲ",
+      "rank": "雑",
+      "hp": 30,
+      "dungeon": "fire",
+      "drop": {
+        "id": "fire_shard",
+        "name": "火の欠片",
+        "price": 15
+      },
+      "actions": [
+        {
+          "name": "かみつき",
+          "chargeSec": 3.8,
+          "damage": 2
+        },
+        {
+          "name": "かみつき",
+          "chargeSec": 3.8,
+          "damage": 2
+        },
+        {
+          "name": "火の息",
+          "chargeSec": 4.8,
+          "damage": 5,
+          "big": true
+        }
+      ]
+    },
+    {
+      "id": "fire_wisp",
+      "name": "鬼火",
+      "rank": "雑",
+      "hp": 22,
+      "dungeon": "fire",
+      "drop": {
+        "id": "fire_shard",
+        "name": "火の欠片",
+        "price": 15
+      },
+      "actions": [
+        {
+          "name": "火花",
+          "chargeSec": 3.0,
+          "damage": 2
+        }
+      ]
+    },
+    {
+      "id": "lava_slime",
+      "name": "溶岩スライム",
+      "rank": "雑",
+      "hp": 40,
+      "dungeon": "fire",
+      "drop": {
+        "id": "fire_shard",
+        "name": "火の欠片",
+        "price": 15
+      },
+      "actions": [
+        {
+          "name": "のしかかり",
+          "chargeSec": 5.0,
+          "damage": 4
+        },
+        {
+          "name": "のしかかり",
+          "chargeSec": 5.0,
+          "damage": 4
+        },
+        {
+          "name": "溶岩弾",
+          "chargeSec": 5.5,
+          "damage": 8,
+          "big": true
+        }
+      ]
+    },
+    {
+      "id": "fire_guard",
+      "name": "炎の番人",
+      "rank": "中",
+      "hp": 75,
+      "dungeon": "fire",
+      "drop": {
+        "id": "guard_core",
+        "name": "番人の核",
+        "price": 80
+      },
+      "actions": [
+        {
+          "name": "斬りつけ",
+          "chargeSec": 4.0,
+          "damage": 5
+        },
+        {
+          "name": "斬りつけ",
+          "chargeSec": 4.0,
+          "damage": 5
+        },
+        {
+          "name": "炎の一閃",
+          "chargeSec": 5.0,
+          "damage": 13,
+          "big": true
+        }
+      ]
+    },
+    {
+      "id": "fire_beast",
+      "name": "炎獣",
+      "rank": "主",
+      "hp": 110,
+      "dungeon": "fire",
+      "burn": {
+        "everySec": 3.0,
+        "damage": 1
+      },
+      "drop": {
+        "id": "beast_fang",
+        "name": "炎獣の牙",
+        "price": 150
+      },
+      "actions": [
+        {
+          "name": "爪",
+          "chargeSec": 3.8,
+          "damage": 5
+        },
+        {
+          "name": "爪",
+          "chargeSec": 3.8,
+          "damage": 5
+        },
+        {
+          "name": "業火",
+          "chargeSec": 5.0,
+          "damage": 15,
+          "big": true
+        },
+        {
+          "name": "突進",
+          "chargeSec": 3.8,
+          "damage": 6
+        }
+      ]
     }
   ],
   "weapons": [
@@ -453,6 +601,14 @@
       "def": 4,
       "price": null,
       "desc": ""
+    }
+  ],
+  "accessories": [
+    {
+      "id": "flame_ring",
+      "name": "炎の指輪",
+      "consumeBonus": 3,
+      "desc": "使い切りボーナスが +3 になる。"
     }
   ]
 }

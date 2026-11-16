@@ -9,11 +9,14 @@ export function buildDeck(cards: CardDef[], spells: string[]): CardDef[] {
   return cards.filter(c => c.type === 'attack' || spells.includes(c.id));
 }
 
-export function gearOf(weapon: WeaponDef | undefined, armor: ArmorDef | undefined): Gear {
+export interface AccessoryDef { id: string; name: string; consumeBonus?: number; desc: string }
+
+export function gearOf(weapon: WeaponDef | undefined, armor: ArmorDef | undefined, accessory?: AccessoryDef): Gear {
   return {
     power: weapon?.power,
     attackWaitSec: weapon?.attackWaitSec,
     chargeMod: (weapon?.chargeMod ?? 0) + (armor?.chargeMod ?? 0),
     def: armor?.def ?? 0,
+    consumeBonus: accessory?.consumeBonus,
   };
 }

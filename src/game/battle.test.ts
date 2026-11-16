@@ -441,6 +441,34 @@ describe('装備', () => {
   });
 });
 
+describe('ダンジョン向けの引き継ぎと仕掛け', () => {
+  it('HP・最大HP・アイテムの使用状況を引き継いで始められる', () => {
+    const b = new Battle(defs, rules, seeded(), [item('potion'), item('flash'), item('rage')], null, {}, { hp: 95, maxHp: 110, used: [true, false, false] });
+    expect(b.hp).toBe(95);
+    expect(b.items[0]!.used).toBe(true);
+    expect(b.selected).toBe(1);                 // 使える物が最初に選ばれている
+    expect(b.useItem(0)).toBe(false);
+    b.items[0]!.used = false; b.useItem(0);
+    expect(b.hp).toBe(110);                     // 回復の上限は引き継いだ最大HP
+  });
+
+  it('やけど: 時間でHPが減る。敵がスタンしていても進み、これで倒れることもある', () => {
+    const enemy: EnemyDef = { id: 'b', name: 'b', hp: 99, burn: { everySec: 2, damage: 1 }, actions: [{ name: 'x', chargeSec: 99, damage: 1 }] };
+    const b = new Battle(defs, rules, seeded(), [item('flash')], enemy, {}, { hp: 3 });
+    b.useItem(0);
+    wait(b, 2.05); expect(b.hp).toBe(2);
+    wait(b, 4.0);
+    expect(b.result).toBe('lost');
+  });
+
+  it('アクセサリで、使い切りボーナスが置き換わる', () => {
+    const b = new Battle(defs, rules, seeded(), [], null, { consumeBonus: 3 });
+    setHand(b, ['atk1', 'atk1', 'atk1', 'atk1']);
+    for (let i = 0; i < 4; i++) { b.press(i); wait(b, 0.2); }
+    expect(b.stats.damage).toBe(4 + 3);
+  });
+});
+
 it('デッキはアタック28枚（固定）とスペル2枚で30枚になる', () => {
   expect(def('atk1').copies + def('atk2').copies + def('atk3').copies + def('atkS').copies).toBe(28);
   expect(defs.filter(d => d.type === 'spell').map(d => d.id)).toEqual(['double', 'levelx', 'drain', 'rankup']);

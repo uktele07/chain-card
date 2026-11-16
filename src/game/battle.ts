@@ -32,6 +32,8 @@ export interface EnemyAction { name: string; chargeSec: number; damage: number; 
 export interface EnemyDef {
   id: string; name: string; rank?: string; hp: number; actions: EnemyAction[];
   rankSec?: { S: number; A: number; B: number };   // 撃破タイムがこの秒数以内ならそのランク
+  dungeon?: string;                                 // ダンジョン専用の敵（討伐の一覧には出さない）
+  burn?: { everySec: number; damage: number };      // やけど: 戦闘中、時間でHPが減る（ボスの仕掛け）
   unlock?: 'prev';                                  // 一覧でこれより前の敵をすべて倒すと出現
   drop?: { id: string; name: string; price: number };   // 討伐で手に入る換金アイテム
 }
@@ -42,6 +44,7 @@ export interface Gear {
   attackWaitSec?: number;  // 武器: アタックを出した後、次のカードを出せるまでの待ち
   chargeMod?: number;      // 入れ替え時間に足す秒数（マイナスなら速くなる）
   def?: number;            // 防具: 受けるダメージを減らす量（最低1は受ける）
+  consumeBonus?: number;   // アクセサリ: 使い切りボーナスを置き換える
 }
 export interface EnemyState { def: EnemyDef; hp: number; actionIndex: number; gauge: number; stunLeft: number }
 
@@ -69,6 +72,7 @@ export type BattleEvent =
   | { kind: 'spell'; slot: number; effect: string }
   | { kind: 'item'; slot: number; effect: string }
   | { kind: 'heal'; amount: number }
+  | { kind: 'burn'; damage: number }
   | { kind: 'keep'; slot: number; on: boolean }
   | { kind: 'miss'; slot: number }
   | { kind: 'skip'; auto: boolean }
@@ -111,17 +115,22 @@ export class Battle {
   turnDamage = 0;          // 今の手札（配られてから次に配られるまで）で与えたダメージ
   usedInvincible = false;  // 無敵（テスト用）を使った戦闘は記録しない
   hp: number;
+  maxHp: number;
+  private burnWait = 0;
   time = 0;
   stats = { damage: 0, plays: 0, skips: 0, autoSkips: 0, misses: 0, sCount: 0, fullConsumes: 0, maxTurn: 0, chainBreaks: 0, taken: 0 };
   events: BattleEvent[] = [];
 
-  constructor(defs: CardDef[], rules: Rules, rng: () => number = Math.random, items: (ItemDef | null)[] = [], enemy: EnemyDef | null = null, gear: Gear = {}) {
+  constructor(defs: CardDef[], rules: Rules, rng: () => number = Math.random, items: (ItemDef | null)[] = [], enemy: EnemyDef | null = null, gear: Gear = {}, carry: { hp?: number; maxHp?: number; used?: boolean[] } = {}) {
     this.rules = rules;
     this.gear = gear;
+    this.maxHp = carry.maxHp ?? rules.playerMaxHp;
     this.rng = rng;
-    this.hp = rules.playerMaxHp;
-    this.items = items.map(def => (def ? { def, used: false } : null));
-    this.selected = Math.max(0, this.items.findIndex(it => it));
+    this.hp = Math.min(this.maxHp, carry.hp ?? this.maxHp);
+    // ダンジョンでは、HPとアイテムの使用状況を前の戦闘から引き継ぐ
+    this.items = items.map((def, i) => (def ? { def, used: !!carry.used?.[i] } : null));
+    this.selected = Math.max(0, this.items.findIndex(it => it && !it.used));
+    if (this.selected < 0) this.selected = 0;
     if (enemy) {
       this.enemy = { def: enemy, hp: enemy.hp, actionIndex: 0, gauge: 0, stunLeft: 0 };
       this.announceAction();
@@ -165,6 +174,16 @@ export class Battle {
   private updateEnemy(dt: number) {
     const e = this.enemy;
     if (!e) return;
+    if (e.def.burn && !this.invincible) {   // やけどは、敵がスタンしていても進む
+      this.burnWait += dt;
+      while (this.burnWait >= e.def.burn.everySec && this.hp > 0) {
+        this.burnWait -= e.def.burn.everySec;
+        this.hp = Math.max(0, this.hp - e.def.burn.damage);
+        this.stats.taken += e.def.burn.damage;
+        this.events.push({ kind: 'burn', damage: e.def.burn.damage });
+      }
+      if (this.hp <= 0) { this.result = 'lost'; this.events.push({ kind: 'lose' }); return; }
+    }
     if (e.stunLeft > 0) { e.stunLeft = Math.max(0, e.stunLeft - dt); return; }
     e.gauge += dt;
     const a = this.enemyAction!;
@@ -225,7 +244,7 @@ export class Battle {
       // ダブル: 同じアタックを2回当てる。強化薬は1回ごとに乗る
       const hits = this.buffs.double > 0 ? 2 : 1;
       const per = this.powerOf(lv) + (this.rageLeft > 0 ? this.rageBonus : 0);
-      const bonus = lastOfHand ? this.rules.fullConsumeBonus : 0;   // 使い切りボーナス
+      const bonus = lastOfHand ? this.gear.consumeBonus ?? this.rules.fullConsumeBonus : 0;   // 使い切りボーナス
       const damage = per * hits + bonus;
       this.stats.damage += damage;
       this.turnDamage += damage;
@@ -234,7 +253,7 @@ export class Battle {
       for (let h = 0; h < hits; h++) this.events.push({ kind: 'hit', slot: i, damage: per, lv, index: h, hits, bonus: h === hits - 1 ? bonus : 0 });
       if (this.buffs.drain > 0) {   // ドレイン: 与えたダメージと同じだけ回復
         const before = this.hp;
-        this.hp = Math.min(this.rules.playerMaxHp, this.hp + damage);
+        this.hp = Math.min(this.maxHp, this.hp + damage);
         this.events.push({ kind: 'heal', amount: this.hp - before });
       }
       this.buffs = { double: 0, levelx: 0, drain: 0, rankup: 0 };
@@ -260,7 +279,7 @@ export class Battle {
     if (this.result !== 'playing' || !it || it.used) return false;
     it.used = true;
     const d = it.def;
-    if (d.effect === 'heal') this.hp = Math.min(this.rules.playerMaxHp, this.hp + (d.value ?? 0));
+    if (d.effect === 'heal') this.hp = Math.min(this.maxHp, this.hp + (d.value ?? 0));
     if (d.effect === 'flash' && this.enemy) { this.enemy.stunLeft = d.stunSec ?? 0; this.enemy.gauge = 0; }
     if (d.effect === 'sand') {
       this.sandLeft = d.durationSec ?? 0;
