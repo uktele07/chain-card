@@ -39,7 +39,7 @@ body{width:960px;height:540px;overflow:hidden;background:#000;font-family:'Noto 
 <div class="tilt" style="top:0;height:110px;-webkit-mask:linear-gradient(#000,transparent)"></div>
 <div class="tilt" style="bottom:0;height:120px;backdrop-filter:blur(4px);-webkit-mask:linear-gradient(transparent,#000)"></div>
 <div class="vg"></div>
-${kind === 'battle' ? battle(t) : select(t)}
+${kind === 'battle' ? battle(t) : kind === 'select' ? select(t) : battleAlt(t, kind)}
 <script>
 const T=${JSON.stringify(t)};
 const c=document.getElementById('bg'),x=c.getContext('2d');let seed=7;const R=()=>(seed=(seed*1664525+1013904223)%4294967296)/4294967296;
@@ -105,6 +105,67 @@ ${card(392, 170, 'B', '威力 2', '△')}${card(520, 288, 'C', '威力 1', '○'
 <div class="abs" style="left:30px;bottom:24px;font:800 italic 40px/1 'Inter Display','Inter'">84<span style="font:500 14px 'Inter';opacity:.6;font-style:normal"> / 100</span></div>
 <div class="abs" style="left:30px;bottom:14px;width:230px;height:4px;background:rgba(255,255,255,.2)"><div style="width:84%;height:100%;background:#f4f4f2"></div></div>`;
 }
+// 別配置の見本。2版と同じ抑え方（極太と斜めは敵の名前とチェインだけ）で、置き場所だけ変える
+function battleAlt(t, v) {
+  const css = `<style>
+.c3{position:absolute;background:#f4f4f2;color:#111;box-shadow:4px 4px 0 var(--ac)}
+.c3.off{background:rgba(12,12,12,.85);color:#6a6a6a;box-shadow:none;outline:1px solid #444}
+.c3.sp{background:var(--ac);color:#fff;box-shadow:4px 4px 0 #f4f4f2}
+.c3 .lv{position:absolute;left:0;right:0;text-align:center;font-weight:900;font-family:'Inter Display','Inter';line-height:1}
+.c3 .pw{position:absolute;left:0;right:0;bottom:7px;text-align:center;font-size:10px;font-weight:500;letter-spacing:1px}
+.c3 .gl{position:absolute;left:6px;top:4px;font-size:11px;opacity:.75}
+.sm{font-size:11px;font-weight:500;letter-spacing:2px;opacity:.75}
+.chip{position:absolute;height:30px;font-size:12px;font-weight:500;line-height:30px;padding:0 14px;background:rgba(0,0,0,.6);border-left:2px solid rgba(255,255,255,.5)}
+.chip.on{background:#f4f4f2;color:#111;border-left:4px solid var(--ac)}
+</style>`;
+  const hand = (cx, cy, w, h, dx, dy, fs) => {
+    const c = (x, y, lv, pw, gl, cls = '') => `<div class="c3 ${cls}" style="left:${x - w / 2}px;top:${y - h / 2}px;width:${w}px;height:${h}px"><div class="lv" style="top:${h * 0.14}px;font-size:${fs}px">${lv}</div><div class="pw">${pw}</div><div class="gl">${gl}</div></div>`;
+    const r = Math.min(w, h) * 0.36;
+    return c(cx, cy - dy, 'B', '威力 2', '△') + c(cx + dx, cy, 'C', '威力 1', '○') + c(cx, cy + dy, 'S', '威力 10', '✕', 'off') + c(cx - dx, cy, 'X', 'レベルX', '□', 'sp')
+      + `<div class="abs" style="left:${cx - r}px;top:${cy - r}px;width:${r * 2}px;height:${r * 2}px;background:var(--ac);transform:rotate(45deg);outline:2px solid #f4f4f2;outline-offset:4px"></div>`
+      + `<div class="abs d" style="left:${cx - r}px;top:${cy - r - 3}px;width:${r * 2}px;text-align:center;font-size:${r * 1.3}px;line-height:${r * 2}px;color:#111">B</div>`;
+  };
+  if (v === 'center') return css + `
+<img class="abs" src="${t.monsterSrc}" style="left:330px;top:6px;width:300px;height:300px;filter:drop-shadow(0 0 26px ${t.glow}77)">
+<div class="abs para band" style="left:-30px;top:24px;width:300px;height:48px;border-right-width:6px"></div>
+<div class="abs d" style="left:30px;top:24px;font-size:30px;line-height:48px">${t.name}</div>
+<div class="abs sm" style="left:${t.name.length * 32 + 44}px;top:46px;color:var(--ac);opacity:1">BOSS</div>
+<div class="abs" style="left:30px;top:82px;width:240px;height:8px;background:rgba(0,0,0,.7)"><div style="width:64%;height:100%;background:var(--ac)"></div></div>
+<div class="abs" style="left:30px;top:96px;font:700 20px 'Inter'">71<span style="font-size:12px;font-weight:500;opacity:.6"> / 110</span></div>
+<div class="abs sm" style="right:30px;top:26px;border-bottom:1px solid var(--ac);padding-bottom:4px">${t.stage}</div>
+<div class="abs" style="right:30px;top:70px;text-align:right;font-size:12px;font-weight:500"><span style="opacity:.6">次の攻撃</span>　爪　5 ダメージ<br><span style="font:700 26px 'Inter'">3.5</span> 秒</div>
+<div class="abs" style="right:30px;top:128px;width:150px;height:3px;background:rgba(255,255,255,.2)"><div style="width:30%;height:100%;background:#fff;margin-left:auto"></div></div>
+<div class="abs" style="left:0;top:296px;width:960px;height:244px;background:linear-gradient(transparent,rgba(0,0,0,.72) 30%)"></div>
+${hand(480, 412, 104, 70, 116, 78, 38)}
+<div class="abs sm" style="left:30px;top:330px">アイテム</div>
+<div class="chip on" style="left:30px;top:350px;width:190px">回復薬<span style="position:absolute;right:10px;font-size:11px;color:var(--ac);font-weight:900">R2</span></div>
+<div class="chip" style="left:30px;top:384px;width:190px">閃光弾</div>
+<div class="chip" style="left:30px;top:418px;width:190px">チェインの実</div>
+<div class="abs sm" style="right:30px;bottom:70px;text-align:right"><span style="color:var(--ac);opacity:1;letter-spacing:0;margin-right:14px">やけど　3秒ごとに −1</span>HP</div>
+<div class="abs" style="right:30px;bottom:26px;font:800 italic 40px/1 'Inter Display','Inter'">84<span style="font:500 14px 'Inter';opacity:.6;font-style:normal"> / 100</span></div>
+<div class="abs" style="right:30px;bottom:16px;width:230px;height:4px;background:rgba(255,255,255,.2)"><div style="width:84%;height:100%;background:#f4f4f2"></div></div>`;
+  return css + `
+<img class="abs" src="${t.monsterSrc}" style="left:520px;top:92px;width:420px;height:420px;filter:drop-shadow(0 0 30px ${t.glow}77)">
+<div class="abs" style="left:0;top:0;width:960px;height:74px;background:linear-gradient(rgba(0,0,0,.8),transparent)"></div>
+<div class="abs para band" style="left:-30px;top:16px;width:250px;height:44px;border-right-width:6px"></div>
+<div class="abs d" style="left:28px;top:16px;font-size:28px;line-height:44px">${t.name}</div>
+<div class="abs sm" style="left:${t.name.length * 30 + 40}px;top:36px;color:var(--ac);opacity:1">BOSS</div>
+<div class="abs" style="left:250px;top:34px;width:560px;height:8px;background:rgba(0,0,0,.7)"><div style="width:64%;height:100%;background:var(--ac)"></div></div>
+<div class="abs" style="left:824px;top:22px;font:700 22px 'Inter'">71<span style="font-size:12px;font-weight:500;opacity:.6"> / 110</span></div>
+<div class="abs" style="left:250px;top:50px;font-size:12px;font-weight:500"><span style="opacity:.6">次の攻撃</span>　爪　5 ダメージ　　3.5 秒</div>
+<div class="abs" style="left:480px;top:57px;width:330px;height:3px;background:rgba(255,255,255,.2)"><div style="width:30%;height:100%;background:#fff"></div></div>
+<div class="abs" style="left:0;top:80px;width:520px;height:460px;background:linear-gradient(90deg,rgba(0,0,0,.6) 55%,transparent)"></div>
+${hand(250, 262, 92, 102, 112, 112, 52)}
+<div class="abs sm" style="left:250px;top:${262 + 44}px;width:0;white-space:nowrap;transform:translateX(-18px);font-size:9px"></div>
+<div class="abs sm" style="left:30px;bottom:66px">HP<span style="margin-left:14px;color:var(--ac);opacity:1;letter-spacing:0">やけど　3秒ごとに −1</span></div>
+<div class="abs" style="left:30px;bottom:24px;font:800 italic 40px/1 'Inter Display','Inter'">84<span style="font:500 14px 'Inter';opacity:.6;font-style:normal"> / 100</span></div>
+<div class="abs" style="left:30px;bottom:14px;width:230px;height:4px;background:rgba(255,255,255,.2)"><div style="width:84%;height:100%;background:#f4f4f2"></div></div>
+<div class="abs sm" style="left:300px;bottom:52px">アイテム</div>
+<div class="chip on" style="left:300px;bottom:14px">回復薬　<span style="font-size:11px;color:var(--ac);font-weight:900">R2</span></div>
+<div class="chip" style="left:406px;bottom:14px">閃光弾</div>
+<div class="chip" style="left:486px;bottom:14px">チェインの実</div>
+<div class="abs sm" style="right:30px;bottom:18px;border-bottom:1px solid var(--ac);padding-bottom:4px">${t.stage}</div>`;
+}
 function select(t) {
   const rows = [['火', '火の神殿', '探索中', 1], ['水', '水の神殿', '準備中', 0], ['風', '風の神殿', '準備中', 0], ['城', '魔王城', '準備中', 0]];
   return `<div class="abs" style="inset:0;background:linear-gradient(100deg,rgba(0,0,0,.92) 46%,rgba(0,0,0,.15) 62%)"></div>
@@ -129,13 +190,13 @@ ${rows.map(([m, n, st, on], i) => `<div class="row" style="top:${148 + i * 72}px
   const monster = await g.evaluate(() => window.__scene.textures.get('monster-fire_beast').getSourceImage().src);
   await g.close();
   const only = process.argv[2];
-  for (const [name, t, kind] of [['1-battle-fire', THEMES.fire, 'battle'], ['2-battle-water', THEMES.water, 'battle'], ['3-select', THEMES.fire, 'select']]) {
+  for (const [name, t, kind] of [['1-battle-fire', THEMES.fire, 'battle'], ['2-battle-water', THEMES.water, 'battle'], ['3-select', THEMES.fire, 'select'], ['4-battle-center', THEMES.fire, 'center'], ['5-battle-split', THEMES.fire, 'split']]) {
     if (only && !name.startsWith(only)) continue;
     t.monsterSrc = monster;
     const f = `${OUT}/${name}.html`; fs.writeFileSync(f, page(t, monster, kind));
     const p = await b.newPage({ viewport: { width: 960, height: 540 }, deviceScaleFactor: 2 });
     await p.goto('file://' + f); await p.waitForFunction(() => document.body.dataset.ready === '1'); await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(600);
-    await p.screenshot({ path: `${__dirname}/look-${name}${only ? '-v2' : ''}.png` }); await p.close();
+    await p.screenshot({ path: `${__dirname}/look-${name}${only === '1' ? '-v2' : ''}.png` }); await p.close();
   }
   await b.close();
 })();
