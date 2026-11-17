@@ -203,13 +203,48 @@ const head = `<meta charset="utf-8"><link rel="stylesheet" href="file://${FONTS}
     await p.goto('file://' + f); await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(700);
     await p.screenshot({ path: `${__dirname}/${name}.png` }); await p.close();
   };
+  const only = process.argv[2];
   for (const [name, make] of Object.entries(STYLES)) {
     if (process.argv[2] && !name.startsWith(process.argv[2])) continue;
     const s = make(monster);
     await shoot(`style-${name}`, `<!doctype html><html><head>${head}<style>${base}${s.css}</style></head><body>${s.back}${layout(s)}<script>${s.script}</script></body></html>`);
   }
+  // メニュー系の見本: 行き先（ダンジョン）。戦闘の見た目（D3）と同じ調子を、一覧の画面に当てる
+  if (!only || only === 'menu') {
+    const rows = [['火', '火の神殿', '探索中', 1], ['水', '水の神殿', '準備中', 0], ['風', '風の神殿', '準備中', 0], ['城', '魔王城', '準備中', 0]];
+    const css = `body{--gold:#d8b46a;background:#0b0a09}
+.sm{letter-spacing:4px;font-size:10px}
+.row{position:absolute;left:40px;width:380px;height:56px;border-bottom:1px solid rgba(216,180,106,.25)}
+.row.on{background:linear-gradient(90deg,rgba(216,180,106,.3),rgba(216,180,106,.04) 80%,transparent);border-bottom:1px solid var(--gold);border-top:1px solid rgba(216,180,106,.5)}
+.row .mk{position:absolute;left:18px;top:13px;width:30px;height:30px;border:1px solid rgba(216,180,106,.45);font:500 15px/30px 'Noto Sans JP';text-align:center;color:#8d8576}
+.row.on .mk{border-color:var(--ac);color:var(--ac);box-shadow:0 0 14px rgba(255,80,20,.35)}
+.row .nm{position:absolute;left:66px;top:0;line-height:56px;font-size:17px;font-weight:500;letter-spacing:4px;color:#8d8576}.row.on .nm{color:#fff;font-size:19px}
+.row .st{position:absolute;right:16px;top:0;line-height:56px;font-size:11px;letter-spacing:3px;color:#5c554a}.row.on .st{color:var(--gold)}
+.key{display:inline-block;border:1px solid var(--gold);color:var(--gold);font:500 10px 'Inter';letter-spacing:2px;padding:2px 7px;margin:0 8px 0 22px}
+#bg,#bloom{position:absolute;left:-80px;top:-40px;width:900px;height:506px;image-rendering:pixelated}
+#bg{filter:blur(1.2px) saturate(.8) brightness(.8)}#bloom{filter:blur(16px) brightness(1.5) saturate(1.5);mix-blend-mode:screen;opacity:.6;image-rendering:auto}`;
+    const html = `<!doctype html><html><head>${head}<style>${base}${css}</style></head><body>
+<div class="abs" style="left:470px;top:60px;width:450px;height:426px;overflow:hidden"><canvas id="bg" width="320" height="180"></canvas><canvas id="bloom" width="320" height="180"></canvas>
+  <div class="abs" style="inset:0;background:radial-gradient(ellipse at 50% 55%,transparent 35%,rgba(0,0,0,.8) 100%)"></div></div>
+<div class="abs" style="left:470px;top:60px;width:450px;height:426px;border:1px solid var(--gold)"></div>
+<div class="abs" style="left:464px;top:54px;width:462px;height:438px;border:1px solid rgba(216,180,106,.3)"></div>
+<div class="abs" style="left:470px;top:60px;width:3px;height:426px;background:var(--ac);box-shadow:0 0 12px var(--ac)"></div>
+<div class="abs d" style="left:40px;top:28px;font-size:30px;letter-spacing:4px">行き先</div>
+<div class="abs" style="left:40px;top:92px;font-size:14px;font-weight:500;letter-spacing:4px"><span style="color:#8d8576;padding:0 4px 8px">討伐</span><span style="margin-left:26px;padding:0 4px 8px;border-bottom:2px solid var(--gold)">ダンジョン</span><span class="sm" style="margin-left:22px;color:var(--gold)">L1 / R1</span></div>
+${rows.map(([m, n, st, on], i) => `<div class="row ${on ? 'on' : ''}" style="top:${140 + i * 60}px">${on ? '<div style="position:absolute;left:-3px;top:24px;width:7px;height:7px;background:var(--gold);transform:rotate(45deg)"></div>' : ''}<div class="mk">${m}</div><div class="nm">${n}</div><div class="st">${st}</div></div>`).join('')}
+<div class="abs sm" style="left:40px;top:404px">アイテム</div>
+<div class="abs" style="left:40px;top:424px;font-size:12px;font-weight:500;letter-spacing:2px;color:#cfc6b4">回復薬<span style="color:var(--gold);margin:0 12px">◆</span>閃光弾<span style="color:var(--gold);margin:0 12px">◆</span>チェインの実</div>
+<div class="abs sm" style="left:40px;top:462px">所持金</div>
+<div class="abs" style="left:40px;top:478px;font:500 26px/1 'Inter Display','Inter'">310<span style="font:400 12px 'Inter';opacity:.6;margin-left:6px">G</span></div>
+<div class="abs" style="right:40px;bottom:16px;font-size:11px;font-weight:500;letter-spacing:2px;color:#cfc6b4"><span class="key">○</span>入る<span class="key">OPTIONS</span>メニュー</div>
+<div class="abs" style="left:14px;top:14px;width:26px;height:26px;border-left:1px solid var(--gold);border-top:1px solid var(--gold);opacity:.7"></div>
+<div class="abs" style="right:14px;bottom:14px;width:26px;height:26px;border-right:1px solid var(--gold);border-bottom:1px solid var(--gold);opacity:.7"></div>
+<svg class="abs" width="960" height="540" style="left:0;top:0;opacity:.1;mix-blend-mode:overlay;pointer-events:none"><filter id="n"><feTurbulence baseFrequency=".9" numOctaves="2" seed="4"/></filter><rect width="960" height="540" filter="url(#n)"/></svg>
+<script>${pixelBg}</script></body></html>`;
+    await shoot('style-menu-select', html);
+    if (only === 'menu') { await b.close(); return; }
+  }
   // リボルバーの動き: 4コマ
-  const only = process.argv[2];
   const a = STYLES['A-depth'](monster);
   if (only === 'D') { const d = STYLES['D-mix'](monster); const fr = [0, 0.33, 0.66, 1].map((p, i) => `<div style="position:absolute;left:${i * 250}px;top:0;width:250px;height:170px"><div style="position:absolute;left:14px;top:8px;font-size:11px;opacity:.7">${['① 押す前', '② 回り始め', '③ 後ろを通る', '④ 押した後'][i]}</div>${revolver(p, 44, 60, true)}</div>`).join(''); await shoot('style-D-revolver', `<!doctype html><html><head>${head}<style>${base}${d.css}body{width:1000px;height:170px;background:#14110f}</style></head><body>${fr}</body></html>`, 1000, 170); await b.close(); return; }
   if (only) { await b.close(); return; }
