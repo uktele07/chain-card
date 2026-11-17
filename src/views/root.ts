@@ -8,6 +8,8 @@ import battleCss from './battle.css?inline';
 import { battleView } from './battle';
 import listCss from './list.css?inline';
 import { listView } from './list';
+import ovCss from './overlays.css?inline';
+import { resultView, pauseView, resumeView } from './overlays';
 import type { GameScene } from '../scenes/GameScene';
 
 /** HTML で描く画面と、その描き方。移し終えた画面をここに足す（GameScene.draw は、ここにある画面を Canvas に描かない） */
@@ -15,6 +17,9 @@ export type ViewName = 'list' | 'board' | 'battle' | 'result' | 'menu' | 'equip'
 export const VIEWS: Partial<Record<ViewName, (gs: GameScene) => TemplateResult>> = {
   battle: battleView,   // 段階1: 開始前・戦闘中（結果とポーズの下敷きも兼ねる）
   list: listView,       // 段階3（先に実施）: 行き先
+  result: resultView,   // 段階2: 結果・ポーズ・再開のカウント（B 帯）
+  pause: pauseView,
+  resume: resumeView,
 };
 export const isHtml = (v: ViewName) => v in VIEWS;
 
@@ -30,7 +35,7 @@ export class UIRoot {
 
   constructor(parent: HTMLElement) {
     const style = document.createElement('style');
-    style.textContent = tokens + base + battleCss + listCss;
+    style.textContent = tokens + base + battleCss + listCss + ovCss;
     document.head.appendChild(style);
     this.el = document.createElement('div');
     this.el.id = 'ui';

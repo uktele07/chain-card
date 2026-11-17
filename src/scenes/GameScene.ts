@@ -386,8 +386,9 @@ export class GameScene extends Phaser.Scene {
       }
 
       case 'pause':
-        if (b === 'up') this.move('pause', -1, this.inRun ? PAUSE_DUNGEON.length : PAUSE.length);
-        else if (b === 'down') this.move('pause', 1, this.inRun ? PAUSE_DUNGEON.length : PAUSE.length);
+        // 項目は横に並ぶ（左右）。以前の上下も効く
+        if (b === 'up' || b === 'left') this.move('pause', -1, this.inRun ? PAUSE_DUNGEON.length : PAUSE.length);
+        else if (b === 'down' || b === 'right') this.move('pause', 1, this.inRun ? PAUSE_DUNGEON.length : PAUSE.length);
         else if (this.inRun && ok && this.cur.pause === 1) { this.snd.uiBack(); this.run!.battleLost(); this.leaveDungeon(); }   // 戦闘の途中で出ると、負けた扱い
         else if (back || b === 'options' || (ok && this.cur.pause === 0)) { this.overlays = ['resume']; this.resumeLeft = RULES.resumeCountSec; this.snd.count(); }
         else if (ok && this.cur.pause === 1) { this.snd.uiOk(); this.toReady(this.enemy); }
@@ -399,7 +400,8 @@ export class GameScene extends Phaser.Scene {
       case 'result':
         if (this.resultWait > 0) break;
         if (this.inRun) { if (ok) { this.snd.uiOk(); this.toBoard(); } break; }
-        if (b === 'left' || b === 'right') this.move('result', b === 'left' ? -1 : 1, 2);
+        // 選択肢は縦に並ぶ（上下）。以前の左右も効く
+        if (b === 'left' || b === 'right' || b === 'up' || b === 'down') this.move('result', b === 'left' || b === 'up' ? -1 : 1, 2);
         if (this.inRun) { if (ok) { this.snd.uiOk(); this.toBoard(); } break; }
         else if (ok) { this.snd.uiOk(); if (this.cur.result === 0) this.toReady(this.enemy); else this.toList(); }
         break;
@@ -634,7 +636,7 @@ export class GameScene extends Phaser.Scene {
     } else {
       if (this.base === 'list' && isHtml('list')) { drawListScene(this, a, this.overlays.some(o => !isHtml(o))); views.push('list'); }   // 地と絵は Canvas、ほかは HTML
       else if (this.base === 'list') show('list', () => drawList(this, a));
-      else if (isHtml('battle')) { drawBattleScene(this, a); views.push('battle'); }   // 背景・敵・演出は Canvas、画面まわりは HTML
+      else if (isHtml('battle')) { drawBattleScene(this, a); if (this.base !== 'result') views.push('battle'); }   // 背景・敵・演出は Canvas、画面まわりは HTML（結果では隠す）
       else show('battle', () => drawBattle(this, a));
       if (this.base === 'result') show('result', () => drawResult(this, b));
       this.overlays.forEach((o, i) => {
