@@ -192,12 +192,12 @@ ${guide(K('↑ ↓', '選ぶ') + K('○', 'セット') + K('✕', 'やめる'))}
 ${guide(K('↑ ↓', '選ぶ') + K('○', '買う') + K('✕', '戻る'))}`; },
     deck: function () { return `${this.pillar(1, false)}${corners}
 <div class="pg">カード編集</div>
-<div class="abs" style="right:40px;top:44px;font-size:12px;letter-spacing:2px;color:var(--sub)">デッキ <span class="n" style="font-size:18px;color:#fff">30</span> 枚</div>
+<div class="abs" style="left:470px;top:40px;font-size:12px;letter-spacing:2px;color:var(--sub)">デッキ <span class="n" style="font-size:18px;color:#fff">30</span> 枚</div>
 <div class="hd" style="left:270px;top:92px">アタック（枚数は固定）</div>
 ${ATK.map(([l, p, n], i) => `<div class="row" style="left:270px;top:${110 + i * 42}px;width:300px;height:42px;color:var(--sub)"><span class="mk" style="margin-right:12px;border-color:var(--gold);color:var(--gold);font-family:Inter">${l}</span>威力 ${p}<span class="r n" style="font-size:16px;color:#fff">× ${n}</span></div>`).join('')}
 <div class="abs" style="left:270px;top:300px;width:300px;font-size:11px;letter-spacing:2px;color:var(--sub);line-height:2">武器　　　　<span style="color:#fff">鉄の剣</span><br>アクセサリ　<span style="color:var(--off)">なし</span></div>
 <div class="abs" style="left:600px;top:92px;width:1px;height:380px;background:rgba(216,180,106,.4)"></div>
-<div class="hd" style="left:630px;top:92px">スペル（重複不可）</div><div class="abs" style="right:40px;top:88px;font-size:11px;letter-spacing:2px;color:var(--gold)">2 / 2 枚</div>
+<div class="hd" style="left:630px;top:92px">スペル（重複不可）</div><div class="abs" style="right:40px;top:70px;display:flex;align-items:baseline;gap:6px;color:var(--gold)"><span class="n" style="font-weight:500;font-size:36px;line-height:1;color:#fff;text-shadow:0 0 14px rgba(216,180,106,.55)">2</span><span class="n" style="font-weight:300;font-size:16px;letter-spacing:2px">/ 2</span><span style="font-size:10px;letter-spacing:2px">枚</span></div>
 ${SPELLS.map(([m, n, on], i) => `<div class="row ${i === SPELL_PICK ? 'on' : ''}" style="left:630px;top:${110 + i * 44}px;width:290px;${on ? 'color:#fff' : ''}"><span class="mk ${on ? '' : 'off'}" style="margin-right:12px">${m}</span>${n}<span class="r" style="color:${on ? 'var(--gold)' : 'var(--off)'}">${on ? '採用中' : ''}</span></div>`).join('')}
 <div class="abs" style="left:630px;top:310px;width:290px;font-size:11px;letter-spacing:1px;line-height:1.8;color:var(--sub)">次に出すアタックで与えたダメージ分、HPを回復。<br>スペルの効果は、次に出すアタックに乗る。重ね掛け可。</div>
 ${guide(K('↑ ↓', '選ぶ') + K('○', '入れる / 外す') + K('✕', '戻る'))}`; },
