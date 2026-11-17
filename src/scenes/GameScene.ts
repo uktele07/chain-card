@@ -9,9 +9,11 @@ import { DungeonRun, type DungeonDef, type Effect } from '../game/dungeon';
 import { clearSave, loadSave, rankOf, rankValue, storeSave, type Rank, type SaveData } from '../game/save';
 import { buildDeck, gearOf } from '../game/loadout';
 import { RULES, DEFS, SPELLS, WEAPONS, ARMORS, ITEMS, ENEMIES, ALL_ENEMIES, ACCESSORIES, DUNGEONS, enemyById, itemOf, SAVE_CONFIG, SHOP } from '../game/content';
-import { C, CX, CY, RING, CARD_BTN, KEEP_BTN, MON, RESULT_WAIT, MENU, PAUSE, PAUSE_DUNGEON, EQUIP_ROWS, type Base, type Overlay, type Deal } from '../screens/common';
+import { C, CARD_BTN, KEEP_BTN, RESULT_WAIT, MENU, PAUSE, PAUSE_DUNGEON, EQUIP_ROWS, type Base, type Overlay, type Deal } from '../screens/common';
 import { drawList } from '../screens/list';
 import { drawBattle } from '../screens/battle';
+import { drawBattleScene, CHAIN_AT, ITEM_AT, HP_AT } from '../screens/battlescene';
+import { ENEMY_AT } from '../game/battlebg';
 import { UIRoot, isHtml, UI_DEBUG, DEBUG_MARKS, type ViewName } from '../views/root';
 import { drawResult } from '../screens/result';
 import { drawMenu, drawPause, drawResume, drawReset, drawConfirm } from '../screens/menus';
@@ -567,8 +569,8 @@ export class GameScene extends Phaser.Scene {
           this.ringPulse = e.lv === 4 ? 0.4 : 0.18;
           if (e.lv === 4) this.cameras.main.shake(180, 0.006);
           this.snd.hit(e.lv, e.hits > 1);
-          this.popup(String(e.damage), e.lv === 4 || e.hits > 1 ? '#ffd24a' : C.text, e.lv === 4 ? 42 : Math.min(40, 26 + e.damage * 2), MON.y - 60 - e.index * 26, MON.x + Phaser.Math.Between(-60, 60));
-          if (e.bonus > 0) this.popup(`使い切り +${e.bonus}`, '#7fe0a0', 18, MON.y - 110, MON.x);
+          this.popup(String(e.damage), e.lv === 4 || e.hits > 1 ? '#ffd24a' : C.text, e.lv === 4 ? 42 : Math.min(40, 26 + e.damage * 2), ENEMY_AT.y - 70 - e.index * 26, ENEMY_AT.x + Phaser.Math.Between(-60, 60));
+          if (e.bonus > 0) this.popup(`使い切り +${e.bonus}`, '#7fe0a0', 18, ENEMY_AT.y - 120, ENEMY_AT.x);
         });
       } else if (e.kind === 'miss') this.snd.miss();
       else if (e.kind === 'spell') this.snd.spell();
@@ -578,16 +580,16 @@ export class GameScene extends Phaser.Scene {
       else if (e.kind === 'item') {
         this.snd.item(e.effect);
         const it = bt.items[e.slot];
-        this.popup(e.effect === 'heal' ? '+20 HP' : it ? it.def.name : '', '#7fe0a0', 20, 180 + e.slot * 62, 150);
-      } else if (e.kind === 'heal') { if (e.amount > 0) this.popup(`+${e.amount} HP`, '#7fe0a0', 20, 486, CX - 120); }
-      else if (e.kind === 'chainBreak') { this.snd.chainBreak(); this.popup('チェイン切れ', C.warn, 15, CY - RING - 8, CX); }
-      else if (e.kind === 'burn') this.popup(`やけど -${e.damage}`, '#ff8a2a', 16, 470, CX + 120);
+        this.popup(e.effect === 'heal' ? '+20 HP' : it ? it.def.name : '', '#7fe0a0', 20, ITEM_AT.y - 30, ITEM_AT.x);
+      } else if (e.kind === 'heal') { if (e.amount > 0) this.popup(`+${e.amount} HP`, '#7fe0a0', 20, HP_AT.y, HP_AT.x); }
+      else if (e.kind === 'chainBreak') { this.snd.chainBreak(); this.popup('チェイン切れ', C.warn, 15, CHAIN_AT.y - 54, CHAIN_AT.x); }
+      else if (e.kind === 'burn') this.popup(`やけど -${e.damage}`, '#ff8a2a', 16, HP_AT.y - 30, HP_AT.x + 90);
       else if (e.kind === 'enemyCharge') { this.lastTick = 0; if (e.big && this.base === 'fight') this.snd.warn(); }
       else if (e.kind === 'enemyAttack') {
         this.hurt = e.big ? 0.6 : 0.35;
         this.cameras.main.shake(e.big ? 260 : 120, e.big ? 0.012 : 0.005);
         this.snd.enemyHit(e.big);
-        this.popup(e.damage > 0 ? `-${e.damage}` : '無敵', e.damage > 0 ? '#ff6a6a' : '#ffd24a', e.big ? 32 : 22, 486, CX + 120);
+        this.popup(e.damage > 0 ? `-${e.damage}` : '無敵', e.damage > 0 ? '#ff6a6a' : '#ffd24a', e.big ? 32 : 22, HP_AT.y, HP_AT.x + 90);
       } else if (e.kind === 'win') this.finish(true);
       else if (e.kind === 'lose') this.finish(false);
     }
@@ -630,6 +632,7 @@ export class GameScene extends Phaser.Scene {
       else if (o === 'help') show('help', () => drawHelp(this, this.L[3])); else if (o === 'legend') show('legend', () => drawLegend(this, this.L[3]));
     } else {
       if (this.base === 'list') show('list', () => drawList(this, a));
+      else if (isHtml('battle')) { drawBattleScene(this, a); views.push('battle'); }   // 背景・敵・演出は Canvas、画面まわりは HTML
       else show('battle', () => drawBattle(this, a));
       if (this.base === 'result') show('result', () => drawResult(this, b));
       this.overlays.forEach((o, i) => {

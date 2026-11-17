@@ -1,0 +1,97 @@
+/* 戦闘の画面まわり（HTML）。仕様は docs/look.md の4〜6章。見本は docs/samples/style-D6B-fight.png（戦闘中）と style-D4-start.png（開始前）
+   数値は 960×540 の座標。見本を作ったスクリプト（docs/samples/look-gen2.cjs）の CSS をもとにしている */
+.bt { position: absolute; inset: 0; }
+.bt .sm { position: absolute; font-size: 10px; font-weight: 500; letter-spacing: 4px; opacity: .75; }
+.bt .num { position: absolute; font: 500 40px/1 var(--f-num); letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+.bt .of { font: 400 14px var(--f-num); opacity: .6; }
+.bt .bar { position: absolute; height: 3px; background: rgba(255,255,255,.18); }
+.bt .bar > i { display: block; height: 100%; transition: width .15s ease-out; }
+.bt .corner { position: absolute; width: 26px; height: 26px; opacity: .7; }
+
+/* 敵の名前の帯（右上）。極太と斜めは、この画面でここだけ */
+.bt .band { position: absolute; right: -30px; top: 24px; width: 316px; height: 52px; transform: skewX(-12deg);
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,.75) 30%); border-top: 1px solid var(--gold); border-bottom: 1px solid var(--gold); }
+.bt .ename { position: absolute; right: 30px; top: 24px; height: 52px; display: flex; align-items: center; gap: 14px; white-space: nowrap; }
+.bt .ename .kind { font-size: 10px; letter-spacing: 4px; color: var(--gold); margin-top: 14px; }
+.bt .ename .nm { font: 400 34px/52px var(--f-heavy); letter-spacing: 3px; text-shadow: 0 0 18px rgba(216,180,106,.35); }
+.bt .ehp > i { background: var(--ac); box-shadow: 0 0 8px var(--ac); }
+.bt .php > i { background: var(--gold); box-shadow: 0 0 8px rgba(216,180,106,.7); }
+.bt .low { color: var(--ac); }
+.bt .burn { margin-left: 14px; color: var(--ac); opacity: 1; letter-spacing: 1px; }
+
+/* 次の攻撃。1段目に札と技名、2段目にダメージと秒。枠は 310〜650 */
+.bt .next1 { position: absolute; left: 310px; top: 50px; width: 340px; height: 30px; display: flex; align-items: flex-end; gap: 10px; }
+.bt .tag { border: 1px solid var(--gold); color: var(--gold); font: 500 10px var(--f-num); letter-spacing: 3px; padding: 2px 9px; margin-bottom: 4px; }
+.bt .atk { font-size: 24px; letter-spacing: 2px; padding-left: .3em; white-space: nowrap; line-height: 1; }
+.bt .atk.big { color: #ff6a5a; }
+.bt .atk.stun { color: var(--sub); }
+.bt .next2 { position: absolute; left: 310px; top: 92px; width: 340px; height: 44px; display: flex; align-items: flex-end; justify-content: center; gap: 14px; }
+.bt .next2.stun { opacity: .4; }
+.bt .dmg { font: 300 48px/1 var(--f-num); color: var(--ac); text-shadow: 0 0 16px rgba(255,80,20,.6); font-variant-numeric: tabular-nums; }
+.bt .dmg.big { color: #ff2a1f; text-shadow: 0 0 18px rgba(255,30,20,.8); }
+.bt .sec { font: 300 34px/1 var(--f-num); font-variant-numeric: tabular-nums; }
+.bt .unit { font: 500 10px var(--f-ja); color: #fff; opacity: .6; margin-left: 6px; letter-spacing: 2px; }
+.bt .sep { width: 1px; height: 34px; background: var(--gold); opacity: .6; margin: 0 6px 3px; }
+.bt .gauge { position: absolute; left: 310px; top: 144px; width: 340px; height: 2px; background: rgba(255,255,255,.18); }
+.bt .gauge > i { display: block; height: 100%; background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+.bt .gauge > i.big { background: #ff2a1f; box-shadow: 0 0 8px #ff2a1f; }
+
+/* 手札。82×92 で組んで 0.9倍にする（74×83）。少しだけ傾ける */
+.bt .c { position: absolute; width: 82px; height: 92px; color: var(--card-ink); border: 1px solid var(--gold);
+  background: linear-gradient(170deg, rgba(40,34,28,.92), rgba(10,9,8,.92));
+  box-shadow: 0 0 0 3px rgba(0,0,0,.5), 0 12px 24px rgba(0,0,0,.6), inset 0 0 18px rgba(216,180,106,.12);
+  transition: translate .12s ease-out, border-width .12s; }
+.bt .c .lv { position: absolute; left: 0; right: 0; top: 11px; text-align: center; font: 300 50px/1 var(--f-num); }
+.bt .c .pw { position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; font-size: 9px; letter-spacing: 3px; color: var(--gold); white-space: nowrap; overflow: hidden; }
+.bt .c .gl { position: absolute; left: 6px; top: 4px; font-size: 11px; opacity: .75; }
+.bt .c .kp { position: absolute; right: 6px; top: 5px; font: 500 8px var(--f-num); letter-spacing: 2px; color: var(--gold); }
+.bt .c.off { border-color: var(--off-line); color: var(--off-ink); box-shadow: none; }
+.bt .c.off .pw { color: var(--off-ink); }
+.bt .c.sp { border-color: var(--ac); color: var(--ac); box-shadow: 0 0 0 3px rgba(0,0,0,.5), 0 0 20px rgba(255,80,20,.45), inset 0 0 18px rgba(255,80,20,.18); }
+.bt .c.sp .pw { color: var(--ac); letter-spacing: 1px; }
+.bt .c.sp.off { border-color: var(--off-line); color: var(--off-ink); box-shadow: none; }
+.bt .c.sp.off .pw { color: var(--off-ink); }
+.bt .c.kept { translate: 0 -4px; border-width: 2px; border-color: var(--gold); }
+.bt .c.q .lv { color: var(--off-ink); }
+.bt .c.q .gl { color: #8d8576; opacity: 1; }
+.bt .c.empty { background: rgba(10,9,8,.35); border-color: var(--off-line); box-shadow: none; overflow: hidden; }
+.bt .c.empty .fill { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(216,180,106,.22); }
+
+/* チェイン。ひし形の縁の金の線が、チェインの残り時間 */
+.bt .chain { position: absolute; left: 448px; top: 336px; width: 64px; height: 64px; transform: rotate(45deg) scale(.9);
+  background: rgba(10,9,8,.9); border: 1px solid var(--gold); box-shadow: 0 0 26px rgba(216,180,106,.45); }
+.bt .chain.st { box-shadow: 0 0 34px rgba(216,180,106,.75), inset 0 0 14px rgba(216,180,106,.35); }
+.bt .chain.miss { border-color: #ff5a5a; box-shadow: 0 0 26px rgba(255,60,60,.5); }
+.bt .ctimer { position: absolute; left: 430px; top: 318px; width: 100px; height: 100px; overflow: visible; }
+.bt .chs { position: absolute; left: 448px; top: 341px; width: 64px; text-align: center; font: 700 7px var(--f-num); letter-spacing: 2px; color: var(--gold); white-space: nowrap; }
+.bt .chs.ja { font: 500 8px var(--f-ja); letter-spacing: 1px; }
+.bt .chl { position: absolute; left: 448px; top: 338px; width: 64px; text-align: center; font: 300 40px/64px var(--f-num); color: var(--gold); text-shadow: 0 0 14px rgba(216,180,106,.8); }
+.bt .chl.miss, .bt .chs.miss { color: #ff5a5a; text-shadow: none; }
+.bt .buffs { position: absolute; left: 526px; top: 300px; display: flex; gap: 4px; }
+.bt .buffs span { min-width: 18px; height: 18px; padding: 0 4px; border: 1px solid var(--ac); color: var(--ac); font: 500 11px/16px var(--f-num); text-align: center; background: rgba(10,9,8,.8); }
+
+/* アイテムのリボルバー。最上段が選択中。下の段ほど左へずれ、小さく、暗くなる */
+.bt .rv { position: absolute; padding-left: 14px; white-space: nowrap; letter-spacing: 2px; font-weight: 500;
+  background: linear-gradient(90deg, rgba(216,180,106,.1), rgba(20,17,14,.85) 85%); color: var(--sub);
+  border: 1px solid rgba(216,180,106,.3); border-left: 2px solid var(--gold); box-shadow: 0 6px 14px rgba(0,0,0,.5);
+  transition: left .22s ease-in-out, top .22s ease-in-out, width .22s ease-in-out, height .22s ease-in-out, font-size .22s ease-in-out, line-height .22s ease-in-out, opacity .22s ease-in-out; }
+.bt .rv.sel { background: linear-gradient(90deg, rgba(216,180,106,.42), rgba(20,17,14,.7) 85%); color: #fff; border: 1px solid var(--gold); border-left: 4px solid var(--gold);
+  box-shadow: 0 6px 14px rgba(0,0,0,.5), 0 0 16px rgba(216,180,106,.3); }
+.bt .rv .r2 { position: absolute; right: 10px; font: 500 10px var(--f-num); letter-spacing: 2px; color: var(--gold); }
+.bt .rv .usd { position: absolute; right: 10px; font-size: 9px; letter-spacing: 2px; color: #8d8576; }
+.bt .side { position: absolute; left: 28px; top: 330px; width: 204px; display: flex; flex-direction: column; gap: 10px; }
+.bt .desc { font-size: 10.5px; letter-spacing: 1px; line-height: 1.6; color: var(--sub); }
+.bt .desc::before { content: ''; display: inline-block; width: 5px; height: 5px; background: var(--gold); transform: rotate(45deg); margin: 0 8px 2px 2px; }
+.bt .eff-h { font-size: 10px; letter-spacing: 4px; opacity: .75; }
+.bt .tm .row { display: flex; justify-content: space-between; align-items: flex-end; }
+.bt .tm .n { font-size: 11px; letter-spacing: 3px; }
+.bt .tm .s { font: 300 20px/1 var(--f-num); font-variant-numeric: tabular-nums; color: var(--gold); text-shadow: 0 0 10px rgba(216,180,106,.5); }
+.bt .tm .s small { font: 500 9px var(--f-ja); color: var(--sub); margin-left: 4px; letter-spacing: 2px; }
+.bt .tm .b { margin-top: 5px; height: 2px; background: rgba(255,255,255,.15); }
+.bt .tm .b > i { display: block; height: 100%; background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+
+/* 開始前: 操作の案内（右下）と、ゲームパッドなどの案内（下の中央） */
+.bt .guide { position: absolute; right: 48px; bottom: 16px; font-size: 11px; letter-spacing: 2px; color: var(--sub); }
+.bt .key { display: inline-block; border: 1px solid var(--gold); color: var(--gold); font: 500 10px var(--f-num); letter-spacing: 2px; padding: 2px 7px; margin: 0 8px 0 22px; }
+.bt .notice { position: absolute; left: 300px; width: 360px; bottom: 18px; text-align: center; font-size: 10.5px; letter-spacing: 1px; color: var(--ac); }
+.bt .notice::before { content: ''; display: inline-block; width: 5px; height: 5px; border: 1px solid var(--ac); transform: rotate(45deg); margin: 0 8px 2px 0; }

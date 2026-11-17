@@ -1,6 +1,6 @@
 # 画面まわりを HTML と CSS に移す手順（設計メモ）
 
-**状態: 併用に移すことは決定（2026-11-17）。段階0（土台）は済み。段階1から先は合図待ち。**
+**状態: 併用に移すことは決定（2026-11-17）。段階0（土台）と段階1（戦闘）は済み。段階2から先は合図待ち。**
 実装を始めたら `CLAUDE.md` の「構成」と「画面の作り方の約束」を直すこと。
 
 ## 1. 何をするか
@@ -63,7 +63,7 @@
 | 段階 | 内容 | 元のファイル（行数） | 備考 |
 |---|---|---|---|
 | 0 | **済み**。土台: `#ui` の重ね合わせと拡大、`tokens.css`、フォント、lit-html、`draw()` の切り替え | `main.ts`、`GameScene.draw()`、`src/views/` | 見た目は変わらない。`?uidebug` を付けて開くと、HTML（水色の枠）と Canvas（赤い四角）の目印が出る。4つの画面の大きさで、ずれが 0 ピクセルなのを確かめた |
-| 1 | 戦闘の画面まわり。同時に、戦闘の背景（ダンジョンA、討伐C）を Phaser 側に入れる | `screens/battle.ts`（144） | 一番見られる画面。見本は `docs/samples/style-D3-final.png`（持ち主が「いったんOK」とした）。仕様は `docs/look.md` |
+| 1 | **済み**。戦闘の画面まわり。同時に、戦闘の背景（ダンジョンA、討伐C）を Phaser 側に入れる | `screens/battle.ts`（144） | 一番見られる画面。見本は `docs/samples/style-D3-final.png`（持ち主が「いったんOK」とした）。仕様は `docs/look.md` |
 | 2 | 結果、ポーズ、再開のカウント | `result.ts`（49）、`menus.ts` の一部 | 戦闘と続けて出るので、すぐ後に |
 | 3 | 行き先（討伐 / ダンジョン） | `list.ts`（96） | |
 | 4 | メニュー、装備、カード編集、ショップ、確認、操作説明、マスの説明、セーブリセット | `menus.ts`（79）、`equip.ts`（48）、`deck.ts`（47）、`shop.ts`（80）、`help.ts`（32）、`board.ts` の一部 | 一覧の共通部品（今の `rows()`、`powerChips()`）を CSS のクラスとして先に作る |
@@ -86,3 +86,11 @@
 - `src/views/fonts.ts`: 書体。`src/main.ts` が最初に読み、最大 2.5秒待ってから Phaser を始める。1ファイル版（`__SINGLE__`）では読まない。
 - 重ね方: `#ui` は `#game`（Phaser の親）の子。Canvas の位置と幅を `ResizeObserver` と `resize` で読み、`translate` と `scale` で写す。
 - 出典とライセンス: `docs/credits.md`。
+
+## 7. 段階1で作ったもの
+
+- `src/views/battle.ts`、`battle.css`: 開始前・戦闘中の画面まわり（HTML）。
+- `src/screens/battlescene.ts`: 戦闘の Canvas 側（背景・敵・演出）。HTML へ移したときは `drawBattle` の代わりにこれを描く。
+- `src/game/battlebg.ts`: 戦闘の背景。ダンジョンは神殿の広間、討伐は敵の色の抽象。Canvas に描いてテクスチャにする。
+- `src/screens/battle.ts`（以前の Canvas の戦闘画面）は、段階6で消す。
+- まだ Canvas で描く画面（結果、ポーズなど）が上に重なるときは、HTML の画面を隠す（`UIRoot.draw`）。

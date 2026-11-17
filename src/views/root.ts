@@ -4,11 +4,15 @@
 import { html, render, nothing, type TemplateResult } from 'lit-html';
 import tokens from './tokens.css?inline';
 import base from './ui.css?inline';
+import battleCss from './battle.css?inline';
+import { battleView } from './battle';
 import type { GameScene } from '../scenes/GameScene';
 
 /** HTML で描く画面と、その描き方。移し終えた画面をここに足す（GameScene.draw は、ここにある画面を Canvas に描かない） */
 export type ViewName = 'list' | 'board' | 'battle' | 'result' | 'menu' | 'equip' | 'deck' | 'shop' | 'confirm' | 'help' | 'reset' | 'pause' | 'resume' | 'dmenu' | 'legend';
-export const VIEWS: Partial<Record<ViewName, (gs: GameScene) => TemplateResult>> = {};
+export const VIEWS: Partial<Record<ViewName, (gs: GameScene) => TemplateResult>> = {
+  battle: battleView,   // 段階1: 開始前・戦闘中（結果とポーズの下敷きも兼ねる）
+};
 export const isHtml = (v: ViewName) => v in VIEWS;
 
 const debug = typeof location !== 'undefined' && new URLSearchParams(location.search).has('uidebug');
@@ -23,7 +27,7 @@ export class UIRoot {
 
   constructor(parent: HTMLElement) {
     const style = document.createElement('style');
-    style.textContent = tokens + base;
+    style.textContent = tokens + base + battleCss;
     document.head.appendChild(style);
     this.el = document.createElement('div');
     this.el.id = 'ui';
@@ -48,9 +52,12 @@ export class UIRoot {
     this.el.style.transform = `translate(${r.left - pr.left}px, ${r.top - pr.top}px) scale(${r.width / 960})`;
   }
 
-  /** 毎フレーム呼ぶ。views は、いま見えている画面のうち HTML で描くもの（奥から順） */
+  /** 毎フレーム呼ぶ。views は、いま見えている画面（奥から順）。HTML で描くものだけを描く。
+   *  HTML の層は Canvas より常に手前にあるので、Canvas で描く画面（まだ移していないメニューなど）が上に重なるときは、
+   *  その下の HTML の画面を隠す（重なりの順を守るため。移行が済めば起きなくなる） */
   draw(gs: GameScene, views: ViewName[]) {
-    const parts = views.map(v => VIEWS[v]?.(gs) ?? nothing);
+    const lastCanvas = views.reduce((m, v, i) => (isHtml(v) ? m : i), -1);
+    const parts = views.map((v, i) => (VIEWS[v] && i > lastCanvas ? VIEWS[v]!(gs) : nothing));
     render(html`${parts}${debug ? DEBUG_MARKS.map(([x, y]) => html`<div class="dbg" style="left:${x}px;top:${y}px"></div>`) : nothing}`, this.el);
   }
 }
