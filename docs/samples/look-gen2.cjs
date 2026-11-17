@@ -182,6 +182,11 @@ body{--gold:#d8b46a}
     if (!d.css.includes(rule)) throw new Error('name rule not found');
     return { ...d, css: d.css.replace(rule, '.name{letter-spacing:3px;text-shadow:0 0 18px rgba(216,180,106,.35)}') };
   },
+  // D3: D2 の HP（敵と自分）の数字とバーを少しだけ太くする。持ち主が「いったんOK」とした版
+  'D3-final': m => {
+    const d = STYLES['D2-heavyname'](m);
+    return { ...d, css: d.css + ".num{font-weight:500}.of{font-weight:400}.bar{height:3px}" };
+  },
 };
 const head = `<meta charset="utf-8"><link rel="stylesheet" href="file://${FONTS}/node_modules/@fontsource/dela-gothic-one/400.css">${[300, 500, 700, 900].map(w => `<link rel="stylesheet" href="file://${FONTS}/node_modules/@fontsource/noto-sans-jp/${w}.css">`).join('')}`;
 
