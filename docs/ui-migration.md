@@ -1,6 +1,6 @@
 # 画面まわりを HTML と CSS に移す手順（設計メモ）
 
-**状態: 併用に移すことは決定（2026-11-17）。実装は合図待ち。**
+**状態: 併用に移すことは決定（2026-11-17）。段階0（土台）は済み。段階1から先は合図待ち。**
 実装を始めたら `CLAUDE.md` の「構成」と「画面の作り方の約束」を直すこと。
 
 ## 1. 何をするか
@@ -62,7 +62,7 @@
 
 | 段階 | 内容 | 元のファイル（行数） | 備考 |
 |---|---|---|---|
-| 0 | 土台: `#ui` の重ね合わせと拡大、`tokens.css`、フォント、lit-html、`draw()` の切り替え | `index.html`、`main.ts`、`GameScene.draw()` | 見た目は変わらない。ここで拡大と位置が Canvas と合うことを、端の目印で確かめる |
+| 0 | **済み**。土台: `#ui` の重ね合わせと拡大、`tokens.css`、フォント、lit-html、`draw()` の切り替え | `main.ts`、`GameScene.draw()`、`src/views/` | 見た目は変わらない。`?uidebug` を付けて開くと、HTML（水色の枠）と Canvas（赤い四角）の目印が出る。4つの画面の大きさで、ずれが 0 ピクセルなのを確かめた |
 | 1 | 戦闘の画面まわり。同時に、戦闘の背景（ダンジョンA、討伐C）を Phaser 側に入れる | `screens/battle.ts`（144） | 一番見られる画面。見本は `docs/samples/style-D3-final.png`（持ち主が「いったんOK」とした）。仕様は `docs/look.md` |
 | 2 | 結果、ポーズ、再開のカウント | `result.ts`（49）、`menus.ts` の一部 | 戦闘と続けて出るので、すぐ後に |
 | 3 | 行き先（討伐 / ダンジョン） | `list.ts`（96） | |
@@ -78,3 +78,11 @@
 2. 戦闘の見た目: 段階1は、戦闘中 `docs/samples/style-D6B-fight.png`、開始前 `docs/samples/style-D4-start.png` をもとに作る。仕様は `docs/look.md`。
 3. 移行の途中、新旧の見た目が混ざった状態で公開してよい。1画面ずつ公開する。
 4. 戦闘画面に載せる情報: アイテムの説明は小さく残す。強化薬・時の砂の残り時間は残す。無敵（テスト用）の表示は消す。ゲームパッドの案内と START は開始前だけ。くわしくは `docs/look.md` の4章。
+
+## 6. 段階0で作ったもの
+
+- `src/views/root.ts`: `UIRoot`（HTML の層）。`VIEWS` に画面の描き方を足すと、その画面は Canvas に描かれなくなり、HTML で描かれる。画面の名前は `ViewName`。
+- `src/views/tokens.css`: 色と書体の変数。`src/views/ui.css`: 層の土台。どちらも `?inline` で読み、`<style>` として入れる（1ファイル版でも効くように）。
+- `src/views/fonts.ts`: 書体。`src/main.ts` が最初に読み、最大 2.5秒待ってから Phaser を始める。1ファイル版（`__SINGLE__`）では読まない。
+- 重ね方: `#ui` は `#game`（Phaser の親）の子。Canvas の位置と幅を `ResizeObserver` と `resize` で読み、`translate` と `scale` で写す。
+- 出典とライセンス: `docs/credits.md`。

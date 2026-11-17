@@ -12,6 +12,7 @@ import { RULES, DEFS, SPELLS, WEAPONS, ARMORS, ITEMS, ENEMIES, ALL_ENEMIES, ACCE
 import { C, CX, CY, RING, CARD_BTN, KEEP_BTN, MON, RESULT_WAIT, MENU, PAUSE, PAUSE_DUNGEON, EQUIP_ROWS, type Base, type Overlay, type Deal } from '../screens/common';
 import { drawList } from '../screens/list';
 import { drawBattle } from '../screens/battle';
+import { UIRoot, isHtml, UI_DEBUG, DEBUG_MARKS, type ViewName } from '../views/root';
 import { drawResult } from '../screens/result';
 import { drawMenu, drawPause, drawResume, drawReset, drawConfirm } from '../screens/menus';
 import { drawEquip } from '../screens/equip';
@@ -31,6 +32,8 @@ export class GameScene extends Phaser.Scene {
   snd = new Sound();
   L: Layer[] = [];
   fx!: Phaser.GameObjects.Graphics;
+  /** 画面まわりの HTML の層（docs/ui-migration.md）。移し終えた画面は、Canvas ではなくここに描く */
+  ui!: UIRoot;
   save!: SaveData;
   battle!: Battle;
 
@@ -72,6 +75,8 @@ export class GameScene extends Phaser.Scene {
     this.input2 = new Input();
     this.L = [new Layer(this, 0), new Layer(this, 100), new Layer(this, 200), new Layer(this, 300)];
     this.fx = this.add.graphics().setDepth(60);
+    this.ui = new UIRoot(this.game.canvas.parentElement!);
+    this.ui.attach(this.game.canvas);
     loadArt(this, ZOOM);
     loadTempleArt(this, ZOOM);
     this.save = loadSave(SAVE_CONFIG);
@@ -614,30 +619,36 @@ export class GameScene extends Phaser.Scene {
     for (const l of this.L) l.begin();
     this.fx.clear();
     const [a, b] = this.L;
+    // いま見えている画面（奥から順）。HTML へ移した画面は Canvas に描かず、HTML の層に描く
+    const views: ViewName[] = [];
+    const show = (v: ViewName, canvas: () => void) => { views.push(v); if (!isHtml(v)) canvas(); };
     if (this.base === 'board') {
       // 盤面は3層を使う。メニューなどは、いちばん手前の1枚だけを最上層に描く
-      drawBoard(this, a, b, this.L[2]);
+      show('board', () => drawBoard(this, a, b, this.L[2]));
       const o = this.top;
-      if (o === 'dmenu') drawDMenu(this, this.L[3]); else if (o === 'equip') drawEquip(this, this.L[3]); else if (o === 'help') drawHelp(this, this.L[3]); else if (o === 'legend') drawLegend(this, this.L[3]);
-      for (const l of this.L) l.end();
-      return;
+      if (o === 'dmenu') show('dmenu', () => drawDMenu(this, this.L[3])); else if (o === 'equip') show('equip', () => drawEquip(this, this.L[3]));
+      else if (o === 'help') show('help', () => drawHelp(this, this.L[3])); else if (o === 'legend') show('legend', () => drawLegend(this, this.L[3]));
+    } else {
+      if (this.base === 'list') show('list', () => drawList(this, a));
+      else show('battle', () => drawBattle(this, a));
+      if (this.base === 'result') show('result', () => drawResult(this, b));
+      this.overlays.forEach((o, i) => {
+        const l = this.L[Math.min(3, i + 1)];
+        if (o === 'menu') show('menu', () => drawMenu(this, l));
+        else if (o === 'equip') show('equip', () => drawEquip(this, l));
+        else if (o === 'deck') show('deck', () => drawDeck(this, l));
+        else if (o === 'shop') show('shop', () => drawShop(this, l));
+        else if (o === 'confirm') show('confirm', () => drawConfirm(this, l));
+        else if (o === 'help') show('help', () => drawHelp(this, l));
+        else if (o === 'reset') show('reset', () => drawReset(this, l));
+        else if (o === 'pause') show('pause', () => drawPause(this, l));
+        else if (o === 'resume') show('resume', () => drawResume(this, l));
+      });
     }
-    if (this.base === 'list') drawList(this, a);
-    else drawBattle(this, a);
-    if (this.base === 'result') drawResult(this, b);
-    this.overlays.forEach((o, i) => {
-      const l = this.L[Math.min(3, i + 1)];
-      if (o === 'menu') drawMenu(this, l);
-      else if (o === 'equip') drawEquip(this, l);
-      else if (o === 'deck') drawDeck(this, l);
-      else if (o === 'shop') drawShop(this, l);
-      else if (o === 'confirm') drawConfirm(this, l);
-      else if (o === 'help') drawHelp(this, l);
-      else if (o === 'reset') drawReset(this, l);
-      else if (o === 'pause') drawPause(this, l);
-      else if (o === 'resume') drawResume(this, l);
-    });
+    // 位置合わせの目印（?uidebug）: HTML 側の水色の枠と、Canvas 側の赤い四角が重なれば合っている
+    if (UI_DEBUG) for (const [x, y] of DEBUG_MARKS) this.fx.fillStyle(0xff2a2a, 1).fillRect(x + 4, y + 4, 12, 12);
     for (const l of this.L) l.end();
+    this.ui.draw(this, views);
   }
 
   get pad() { return this.input2.padConnected; }

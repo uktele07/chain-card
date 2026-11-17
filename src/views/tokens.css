@@ -1,0 +1,13 @@
+/* 画面まわり（HTML）の色・文字。仕様は docs/look.md。差し色 --ac はダンジョンごとに #ui へ入れる */
+#ui {
+  --gold: #d8b46a;
+  --ac: #ff4b1f;          /* 差し色。火は橙赤、水は #1fa8ff */
+  --ink: #ffffff;         /* 文字 */
+  --card-ink: #f3ead8;    /* カードの文字（生成り） */
+  --sub: #cfc6b4;         /* 控えめな文字 */
+  --off-line: #4a4338;    /* 出せないカードの縁 */
+  --off-ink: #5c554a;     /* 出せないカードの文字 */
+  --f-ja: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+  --f-heavy: 'Dela Gothic One', var(--f-ja);
+  --f-num: 'Inter Variable', 'Inter Display', 'Inter', var(--f-ja);
+}

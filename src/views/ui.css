@@ -1,0 +1,12 @@
+/* HTML の層。Canvas の真上に重ね、960×540 で組んで、Canvas と同じ倍率に拡大する */
+#game { position: relative; }
+#ui {
+  position: absolute; left: 0; top: 0; width: 960px; height: 540px;
+  transform-origin: 0 0; pointer-events: none; user-select: none; overflow: hidden;
+  font-family: var(--f-ja); font-weight: 500; color: var(--ink);
+  -webkit-font-smoothing: antialiased; font-optical-sizing: auto;
+}
+#ui * { box-sizing: border-box; }
+#ui .abs { position: absolute; }
+/* 位置合わせの目印（?uidebug）。Canvas 側にも同じ位置に別の色で描く */
+#ui .dbg { position: absolute; width: 20px; height: 20px; border: 2px solid #3cf; }
