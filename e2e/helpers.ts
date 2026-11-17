@@ -65,10 +65,10 @@ export async function playAttack(page: Page) {
   }
   throw new Error('no playable attack appeared');
 }
-/** 敵のHPを1にして、次の一撃で勝つ */
+/** 敵のHPを1にして、次の一撃で勝つ。遅い環境でも負けないよう、敵の攻撃とやけどは止めておく */
 export async function win(page: Page) {
-  await battle(page, b => { b.enemy.hp = 1; });
-  for (let i = 0; i < 20 && (await top(page)) === 'fight'; i++) await playAttack(page);
+  await battle(page, b => { b.enemy.hp = 1; b.enemy.gauge = -1e6; b.burnWait = -1e6; });
+  for (let i = 0; i < 60 && (await top(page)) === 'fight'; i++) await playAttack(page);
   await waitTop(page, 'result');
   await page.waitForFunction(() => (window as any).__scene.resultWait <= 0);
 }
