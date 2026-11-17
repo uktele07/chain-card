@@ -15,7 +15,7 @@ const PICK = 1;   // 鉄の斧を選んでいる
 const SHOP = [['武器', '鉄の斧', '購入済み'], ['武器', '鉄の弓', '200 G'], ['防具', '鋼の鎧', '300 G'], ['防具', '銀の胸当て', '500 G']];
 const SHOP_PICK = 1;
 const ATK = [['C', 1, 13], ['B', 2, 8], ['A', 3, 5], ['S', 10, 2]];
-const SPELLS = [['×2', 'ダブル', 1], ['X', 'レベルX', 1], ['吸', 'ドレイン', 0], ['↑', 'ランクアップ', 0]];
+const SPELLS = [['x2', 'ダブル', 1], ['X', 'レベルX', 1], ['吸', 'ドレイン', 0], ['↑', 'ランクアップ', 0]];
 const SPELL_PICK = 2;
 const LOADOUT = [['武器', '鉄の剣'], ['防具', '革の衣'], ['アクセサリ', 'なし'], ['アイテム', '回復薬・閃光弾・チェインの実'], ['スペル', 'ダブル・レベルX'], ['所持金', '310 G']];
 
@@ -27,10 +27,10 @@ body{width:960px;height:540px;overflow:hidden;background:#0b0a09;font-family:'No
 .guide{position:absolute;right:40px;bottom:10px;padding:6px 0 6px 10px;background:#0b0a09;font-size:11px;letter-spacing:2px;color:var(--sub);white-space:nowrap}
 .corner{position:absolute;width:26px;height:26px;opacity:.7}
 .chips{display:inline-flex;gap:0;align-items:center}.chip{display:inline-flex;align-items:center;gap:6px;width:52px;font:300 16px/1 'Inter Display','Inter';font-variant-numeric:tabular-nums}
-.chip b{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid rgba(216,180,106,.7);color:var(--gold);font:600 11px/1 'Inter Display','Inter';letter-spacing:0}
+.chip b{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid rgba(216,180,106,.7);color:var(--gold);font:600 11px/1 'Inter Display','Inter';letter-spacing:0;text-box:trim-both cap alphabetic}
 .chip span{min-width:18px}
 .chips.old{opacity:.5}.up{color:var(--gold)}.down{color:var(--ac)}
-.mk{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:1px solid var(--ac);color:var(--ac);font:600 13px/1 'Inter Display','Noto Sans JP';letter-spacing:0;flex:none}
+.mk{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:1px solid var(--ac);color:var(--ac);font:600 13px/1 'Inter Display','Noto Sans JP';letter-spacing:0;flex:none;padding-top:2.6px}   /* 文字の画素の中心が 1.3 上にずれるので下げる（4倍で撮って測った） */
 .mk.off{border-color:rgba(216,180,106,.35);color:var(--dim)}`;
 const corners = `<div class="corner" style="left:14px;top:14px;border-left:1px solid var(--gold);border-top:1px solid var(--gold)"></div><div class="corner" style="right:14px;bottom:14px;border-right:1px solid var(--gold);border-bottom:1px solid var(--gold)"></div>`;
 const guide = t => `<div class="guide">${t}</div>`;
@@ -175,7 +175,7 @@ ${guide(K('↑ ↓', '選ぶ') + K('○', '決定') + K('✕', '閉じる'))}`; 
 <div class="hd" style="left:270px;top:250px">アイテム（重複不可）</div>${rows(SLOTS.slice(3).map(s => [s[0], s[1]]), 270, 268, 300, -1, 42)}
 <div class="abs" style="left:270px;top:110px;width:300px;height:42px;border:1px solid var(--gold)"></div>
 <div class="vl" style="left:600px;top:92px;width:1px;height:380px;position:absolute;background:rgba(216,180,106,.4)"></div>
-<div class="hd" style="left:630px;top:92px">武器を選ぶ</div>
+<div class="hd" style="left:630px;top:92px">武器一覧</div>
 ${rows(WEAPONS.map(w => [w[0], w[2]]), 630, 110, 290, PICK, 42)}
 ${weaponCompare(630, 262, 290)}
 ${guide(K('↑ ↓', '選ぶ') + K('○', 'セット') + K('✕', 'やめる'))}`; },
@@ -188,20 +188,18 @@ ${guide(K('↑ ↓', '選ぶ') + K('○', 'セット') + K('✕', 'やめる'))}
 <div class="abs" style="left:630px;top:118px;width:290px">
   <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid rgba(216,180,106,.25)"><span style="font-size:13px;letter-spacing:2px;white-space:nowrap">鉄の弓</span>${chips([1, 1, 1, 10], '', [1, 2, 3, 10])}</div>
   <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px"><span style="font-size:11px;letter-spacing:1px;color:var(--dim);white-space:nowrap">現在: 鉄の剣</span>${chips([1, 2, 3, 10], 'old')}</div>
-  <div style="margin-top:18px;font-size:11px;letter-spacing:1px;line-height:1.7;color:var(--sub)">威力は控えめだが、カード入れ替えが高速。</div>
-  <div style="margin-top:110px;font-size:11px;letter-spacing:2px;color:var(--gold)">買った物は「装備」で着ける。</div></div>
+  <div style="margin-top:18px;font-size:11px;letter-spacing:1px;line-height:1.7;color:var(--sub)">威力は控えめだが、カード入れ替えが高速。</div></div>
 ${guide(K('↑ ↓', '選ぶ') + K('○', '買う') + K('✕', '戻る'))}`; },
     deck: function () { return `${this.pillar(1, false)}${corners}
 <div class="pg">カード編集</div>
 <div class="abs" style="right:40px;top:44px;font-size:12px;letter-spacing:2px;color:var(--sub)">デッキ <span class="n" style="font-size:18px;color:#fff">30</span> 枚</div>
 <div class="hd" style="left:270px;top:92px">アタック（枚数は固定）</div>
 ${ATK.map(([l, p, n], i) => `<div class="row" style="left:270px;top:${110 + i * 42}px;width:300px;height:42px;color:var(--sub)"><span class="mk" style="margin-right:12px;border-color:var(--gold);color:var(--gold);font-family:Inter">${l}</span>威力 ${p}<span class="r n" style="font-size:16px;color:#fff">× ${n}</span></div>`).join('')}
-<div class="abs" style="left:270px;top:300px;width:300px;font-size:11px;letter-spacing:2px;color:var(--sub);line-height:2">威力のもと　<span style="color:#fff">鉄の剣</span><br>アクセサリ　<span style="color:var(--off)">なし</span></div>
+<div class="abs" style="left:270px;top:300px;width:300px;font-size:11px;letter-spacing:2px;color:var(--sub);line-height:2">武器　　　　<span style="color:#fff">鉄の剣</span><br>アクセサリ　<span style="color:var(--off)">なし</span></div>
 <div class="abs" style="left:600px;top:92px;width:1px;height:380px;background:rgba(216,180,106,.4)"></div>
 <div class="hd" style="left:630px;top:92px">スペル（重複不可）</div><div class="abs" style="right:40px;top:88px;font-size:11px;letter-spacing:2px;color:var(--gold)">2 / 2 枚</div>
 ${SPELLS.map(([m, n, on], i) => `<div class="row ${i === SPELL_PICK ? 'on' : ''}" style="left:630px;top:${110 + i * 44}px;width:290px;${on ? 'color:#fff' : ''}"><span class="mk ${on ? '' : 'off'}" style="margin-right:12px">${m}</span>${n}<span class="r" style="color:${on ? 'var(--gold)' : 'var(--off)'}">${on ? '採用中' : ''}</span></div>`).join('')}
 <div class="abs" style="left:630px;top:310px;width:290px;font-size:11px;letter-spacing:1px;line-height:1.8;color:var(--sub)">次に出すアタックで与えたダメージ分、HPを回復。<br>スペルの効果は、次に出すアタックに乗る。重ね掛け可。</div>
-<div class="abs" style="left:630px;top:400px;width:290px;font-size:11px;letter-spacing:2px;color:var(--ac)">2枚まで。入れるには、どれかを外す。</div>
 ${guide(K('↑ ↓', '選ぶ') + K('○', '入れる / 外す') + K('✕', '戻る'))}`; },
   },
 };
