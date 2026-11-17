@@ -382,7 +382,7 @@ describe('ダンジョン', () => {
     g = await open();
     await enter();
     await scene(g.page, s => { s.run.state.pos = 4; s.run.state.hp = 55; s.keepRun(); });
-    await key(g.page, 'Escape', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'Enter');   // ダンジョンから出る
+    await key(g.page, 'Escape', 'ArrowDown', 'ArrowDown', 'Enter');   // ダンジョンから出る（入口以外: 操作説明・やり直す・出る・閉じる）
     await waitTop(g.page, 'list');
     expect((await stored(g.page)).run.pos).toBe(4);
     await g.page.reload();
