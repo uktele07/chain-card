@@ -5,7 +5,7 @@ import { BOARD_PAD, boardKey, squareIconKey } from '../game/art';
 import type { Layer } from '../game/ui';
 import type { Effect, Square } from '../game/dungeon';
 import { enemyById, itemOf, ACCESSORIES } from '../game/content';
-import { C, CX, SQUARE, DMENU, guide, dim, panel, rows } from './common';
+import { C, CX, SQUARE, guide, dim, panel, rows } from './common';
 import type { GameScene } from '../scenes/GameScene';
 
 const BOX = '#0b0d13';
@@ -170,7 +170,7 @@ function drawCleared(gs: GameScene, l: Layer) {
 
 export function drawDMenu(gs: GameScene, l: Layer) {
   dim(l, 0.6);
-  panel(l, gs.run?.def.name ?? '', DMENU.map((label, i) => ({ label: i === 2 && gs.restartArmed ? 'もう一度押すと、やり直す' : label, note: i === 3 ? '続きから再開できる' : undefined })), gs.cur.dmenu, 106, 380);
+  panel(l, gs.run?.def.name ?? '', gs.dmenuItems(), gs.cur.dmenu, 106, 380);
   guide(gs, l, '↑↓ 選ぶ　　○ 決定　　✕ / OPTIONS 閉じる', '↑↓ 選ぶ　　Enter 決定　　Backspace / Esc 閉じる');
 }
 

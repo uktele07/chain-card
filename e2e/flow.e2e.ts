@@ -249,6 +249,20 @@ describe('ダンジョン', () => {
     expect(await scene(g.page, s => [s.run.state.pos, s.bmode])).toEqual([0, 'idle']);
   });
 
+  it('入口にいる間だけ、盤面のメニューから装備を変えられる', async () => {
+    g = await open({ weapons: ['sword', 'axe'] });
+    await enter();
+    await key(g.page, 'Escape', 'Enter');               // 先頭が「装備」
+    await waitTop(g.page, 'equip');
+    await key(g.page, 'Enter', 'ArrowDown', 'Enter', 'Backspace');   // 武器 → 2つ目
+    await waitTop(g.page, 'dmenu');
+    expect((await save(g.page)).weapon).not.toBe((await save(g.page)).weapons[0]);
+    expect(await scene(g.page, s => s.run.state.pos)).toBe(0);
+    await key(g.page, 'Escape');
+    await scene(g.page, s => { s.run.state.pos = 4; s.toBoard(); });
+    expect(await scene(g.page, s => s.dmenuItems().map((x: any) => x.act))).not.toContain('equip');
+  });
+
   it('サイコロは ○ で回し、もう一度 ○ で止める。✕ でやめられる。△ でマスの説明', async () => {
     g = await open();
     await enter();

@@ -34,8 +34,6 @@ export const MENU: { label: string; off?: boolean; act?: Overlay | 'close' }[] =
 export const PAUSE = ['戦闘再開', 'やり直す', '戦闘終了'];
 /** ダンジョンの戦闘中のポーズ（逃げる手段はないので、やり直しはない） */
 export const PAUSE_DUNGEON = ['戦闘再開', 'ダンジョンから出る'];
-/** 盤面でのメニュー */
-export const DMENU = ['マスの説明', '操作説明', '最初からやり直す', 'ダンジョンから出る', '閉じる'];
 /** マスの種類ごとの色と絵 */
 export const SQUARE: Record<string, { color: string; icon: string; name: string }> = {
   start: { color: '#8a93a3', icon: 'gate', name: '入口' }, none: { color: '#6b5f58', icon: '', name: '何も起こらない' },

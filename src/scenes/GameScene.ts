@@ -9,7 +9,7 @@ import { DungeonRun, type DungeonDef, type Effect } from '../game/dungeon';
 import { clearSave, loadSave, rankOf, rankValue, storeSave, type Rank, type SaveData } from '../game/save';
 import { buildDeck, gearOf } from '../game/loadout';
 import { RULES, DEFS, SPELLS, WEAPONS, ARMORS, ITEMS, ENEMIES, ALL_ENEMIES, ACCESSORIES, DUNGEONS, enemyById, itemOf, SAVE_CONFIG, SHOP } from '../game/content';
-import { C, CX, CY, RING, CARD_BTN, KEEP_BTN, MON, RESULT_WAIT, MENU, PAUSE, PAUSE_DUNGEON, DMENU, EQUIP_ROWS, type Base, type Overlay, type Deal } from '../screens/common';
+import { C, CX, CY, RING, CARD_BTN, KEEP_BTN, MON, RESULT_WAIT, MENU, PAUSE, PAUSE_DUNGEON, EQUIP_ROWS, type Base, type Overlay, type Deal } from '../screens/common';
 import { drawList } from '../screens/list';
 import { drawBattle } from '../screens/battle';
 import { drawResult } from '../screens/result';
@@ -103,7 +103,11 @@ export class GameScene extends Phaser.Scene {
   toList() { this.base = 'list'; this.overlays = []; this.snd.stopBgm(); this.snd.intensity = 0; }
   toReady(e: EnemyDef) { this.enemy = e; this.base = 'ready'; this.overlays = []; this.snd.stopBgm(); this.snd.intensity = 0; this.newBattle(); }
   pop() {
-    this.overlays.pop();
+    const closed = this.overlays.pop();
+    if (closed === 'equip' && this.base === 'board' && this.run) {     // 入口で装備を変えた: アイテムの枠を作り直す
+      this.run = new DungeonRun(this.run.def, RULES.playerMaxHp, this.save.items.map(x => !!x), Math.random, { ...this.run.state });
+      this.keepRun();
+    }
     if (this.overlays.length === 0 && this.base === 'ready') this.newBattle();   // 装備を変えたかもしれないので作り直す
   }
 
@@ -151,6 +155,16 @@ export class GameScene extends Phaser.Scene {
       sv.cleared[id] = true;
     }
     this.keepRun();
+  }
+  /** 盤面のメニュー。入口（最初のマス）にいる間だけ、装備を変えられる */
+  dmenuItems(): { label: string; act: 'equip' | 'legend' | 'help' | 'restart' | 'leave' | 'close'; note?: string }[] {
+    const atStart = !!this.run && this.run.state.pos === 0;
+    return [
+      ...(atStart ? [{ label: '装備', act: 'equip' as const, note: '入口でだけ変えられる' }] : []),
+      { label: 'マスの説明', act: 'legend' }, { label: '操作説明', act: 'help' },
+      { label: this.restartArmed ? 'もう一度押すと、やり直す' : '最初からやり直す', act: 'restart' },
+      { label: 'ダンジョンから出る', act: 'leave', note: '続きから再開できる' }, { label: '閉じる', act: 'close' },
+    ];
   }
   /** 途中経過を保存する（踏破したら消す）。マスに止まるたび・戦闘のたびに呼ぶ */
   keepRun() {
@@ -337,16 +351,20 @@ export class GameScene extends Phaser.Scene {
         break;
       }
 
-      case 'dmenu':
-        if (b === 'up' || b === 'down') { this.move('dmenu', b === 'up' ? -1 : 1, DMENU.length); this.restartArmed = false; }
-        else if (back || b === 'options' || (ok && this.cur.dmenu === 4)) { this.snd.uiBack(); this.pop(); }
-        else if (ok && this.cur.dmenu <= 1) { this.snd.uiOk(); this.overlays.push(this.cur.dmenu === 0 ? 'legend' : 'help'); }
-        else if (ok && this.cur.dmenu === 2) {
+      case 'dmenu': {
+        const items = this.dmenuItems(), act = items[this.cur.dmenu]?.act;
+        if (b === 'up' || b === 'down') { this.move('dmenu', b === 'up' ? -1 : 1, items.length); this.restartArmed = false; }
+        else if (back || b === 'options' || (ok && act === 'close')) { this.snd.uiBack(); this.pop(); }
+        else if (!ok) break;
+        else if (act === 'equip') { this.snd.uiOk(); this.cur.slot = 0; this.equipFocus = 'slots'; this.overlays.push('equip'); }
+        else if (act === 'legend' || act === 'help') { this.snd.uiOk(); this.overlays.push(act); }
+        else if (act === 'restart') {
           if (!this.restartArmed) { this.restartArmed = true; this.snd.uiMove(); }      // 押し間違いを防ぐため、2回押して実行
           else { this.snd.uiOk(); this.save.run = null; this.enterDungeon(this.run!.def); }
         }
-        else if (ok && this.cur.dmenu === 3) { this.snd.uiBack(); this.leaveDungeon(); }
+        else if (act === 'leave') { this.snd.uiBack(); this.leaveDungeon(); }
         break;
+      }
 
       case 'fight': {
         const c = CARD_BTN.indexOf(b), k = KEEP_BTN.indexOf(b);
@@ -600,7 +618,7 @@ export class GameScene extends Phaser.Scene {
       // 盤面は3層を使う。メニューなどは、いちばん手前の1枚だけを最上層に描く
       drawBoard(this, a, b, this.L[2]);
       const o = this.top;
-      if (o === 'dmenu') drawDMenu(this, this.L[3]); else if (o === 'help') drawHelp(this, this.L[3]); else if (o === 'legend') drawLegend(this, this.L[3]);
+      if (o === 'dmenu') drawDMenu(this, this.L[3]); else if (o === 'equip') drawEquip(this, this.L[3]); else if (o === 'help') drawHelp(this, this.L[3]); else if (o === 'legend') drawLegend(this, this.L[3]);
       for (const l of this.L) l.end();
       return;
     }

@@ -217,9 +217,9 @@ const head = `<meta charset="utf-8"><link rel="stylesheet" href="file://${FONTS}
 .row{position:absolute;left:40px;width:380px;height:56px;border-bottom:1px solid rgba(216,180,106,.25)}
 .row.on{background:linear-gradient(90deg,rgba(216,180,106,.3),rgba(216,180,106,.04) 80%,transparent);border-bottom:1px solid var(--gold);border-top:1px solid rgba(216,180,106,.5)}
 .row .mk{position:absolute;left:18px;top:13px;width:30px;height:30px;border:1px solid rgba(216,180,106,.45);font:500 15px/30px 'Noto Sans JP';text-align:center;color:#8d8576}
-.row.on .mk{border-color:var(--ac);color:var(--ac);box-shadow:0 0 14px rgba(255,80,20,.35)}
-.row .nm{position:absolute;left:66px;top:0;line-height:56px;font-size:17px;font-weight:500;letter-spacing:4px;color:#8d8576}.row.on .nm{color:#fff;font-size:19px}
-.row .st{position:absolute;right:16px;top:0;line-height:56px;font-size:11px;letter-spacing:3px;color:#5c554a}.row.on .st{color:var(--gold)}
+.row.on .mk{border-color:var(--ac);color:var(--ac);box-shadow:0 0 14px rgba(255,80,20,.35);left:14px;top:9px;width:38px;height:38px;font-size:20px;line-height:38px}
+.row .nm{position:absolute;left:66px;top:0;line-height:56px;font-size:17px;font-weight:500;letter-spacing:4px;color:#8d8576}.row.on .nm{color:#fff;font-size:23px;left:70px}
+.row .st{position:absolute;right:16px;top:0;line-height:56px;font-size:11px;letter-spacing:3px;color:#5c554a}.row.on .st{color:var(--gold);font-size:12px}
 .key{display:inline-block;border:1px solid var(--gold);color:var(--gold);font:500 10px 'Inter';letter-spacing:2px;padding:2px 7px;margin:0 8px 0 22px}
 #bg,#bloom{position:absolute;left:-80px;top:-40px;width:900px;height:506px;image-rendering:pixelated}
 #bg{filter:blur(1.2px) saturate(.8) brightness(.8)}#bloom{filter:blur(16px) brightness(1.5) saturate(1.5);mix-blend-mode:screen;opacity:.6;image-rendering:auto}`;
@@ -232,8 +232,6 @@ const head = `<meta charset="utf-8"><link rel="stylesheet" href="file://${FONTS}
 <div class="abs d" style="left:40px;top:28px;font-size:30px;letter-spacing:4px">行き先</div>
 <div class="abs" style="left:40px;top:92px;font-size:14px;font-weight:500;letter-spacing:4px"><span style="color:#8d8576;padding:0 4px 8px">討伐</span><span style="margin-left:26px;padding:0 4px 8px;border-bottom:2px solid var(--gold)">ダンジョン</span><span class="sm" style="margin-left:22px;color:var(--gold)">L1 / R1</span></div>
 ${rows.map(([m, n, st, on], i) => `<div class="row ${on ? 'on' : ''}" style="top:${140 + i * 60}px">${on ? '<div style="position:absolute;left:-3px;top:24px;width:7px;height:7px;background:var(--gold);transform:rotate(45deg)"></div>' : ''}<div class="mk">${m}</div><div class="nm">${n}</div><div class="st">${st}</div></div>`).join('')}
-<div class="abs sm" style="left:40px;top:404px">アイテム</div>
-<div class="abs" style="left:40px;top:424px;font-size:12px;font-weight:500;letter-spacing:2px;color:#cfc6b4">回復薬<span style="color:var(--gold);margin:0 12px">◆</span>閃光弾<span style="color:var(--gold);margin:0 12px">◆</span>チェインの実</div>
 <div class="abs sm" style="left:40px;top:462px">所持金</div>
 <div class="abs" style="left:40px;top:478px;font:500 26px/1 'Inter Display','Inter'">310<span style="font:400 12px 'Inter';opacity:.6;margin-left:6px">G</span></div>
 <div class="abs" style="right:40px;bottom:16px;font-size:11px;font-weight:500;letter-spacing:2px;color:#cfc6b4"><span class="key">○</span>入る<span class="key">OPTIONS</span>メニュー</div>
