@@ -68,7 +68,10 @@ export class GameScene extends Phaser.Scene {
   invincible = false;       // テスト用。画面を移っても維持する
   resultWait = 0;
   resumeLeft = 0;
-  outcome: { rank: Rank | null; newBest: boolean } = { rank: null, newBest: false };
+  /** 直前の討伐の結果。prevBest はこの戦闘より前の最速タイム（初めてなら null）、wins はこの討伐を含めた回数 */
+  outcome: { rank: Rank | null; newBest: boolean; prevBest: number | null; wins: number } = { rank: null, newBest: false, prevBest: null, wins: 0 };
+  /** すごろくのテストモード（タッチパッド / T で切り替え）: サイコロの目を自分で選べる */
+  diceTest = false;
   enemyShake = 0; ringPulse = 0; hurt = 0; lastTick = 0; clock = 0;
 
   constructor() { super('game'); }
@@ -124,7 +127,7 @@ export class GameScene extends Phaser.Scene {
     this.base = 'result'; this.overlays = [];
     this.resultWait = RESULT_WAIT;
     this.cur.result = won ? 1 : 0;      // 勝ち→一覧に戻る / 負け→もう一度
-    this.outcome = { rank: null, newBest: false };
+    this.outcome = { rank: null, newBest: false, prevBest: null, wins: 0 };
     this.gained = null;
     this.snd.stopBgm();
     if (this.inRun && this.run) { this.finishInRun(won); return; }
@@ -132,25 +135,31 @@ export class GameScene extends Phaser.Scene {
     this.snd.win();
     if (b.usedInvincible) return;        // 無敵を使った戦闘は、ランクも記録も付けない
     const rank = rankOf(b.time, this.enemy.rankSec);
-    const old = this.save.records[this.enemy.id];
-    const newBest = !old || b.time < old.bestTime;
-    this.save.records[this.enemy.id] = {
-      bestTime: newBest ? b.time : old.bestTime,
-      bestRank: !old || rankValue(rank) > rankValue(old.bestRank) ? rank : old.bestRank,
-    };
+    this.record(rank);
     const drop = this.enemy.drop;
     if (drop) { this.save.loot[drop.id] = (this.save.loot[drop.id] ?? 0) + 1; this.gained = drop; }
     storeSave(this.save);
-    this.outcome = { rank, newBest };
+  }
+  /** 討伐の記録（最速タイム・ランク・回数）を付ける。rank が null ならランクは出さない（ダンジョンの敵） */
+  record(rank: Rank | null) {
+    const b = this.battle, id = this.enemy.id, old = this.save.records[id];
+    const newBest = !old || b.time < old.bestTime, r = rank ?? 'C';
+    this.save.records[id] = {
+      bestTime: newBest ? b.time : old.bestTime,
+      bestRank: !old || rankValue(r) > rankValue(old.bestRank) ? r : old.bestRank,
+      wins: (old?.wins ?? 0) + 1,
+    };
+    this.outcome = { rank, newBest, prevBest: old ? old.bestTime : null, wins: this.save.records[id].wins };
   }
 
   // ---------------- ダンジョン ----------------
-  /** ダンジョンの戦闘が終わった。ランクや記録は付けない */
+  /** ダンジョンの戦闘が終わった。最速タイムと回数は付ける（ランクの目安が無いので、ランクは付けない） */
   finishInRun(won: boolean) {
     const run = this.run!, b = this.battle, sv = this.save;
     if (!won) { this.snd.lose(); run.battleLost(); this.keepRun(); return; }
     this.snd.win();
     run.battleWon(b.hp, b.items.map(it => !!it?.used));
+    if (!b.usedInvincible) this.record(null);
     const drop = this.enemy.drop;
     if (drop) { sv.loot[drop.id] = (sv.loot[drop.id] ?? 0) + 1; this.gained = drop; }
     if (run.state.cleared) {
@@ -269,7 +278,7 @@ export class GameScene extends Phaser.Scene {
     const d = run.def, G = d.cell, P = BOARD_PAD;
     if (this.top === 'board') {
       if (this.bmode === 'rolling') {
-        this.diceFace = 1 + Math.floor(this.clock * 20) % 6;      // 回っている間の目は飾り。止めた瞬間に抽選する
+        if (!this.diceTest) this.diceFace = 1 + Math.floor(this.clock * 20) % 6;   // テストモードでは、選んだ目のまま      // 回っている間の目は飾り。止めた瞬間に抽選する
       } else if (this.bmode === 'moving' && this.target) {
         const dx = this.target.x - this.piece.x, dy = this.target.y - this.piece.y, dist = Math.hypot(dx, dy), stepLen = 340 * dt;
         if (dist <= stepLen) {
@@ -301,6 +310,11 @@ export class GameScene extends Phaser.Scene {
   handle(b: Btn) {
     this.snd.unlock();
     if (b === 'mute') { this.snd.toggleMute(); return; }
+    if (b === 'touchpad' && this.top === 'board') {    // すごろく: サイコロの目を選べるテストモードの切り替え
+      this.diceTest = !this.diceTest; this.snd.keep(this.diceTest);
+      if (this.bmode === 'rolling') this.diceFace = this.diceFace || 1;
+      return;
+    }
     if (b === 'touchpad') { this.invincible = !this.invincible; this.battle.invincible = this.invincible; this.snd.keep(this.invincible); return; }
     const ok = b === 'circle' || b === 'ok', back = b === 'cross' || b === 'back';
     const bt = this.battle;
@@ -337,8 +351,9 @@ export class GameScene extends Phaser.Scene {
         if (m === 'look') { if (b === 'square' || back) { this.bmode = this.lookFrom; this.snd.uiBack(); } break; }
         if (m === 'cleared') { if (ok) { this.snd.uiOk(); this.leaveDungeon(); } break; }
         if (m === 'landed') { if (ok) this.closeLanded(); break; }
-        if (m === 'rolling') {      // 回っているサイコロ: ○で止める、✕でやめる
-          if (ok) { this.rolled = run.roll(); this.diceFace = this.rolled; this.snd.uiOk(); this.keepRun(); this.advance(); }
+        if (m === 'rolling') {      // 回っているサイコロ: ○で止める、✕でやめる。テストモードでは十字キーで目を選ぶ
+          if (this.diceTest && (b === 'up' || b === 'right' || b === 'down' || b === 'left')) { this.diceFace = ((this.diceFace || 1) - 1 + (b === 'up' || b === 'right' ? 1 : 5)) % 6 + 1; this.snd.uiMove(); break; }
+          if (ok) { this.rolled = run.roll(this.diceTest ? this.diceFace || 1 : undefined); this.diceFace = this.rolled; this.snd.uiOk(); this.keepRun(); this.advance(); }
           else if (back) { this.bmode = 'idle'; this.diceFace = 0; this.snd.uiBack(); }
           break;
         }
@@ -346,7 +361,7 @@ export class GameScene extends Phaser.Scene {
         if (b === 'options') { this.cur.dmenu = 0; this.restartArmed = false; this.overlays.push('dmenu'); this.snd.uiOk(); }
         else if (b === 'square') { this.lookFrom = m; this.bmode = 'look'; this.snd.uiOk(); }
         else if (b === 'tri') { this.overlays.push('legend'); this.snd.uiOk(); }
-        else if (m === 'idle') { if (ok) { this.bmode = 'rolling'; this.snd.refill(); } }
+        else if (m === 'idle') { if (ok) { this.bmode = 'rolling'; if (this.diceTest) this.diceFace = 1; this.snd.refill(); } }
         else if (ok) { this.snd.uiOk(); this.advance(run.options()[this.pick]); }
         else {
           // 押した向きにいちばん近い行き先を選ぶ
@@ -399,7 +414,13 @@ export class GameScene extends Phaser.Scene {
 
       case 'result':
         if (this.resultWait > 0) break;
-        if (this.inRun) { if (ok) { this.snd.uiOk(); this.toBoard(); } break; }
+        if (this.inRun && this.battle.result === 'won') { if (ok) { this.snd.uiOk(); this.toBoard(); } break; }
+        if (this.inRun) {   // ダンジョンで負けた: 入口（中間地点）に戻るか、ダンジョンから出る
+          if (b === 'up' || b === 'down' || b === 'left' || b === 'right') this.move('result', b === 'up' || b === 'left' ? -1 : 1, 2);
+          else if (ok && this.cur.result === 1) { this.snd.uiBack(); this.leaveDungeon(); }
+          else if (ok) { this.snd.uiOk(); this.toBoard(); }
+          break;
+        }
         // 選択肢は縦に並ぶ（上下）。以前の左右も効く
         if (b === 'left' || b === 'right' || b === 'up' || b === 'down') this.move('result', b === 'left' || b === 'up' ? -1 : 1, 2);
         if (this.inRun) { if (ok) { this.snd.uiOk(); this.toBoard(); } break; }

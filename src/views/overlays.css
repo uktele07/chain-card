@@ -11,7 +11,7 @@
 .ov .time { position: absolute; left: 60px; font: 300 80px/1 var(--f-num); font-variant-numeric: tabular-nums; }
 .ov .time small { font: 500 14px var(--f-ja); color: var(--sub); margin-left: 8px; }
 .ov .rank { position: absolute; display: flex; align-items: center; justify-content: center; border: 1px solid var(--gold); border-radius: 50%; color: var(--gold);
-  font: 300 48px/1 var(--f-num); box-shadow: 0 0 24px rgba(216,180,106,.35); }
+  font: 700 48px/1 var(--f-num); box-shadow: 0 0 24px rgba(216,180,106,.35); }
 .ov .best { position: absolute; left: 60px; border: 1px solid var(--gold); color: var(--gold); font-size: 10px; letter-spacing: 3px; padding: 2px 10px; }
 .ov .best.no { border-color: var(--sub); color: var(--sub); }
 .ov .vl { position: absolute; width: 1px; background: rgba(216,180,106,.4); }
@@ -27,7 +27,7 @@
 .ov .ch .note { display: block; margin-top: 4px; font-size: 10px; letter-spacing: 2px; color: var(--sub); }
 .ov .ch .note.warn { color: var(--ac); }
 .ov .lose-t { position: absolute; left: 60px; font: 400 44px/1 var(--f-heavy); letter-spacing: 14px; color: var(--ac); }
-.ov .pz { position: absolute; left: 60px; font: 300 26px/1 var(--f-num); letter-spacing: 14px; color: var(--gold); }
+.ov .pz { position: absolute; left: 60px; font: 700 26px/1 var(--f-num); letter-spacing: 14px; color: var(--gold); }
 .ov .cnt { position: absolute; left: 0; right: 0; text-align: center; font: 300 44px/1 var(--f-num); font-variant-numeric: tabular-nums; }
 .ov .cnt span { font-size: 11px; letter-spacing: 8px; color: var(--gold); vertical-align: middle; margin-right: 24px; }
 .ov .guide { position: absolute; right: 40px; bottom: 16px; font-size: 11px; letter-spacing: 2px; color: var(--sub); white-space: nowrap; }

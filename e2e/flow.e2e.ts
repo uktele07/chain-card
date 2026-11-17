@@ -306,7 +306,8 @@ describe('ダンジョン', () => {
     const sv = await stored(g.page);
     expect(sv.loot.fire_shard).toBe(1);
     expect(sv.run.pos).toBe(2);
-    expect(sv.records.fire_lizard).toBeUndefined();     // ダンジョンの敵には記録を付けない
+    expect(sv.records.fire_lizard.wins).toBe(1);        // ダンジョンの敵にも、討伐回数と最速タイムを付ける（ランクは付けない）
+    expect(sv.records.fire_lizard.bestTime).toBeGreaterThan(0);
   });
 
   it('分かれ道は盤面の上で選ぶ。先を見ることもできる', async () => {
@@ -345,6 +346,36 @@ describe('ダンジョン', () => {
     await key(g.page, 'Enter');
     await waitTop(g.page, 'board');
     expect(await scene(g.page, s => [s.run.state.pos, s.run.state.hp, s.run.state.maxBonus])).toEqual([0, 100, 0]);
+  });
+
+  it('負けたとき、ダンジョンから出ることもできる（続きは入口から）', async () => {
+    g = await open();
+    await enter();
+    await scene(g.page, s => { s.run.state.pos = 1; s.toBoard(); });
+    await fix(0);
+    await roll();
+    await mode('landed');
+    await key(g.page, 'Enter');
+    await waitTop(g.page, 'ready');
+    await start(g.page);
+    await battle(g.page, b => { b.hp = 1; b.enemy.gauge = 99; });
+    await waitTop(g.page, 'result');
+    await g.page.waitForFunction(() => (window as any).__scene.resultWait <= 0);
+    await key(g.page, 'ArrowDown', 'Enter');            // ダンジョンから出る
+    await waitTop(g.page, 'list');
+    expect((await stored(g.page)).run.pos).toBe(0);
+  });
+
+  it('テストモード: タッチパッド（T）でサイコロの目を選べる。もう一度押すと解除', async () => {
+    g = await open();
+    await enter();
+    await key(g.page, 'KeyT', 'Enter');
+    await mode('rolling');
+    await key(g.page, 'ArrowUp', 'ArrowUp', 'ArrowUp', 'Enter');   // 1 → 4
+    await g.page.waitForFunction(() => (window as any).__scene.bmode !== 'moving' && (window as any).__scene.bmode !== 'rolling');
+    expect(await scene(g.page, s => [s.rolled, s.diceTest])).toEqual([4, true]);
+    await key(g.page, 'KeyT');
+    expect(await scene(g.page, s => s.diceTest)).toBe(false);
   });
 
   it('外に出ても、続きから再開できる', async () => {

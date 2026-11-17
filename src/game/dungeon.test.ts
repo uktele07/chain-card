@@ -51,6 +51,11 @@ describe('進み方', () => {
     expect(r.step()).toBe('moved'); expect(r.step()).toBe('moved'); expect(r.step()).toBe('moved'); expect(r.step()).toBe('landed');
     expect(r.state.pos).toBe(4);
   });
+  it('テストモード: 目を指定すると、その目になる（乱数は使わない）', () => {
+    const r = run(() => 0.99);
+    for (const n of [1, 3, 6]) { expect(r.roll(n)).toBe(n); expect(r.state.steps).toBe(n); }
+    expect(r.roll(0)).toBe(6);     // 範囲外は、ふつうに振る
+  });
   it('分かれ道では行き先を選ぶまで進まない', () => {
     const r = run();
     const fork = r.board.findIndex(s => s.next.length > 1);

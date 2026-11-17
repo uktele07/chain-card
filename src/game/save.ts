@@ -2,7 +2,8 @@
 import type { RunState } from './dungeon';
 
 export type Rank = 'S' | 'A' | 'B' | 'C';
-export interface EnemyRecord { bestTime: number; bestRank: Rank }
+/** 敵ごとの記録。wins は討伐回数（2026-11-17 から数える。それ以前の記録は 1 回として読む）。ダンジョンの敵はランクの目安が無いので bestRank は C のまま */
+export interface EnemyRecord { bestTime: number; bestRank: Rank; wins: number }
 export interface SaveData {
   items: (string | null)[];        // セットしたアイテム（3枠、重複なし）
   spells: string[];                // デッキに入れるスペル
@@ -55,7 +56,7 @@ export function loadSave(c: SaveConfig): SaveData {
     const armors = uniq([c.startArmor, ...(Array.isArray(d.armors) ? d.armors.filter(x => c.armors.includes(x)) : [])]);
     const records: Record<string, EnemyRecord> = {};
     for (const [k, v] of Object.entries(d.records ?? {})) {
-      if (v && typeof v.bestTime === 'number' && RANKS.includes(v.bestRank)) records[k] = { bestTime: v.bestTime, bestRank: v.bestRank };
+      if (v && typeof v.bestTime === 'number' && RANKS.includes(v.bestRank)) records[k] = { bestTime: v.bestTime, bestRank: v.bestRank, wins: typeof v.wins === 'number' && v.wins >= 1 ? Math.floor(v.wins) : 1 };
     }
     const loot: Record<string, number> = {};
     for (const [k, v] of Object.entries(d.loot ?? {})) if (typeof v === 'number' && v > 0) loot[k] = Math.floor(v);

@@ -117,6 +117,7 @@ export function drawBoard(gs: GameScene, l0: Layer, l1: Layer, l2: Layer) {
   else if (mode === 'choose') guide(gs, l2, '十字キー 選ぶ　　○ 決定　　□ 先を見る　　△ マスの説明', '矢印キー 選ぶ　　Enter 決定　　A 先を見る　　W マスの説明');
   else if (mode === 'landed') guide(gs, l2, gs.effect?.kind === 'monster' ? '○ 戦う' : '○ 次へ', gs.effect?.kind === 'monster' ? 'Enter 戦う' : 'Enter 次へ');
   else if (mode === 'idle') guide(gs, l2, '○ サイコロ　　□ 先を見る　　△ マスの説明　　OPTIONS メニュー', 'Enter サイコロ　　A 先を見る　　W マスの説明　　Esc メニュー');
+  else if (mode === 'rolling' && gs.diceTest) guide(gs, l2, '十字キー 目を選ぶ　　○ 決定　　✕ やめる', '矢印キー 目を選ぶ　　Enter 決定　　Backspace やめる');
   else if (mode === 'rolling') guide(gs, l2, '○ 止める　　✕ やめる', 'Enter 止める　　Backspace やめる');
   else guide(gs, l2, '', '');
 }
@@ -127,9 +128,10 @@ function drawDice(gs: GameScene, l: Layer) {
   l.rect(x - 34, y - 34, 68, 68, { fill: n ? '#f4f6fb' : '#1d2330', stroke: n ? '#c9cfdb' : C.line, rx: 14 });
   for (const [dx, dy] of PIPS[n] ?? []) l.circle(x + dx * 18, y + dy * 18, 6.5, { fill: C.ink });
   if (!n) l.text(x, y, '？', 28, C.dim, 'middle', true);
-  const label = mode === 'idle' ? `${gs.pad ? '○' : 'Enter'} 振る` : mode === 'rolling' ? `${gs.pad ? '○' : 'Enter'} 止める` : st.steps > 0 ? `あと ${st.steps}マス` : `${gs.rolled} 進んだ`;
+  const label = mode === 'idle' ? `${gs.pad ? '○' : 'Enter'} 振る` : mode === 'rolling' ? `${gs.pad ? '○' : 'Enter'} ${gs.diceTest ? '決定' : '止める'}` : st.steps > 0 ? `あと ${st.steps}マス` : `${gs.rolled} 進んだ`;
   l.rect(x - 46, y + 42, 92, 24, { fill: BOX, rx: 12, alpha: 0.85 });
   l.text(x, y + 54, label, 12, C.keep, 'middle', true);
+  if (gs.diceTest) { l.rect(x - 58, y - 66, 116, 22, { fill: '#3a1d20', stroke: C.miss, sw: 1.5, rx: 11 }); l.text(x, y - 55, 'テスト: 目を選べる', 11, C.warn, 'middle', true); }
 }
 
 /** 左下の全体図。道・関所・いる場所・いま映っている範囲 */

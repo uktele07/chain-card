@@ -12,9 +12,11 @@ const corners = html`<div class="corner" style="left:14px;top:14px;border-left:1
 export function resultView(gs: GameScene) {
   const b = gs.battle, won = b.result === 'won', ready = gs.resultWait <= 0, pad = gs.pad;
   // 選ぶもの: 討伐は「もう一度 / 一覧に戻る」、ダンジョンは1つだけ（勝てば進む、負ければ入口か中間地点）
-  const choices = gs.inRun && gs.run ? [won ? '進む' : gs.run.state.midDone ? '中間地点に戻る' : '入口に戻る'] : ['もう一度', '一覧に戻る'];
-  const sel = gs.inRun ? 0 : gs.cur.result;
-  const chs = choices.map((c, i) => html`<div class="ch ${ready && i === sel ? 'on' : ''} ${ready ? '' : 'wait'}" style="left:770px;top:${(won ? 244 : 244) + (choices.length === 1 ? 20 : i * 40)}px">${c}</div>`);
+  // ダンジョンで負けたときは「ダンジョンから出る」も選べる
+  const choices = gs.inRun && gs.run ? (won ? ['進む'] : [gs.run.state.midDone ? '中間地点に戻る' : '入口に戻る', 'ダンジョンから出る']) : ['もう一度', '一覧に戻る'];
+  const sel = choices.length === 1 ? 0 : gs.cur.result;
+  const long = choices.some(c => c.length > 6);   // 「ダンジョンから出る」など長い項目は、少し左から詰めて並べる
+  const chs = choices.map((c, i) => html`<div class="ch ${ready && i === sel ? 'on' : ''} ${ready ? '' : 'wait'}" style="left:${long ? 762 : 770}px;letter-spacing:${long ? 2 : 4}px;top:${244 + (choices.length === 1 ? 20 : i * 40)}px">${c}</div>`);
   const guide = html`<div class="guide">${choices.length > 1 ? html`${key(pad ? '↑ ↓' : '↑ ↓')}選ぶ` : nothing}${key(pad ? '○' : 'Enter')}決定</div>`;
   if (!won) {
     const rows: [string, string][] = [[`${gs.enemy.name} の残りHP`, `${b.enemy!.hp} / ${gs.enemy.hp}`], ['経過時間', `${b.time.toFixed(1)} 秒`], ['最大ダメージ（1ターン）', String(b.stats.maxTurn)]];
@@ -27,9 +29,10 @@ export function resultView(gs: GameScene) {
       ${chs}${corners}${guide}</div>`;
   }
   const o = gs.outcome;
+  // 討伐回数と、この戦闘より前の最速タイム（無敵を使った戦闘は記録しないので出さない）
   const rows: [string, string, string][] = [
-    ['残りHP', gs.inRun ? `${b.hp} / ${b.maxHp}` : String(b.hp), ''],
-    ['最大ダメージ（1ターン）', String(b.stats.maxTurn), ''],
+    ['討伐回数', b.usedInvincible ? '記録なし' : `${o.wins} 回`, b.usedInvincible ? 'none' : ''],
+    ['これまでの最速タイム', o.prevBest === null ? '—' : `${o.prevBest.toFixed(1)} 秒`, o.prevBest === null ? 'none' : ''],
     ['戦利品', gs.gained ? `${gs.gained.name} ×1` : 'なし', gs.gained ? 'g' : 'none'],
   ];
   return html`<div class="ov" style="--ac:${accent(gs)}"><div class="dim"></div>
@@ -47,7 +50,7 @@ export function resultView(gs: GameScene) {
 
 export function pauseView(gs: GameScene) {
   const pad = gs.pad;
-  const items: [string, string, boolean][] = gs.inRun ? PAUSE_DUNGEON.map((l, i) => [l, i === 1 ? '敗北になる' : '', true]) : PAUSE.map((l, i) => [l, i === 2 ? '一覧に戻る' : '', false]);
+  const items: [string, string, boolean][] = gs.inRun ? PAUSE_DUNGEON.map(l => [l, '', false]) : PAUSE.map((l, i) => [l, i === 2 ? '一覧に戻る' : '', false]);
   return html`<div class="ov" style="--ac:${accent(gs)}"><div class="dim" style="background:rgba(5,4,3,.55)"></div>
     <div class="band" style="top:226px;height:88px"></div>
     <div class="pz" style="top:257px">PAUSE</div>

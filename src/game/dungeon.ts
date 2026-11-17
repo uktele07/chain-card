@@ -81,9 +81,9 @@ export class DungeonRun {
     return 0;
   }
 
-  /** サイコロを振る */
-  roll(): number {
-    const n = 1 + Math.floor(this.rng() * 6);
+  /** サイコロを振る。fixed を渡すとその目にする（テストモード） */
+  roll(fixed?: number): number {
+    const n = fixed && fixed >= 1 && fixed <= 6 ? Math.floor(fixed) : 1 + Math.floor(this.rng() * 6);
     this.state.steps = n;
     return n;
   }
