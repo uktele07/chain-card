@@ -35,8 +35,8 @@ function lightAndVignette(ctx: CanvasRenderingContext2D, rgb: string, strength: 
   ctx.fillStyle = g; ctx.fillRect(-W * 2, -W * 2, W * 4, W * 4); ctx.restore();
 }
 
-/** 神殿の広間（ダンジョン）。見本の pixelBg と同じ絵 */
-function templeHall(ctx: CanvasRenderingContext2D) {
+/** 神殿の広間の元の絵（320×180）。見本の pixelBg と同じ */
+function templePixels() {
   const c = document.createElement('canvas'); c.width = 320; c.height = 180;
   const x = c.getContext('2d')!;
   let seed = 7; const R = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
@@ -52,6 +52,12 @@ function templeHall(ctx: CanvasRenderingContext2D) {
   for (let i = -9; i <= 9; i++) for (let y = hz + 2; y < 180; y++) { const k = (y - hz) / (180 - hz); x.fillRect(Math.round(190 + i * (14 + k * 46)), y, 1, 1); }
   for (const px of [18, 92, 236, 300]) { x.fillStyle = W0[2]; x.fillRect(px - 9, 0, 18, hz - 2); x.fillStyle = '#4a322a'; x.fillRect(px - 9, 0, 3, hz - 2); x.fillStyle = '#000'; x.globalAlpha = 0.35; x.fillRect(px + 3, 0, 6, hz - 2); x.globalAlpha = 1; x.fillStyle = W0[1]; x.fillRect(px - 12, hz - 8, 24, 6); x.fillRect(px - 12, 0, 24, 5); }
   for (const px of [55, 268]) { x.fillStyle = W0[2]; x.fillRect(px - 5, 58, 10, 3); x.fillStyle = G; x.fillRect(px - 3, 50, 6, 8); x.fillStyle = AC2; x.fillRect(px - 1, 47, 3, 8); x.fillStyle = '#fff'; x.fillRect(px, 52, 1, 4); }
+  return c;
+}
+
+/** 神殿の広間（戦闘の背景） */
+function templeHall(ctx: CanvasRenderingContext2D) {
+  const c = templePixels();
   // 見本と同じく、少しはみ出す大きさ（1040×600、左上 -40,-30）に広げ、弱くぼかして沈める
   ctx.save();
   ctx.filter = 'blur(2.5px) saturate(0.7) brightness(0.62)';
@@ -87,6 +93,32 @@ export function ensureBattleBg(scene: Phaser.Scene, kind: string, zoom: number) 
   const { tex, ctx } = canvasTexture(scene, key, zoom);
   if (kind === 'temple') { templeHall(ctx); lightAndVignette(ctx, '255,150,70', 0.3); }
   else { const rgb = rgbOf(kind.slice(5)); abstractBg(ctx, rgb); lightAndVignette(ctx, rgb, 0.18); }
+  tex.refresh();
+  return key;
+}
+
+/** 行き先の画面の右の枠に入れる絵（450×426）。見本（look-gen2.cjs の menu）と同じく、広間の絵を切り出し、たいまつと溶岩を光らせる */
+export const listArtKey = (id: string) => `listart-${id}`;
+export function ensureListArt(scene: Phaser.Scene, id: string, zoom: number) {
+  const key = listArtKey(id);
+  if (scene.textures.exists(key)) return key;
+  const w = 450, h = 426, tex = scene.textures.createCanvas(key, w * zoom, h * zoom)!, ctx = tex.getContext();
+  ctx.scale(zoom, zoom);
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
+  ctx.save(); ctx.filter = 'blur(1.2px) saturate(0.8) brightness(0.8)'; ctx.drawImage(templePixels(), -80, -40, 900, 506); ctx.restore();
+  // 光のにじみ: たいまつ・溶岩・扉の光だけを描いた絵を大きくぼかし、明るく重ねる
+  const g = document.createElement('canvas'); g.width = 320; g.height = 180;
+  const x = g.getContext('2d')!, hz = 104;
+  x.fillStyle = '#000'; x.fillRect(0, 0, 320, 180); x.fillStyle = '#ff7a2a'; x.fillRect(0, hz - 6, 320, 10);
+  for (const px of [55, 268]) { x.beginPath(); x.arc(px, 52, 12, 0, 7); x.fill(); }
+  for (const ax of [130, 198]) { x.fillStyle = '#a8361a'; x.fillRect(ax - 8, 70, 16, 34); }
+  ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = 0.6; ctx.filter = 'blur(16px) brightness(1.5) saturate(1.5)';
+  ctx.drawImage(g, -80, -40, 900, 506); ctx.restore();
+  // 縁を暗く
+  ctx.save(); ctx.translate(w / 2, h * 0.55); ctx.scale(1, h / w);
+  const v = ctx.createRadialGradient(0, 0, w * 0.25, 0, 0, w * 0.75);
+  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.8)');
+  ctx.fillStyle = v; ctx.fillRect(-w, -w, w * 2, w * 2); ctx.restore();
   tex.refresh();
   return key;
 }

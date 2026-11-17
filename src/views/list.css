@@ -1,0 +1,56 @@
+/* 行き先の画面（HTML）。見本は docs/samples/style-menu-select.png（ダンジョン）。討伐も同じ作りにそろえる */
+.ls { position: absolute; inset: 0; }
+.ls .sm { position: absolute; font-size: 10px; font-weight: 500; letter-spacing: 4px; opacity: .75; }
+.ls .corner { position: absolute; width: 26px; height: 26px; opacity: .7; }
+.ls .title { position: absolute; left: 40px; top: 28px; font: 400 30px/1.4 var(--f-heavy); letter-spacing: 4px; }
+.ls .tabs { position: absolute; left: 40px; top: 92px; font-size: 14px; letter-spacing: 4px; display: flex; align-items: baseline; }
+.ls .tabs span { padding: 0 4px 8px; color: #8d8576; }
+.ls .tabs span.on { color: #fff; border-bottom: 2px solid var(--gold); }
+.ls .tabs span + span { margin-left: 26px; }
+.ls .tabs .sw { margin-left: 22px; padding: 0; font-size: 10px; color: var(--gold); border: 0; }
+
+.ls .row { position: absolute; left: 40px; width: 380px; height: 56px; border-bottom: 1px solid rgba(216,180,106,.25); }
+.ls .row.on { background: linear-gradient(90deg, rgba(216,180,106,.3), rgba(216,180,106,.04) 80%, transparent); border-bottom: 1px solid var(--gold); border-top: 1px solid rgba(216,180,106,.5); }
+.ls .row .dia { position: absolute; left: -3px; top: 24px; width: 7px; height: 7px; background: var(--gold); transform: rotate(45deg); }
+.ls .row .mk { position: absolute; left: 18px; top: 13px; width: 30px; height: 30px; border: 1px solid rgba(216,180,106,.45); font: 500 15px/28px var(--f-ja); text-align: center; color: #8d8576;
+  transition: all .12s ease-out; }
+.ls .row.on .mk { border-color: var(--ac); color: var(--ac); box-shadow: 0 0 14px rgba(255,80,20,.35); left: 14px; top: 9px; width: 38px; height: 38px; font-size: 20px; line-height: 36px; }
+.ls .row .nm { position: absolute; left: 66px; top: 0; line-height: 56px; font-size: 17px; letter-spacing: 4px; color: #8d8576; white-space: nowrap; transition: font-size .12s ease-out, left .12s ease-out; }
+.ls .row.on .nm { color: #fff; font-size: 23px; left: 70px; }
+.ls .row .st { position: absolute; right: 16px; top: 0; height: 56px; line-height: 1; font-size: 11px; letter-spacing: 3px; color: #5c554a; white-space: nowrap; display: flex; align-items: center; gap: 10px; }
+.ls .row.on .st { color: var(--gold); font-size: 12px; }
+.ls .row .st.lit { color: var(--sub); }
+.ls .row .tm { font: 300 17px/1 var(--f-num); letter-spacing: 1px; font-variant-numeric: tabular-nums; color: var(--sub); }
+.ls .row.on .tm { color: #fff; }
+.ls .row .tm small { font: 500 9px var(--f-ja); margin-left: 3px; letter-spacing: 2px; }
+.ls .rank { width: 24px; height: 24px; border: 1px solid var(--gold); border-radius: 50%; text-align: center; font: 500 13px/22px var(--f-num); color: var(--gold); letter-spacing: 0; }
+
+.ls .gold-l { left: 40px; top: 462px; }
+.ls .gold { position: absolute; left: 40px; top: 478px; font: 500 26px/1 var(--f-num); font-variant-numeric: tabular-nums; }
+.ls .gold small { font: 400 12px var(--f-num); opacity: .6; margin-left: 6px; }
+
+/* 右の枠。中の絵は Canvas。金の二重の細い枠と、左端の差し色の線 */
+.ls .fr { position: absolute; left: 470px; top: 60px; width: 450px; height: 426px; border: 1px solid var(--gold); }
+.ls .fr2 { position: absolute; left: 464px; top: 54px; width: 462px; height: 438px; border: 1px solid rgba(216,180,106,.3); }
+.ls .frl { position: absolute; left: 470px; top: 60px; width: 3px; height: 426px; background: var(--ac); box-shadow: 0 0 12px var(--ac); }
+.ls .soon { position: absolute; left: 470px; top: 60px; width: 450px; height: 426px; display: flex; align-items: center; justify-content: center; font-size: 12px; letter-spacing: 6px; color: #5c554a; }
+
+/* 討伐: 右の枠に、選んだ敵の名前・HP・攻撃パターン・戦利品 */
+.ls .en { position: absolute; left: 494px; top: 82px; font-size: 22px; letter-spacing: 4px; }
+.ls .ehp { position: absolute; left: 494px; top: 120px; font: 400 13px var(--f-num); letter-spacing: 2px; color: var(--sub); }
+.ls .why { position: absolute; left: 494px; top: 300px; width: 400px; font-size: 13px; letter-spacing: 2px; color: var(--sub); }
+.ls .ph { left: 494px; top: 252px; }
+.ls .act { position: absolute; left: 494px; width: 402px; display: flex; align-items: center; border-bottom: 1px solid rgba(216,180,106,.2); font-size: 14px; letter-spacing: 2px; }
+.ls .act .an { flex: 1; padding-left: 10px; white-space: nowrap; }
+.ls .act.big .an { color: #ff6a5a; }
+.ls .act .as { width: 70px; text-align: right; font: 300 14px var(--f-num); color: var(--sub); font-variant-numeric: tabular-nums; }
+.ls .act .ad { width: 110px; text-align: right; padding-right: 10px; font: 300 16px var(--f-num); font-variant-numeric: tabular-nums; }
+.ls .act.big .ad { color: #ff6a5a; }
+.ls .act .ad small, .ls .act .as small { font: 500 9px var(--f-ja); margin-left: 3px; letter-spacing: 2px; color: var(--sub); }
+.ls .act .q { width: 180px; text-align: right; padding-right: 10px; color: #5c554a; letter-spacing: 4px; font-size: 12px; }
+.ls .foot { position: absolute; left: 494px; width: 402px; top: 456px; display: flex; justify-content: space-between; font-size: 11px; letter-spacing: 2px; color: var(--sub); }
+.ls .foot b { font-weight: 500; color: var(--gold); margin-left: 8px; }
+
+.ls .guide { position: absolute; right: 40px; bottom: 16px; font-size: 11px; letter-spacing: 2px; color: var(--sub); white-space: nowrap; }
+.ls .key { display: inline-block; border: 1px solid var(--gold); color: var(--gold); font: 500 10px var(--f-num); letter-spacing: 2px; padding: 2px 7px; margin: 0 8px 0 22px; }
+.ls .notice { position: absolute; left: 260px; width: 300px; bottom: 18px; text-align: center; font-size: 10.5px; letter-spacing: 1px; color: var(--ac); }

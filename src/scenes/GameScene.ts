@@ -14,6 +14,7 @@ import { drawList } from '../screens/list';
 import { drawBattle } from '../screens/battle';
 import { drawBattleScene, CHAIN_AT, ITEM_AT, HP_AT } from '../screens/battlescene';
 import { ENEMY_AT } from '../game/battlebg';
+import { drawListScene } from '../screens/listscene';
 import { UIRoot, isHtml, UI_DEBUG, DEBUG_MARKS, type ViewName } from '../views/root';
 import { drawResult } from '../screens/result';
 import { drawMenu, drawPause, drawResume, drawReset, drawConfirm } from '../screens/menus';
@@ -631,7 +632,8 @@ export class GameScene extends Phaser.Scene {
       if (o === 'dmenu') show('dmenu', () => drawDMenu(this, this.L[3])); else if (o === 'equip') show('equip', () => drawEquip(this, this.L[3]));
       else if (o === 'help') show('help', () => drawHelp(this, this.L[3])); else if (o === 'legend') show('legend', () => drawLegend(this, this.L[3]));
     } else {
-      if (this.base === 'list') show('list', () => drawList(this, a));
+      if (this.base === 'list' && isHtml('list')) { drawListScene(this, a, this.overlays.some(o => !isHtml(o))); views.push('list'); }   // 地と絵は Canvas、ほかは HTML
+      else if (this.base === 'list') show('list', () => drawList(this, a));
       else if (isHtml('battle')) { drawBattleScene(this, a); views.push('battle'); }   // 背景・敵・演出は Canvas、画面まわりは HTML
       else show('battle', () => drawBattle(this, a));
       if (this.base === 'result') show('result', () => drawResult(this, b));
