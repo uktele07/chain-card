@@ -26,10 +26,11 @@ body{width:960px;height:540px;overflow:hidden;background:#0b0a09;font-family:'No
 .key{display:inline-block;border:1px solid var(--gold);color:var(--gold);font:500 10px 'Inter';letter-spacing:2px;padding:2px 7px;margin:0 8px 0 22px}
 .guide{position:absolute;right:40px;bottom:10px;padding:6px 0 6px 10px;background:#0b0a09;font-size:11px;letter-spacing:2px;color:var(--sub);white-space:nowrap}
 .corner{position:absolute;width:26px;height:26px;opacity:.7}
-.chips{display:inline-flex;gap:10px;align-items:center}.chip{display:inline-flex;align-items:center;gap:5px;font:300 15px 'Inter Display','Inter'}
-.chip b{display:inline-block;width:18px;height:18px;border:1px solid var(--gold);color:var(--gold);font:500 10px/16px 'Inter';text-align:center}
+.chips{display:inline-flex;gap:0;align-items:center}.chip{display:inline-flex;align-items:center;gap:6px;width:52px;font:300 16px/1 'Inter Display','Inter';font-variant-numeric:tabular-nums}
+.chip b{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid rgba(216,180,106,.7);color:var(--gold);font:600 11px/1 'Inter Display','Inter';letter-spacing:0}
+.chip span{min-width:18px}
 .chips.old{opacity:.5}.up{color:var(--gold)}.down{color:var(--ac)}
-.mk{display:inline-block;width:26px;height:26px;border:1px solid var(--ac);color:var(--ac);font:500 13px/24px 'Noto Sans JP';text-align:center}
+.mk{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:1px solid var(--ac);color:var(--ac);font:600 13px/1 'Inter Display','Noto Sans JP';letter-spacing:0;flex:none}
 .mk.off{border-color:rgba(216,180,106,.35);color:var(--dim)}`;
 const corners = `<div class="corner" style="left:14px;top:14px;border-left:1px solid var(--gold);border-top:1px solid var(--gold)"></div><div class="corner" style="right:14px;bottom:14px;border-right:1px solid var(--gold);border-bottom:1px solid var(--gold)"></div>`;
 const guide = t => `<div class="guide">${t}</div>`;
@@ -37,8 +38,8 @@ const K = (k, t) => `<span class="key">${k}</span>${t}`;
 /** 武器の威力の札。cmp を渡すと、上がる所を金、下がる所を差し色に */
 const chips = (p, cls = '', cmp) => `<span class="chips ${cls}">${['C', 'B', 'A', 'S'].map((l, i) => `<span class="chip"><b>${l}</b><span class="${cmp ? (p[i] > cmp[i] ? 'up' : p[i] < cmp[i] ? 'down' : '') : ''}">${p[i]}</span></span>`).join('')}</span>`;
 const weaponCompare = (x, y, w) => `<div class="abs" style="left:${x}px;top:${y}px;width:${w}px">
-  <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid rgba(216,180,106,.25)"><span style="font-size:13px;letter-spacing:2px">${WEAPONS[PICK][0]}</span>${chips(WEAPONS[PICK][1], '', WEAPONS[0][1])}</div>
-  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px"><span style="font-size:12px;letter-spacing:2px;color:var(--dim)">現在: ${WEAPONS[0][0]}</span>${chips(WEAPONS[0][1], 'old')}</div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid rgba(216,180,106,.25)"><span style="font-size:13px;letter-spacing:2px;white-space:nowrap">${WEAPONS[PICK][0]}</span>${chips(WEAPONS[PICK][1], '', WEAPONS[0][1])}</div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px"><span style="font-size:11px;letter-spacing:1px;color:var(--dim);white-space:nowrap">現在: ${WEAPONS[0][0]}</span>${chips(WEAPONS[0][1], 'old')}</div>
   <div style="margin-top:14px;font-size:11px;letter-spacing:1px;line-height:1.7;color:var(--sub)">チェインを重ねた際の威力は絶大。しかし、攻撃毎に待機時間が発生。</div></div>`;
 
 // 一覧の行（行き先と同じ作り）
@@ -80,8 +81,8 @@ ${guide(K('↑ ↓', '選ぶ') + K('○', 'セット') + K('✕', 'やめる'))}
 ${frame(470, 60, 450, 426)}
 <div class="abs" style="left:494px;top:84px;font-size:22px;letter-spacing:4px">鉄の弓</div><div class="abs n" style="right:64px;top:88px;font-size:20px;color:var(--gold)">200 G</div>
 <div class="abs" style="left:494px;top:150px;width:402px">
-  <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid rgba(216,180,106,.25)"><span style="font-size:13px;letter-spacing:2px">鉄の弓</span>${chips([1, 1, 1, 10], '', [1, 2, 3, 10])}</div>
-  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px"><span style="font-size:12px;letter-spacing:2px;color:var(--dim)">現在: 鉄の剣</span>${chips([1, 2, 3, 10], 'old')}</div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid rgba(216,180,106,.25)"><span style="font-size:13px;letter-spacing:2px;white-space:nowrap">鉄の弓</span>${chips([1, 1, 1, 10], '', [1, 2, 3, 10])}</div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px"><span style="font-size:11px;letter-spacing:1px;color:var(--dim);white-space:nowrap">現在: 鉄の剣</span>${chips([1, 2, 3, 10], 'old')}</div>
   <div style="margin-top:18px;font-size:11px;letter-spacing:1px;line-height:1.7;color:var(--sub)">威力は控えめだが、カード入れ替えが高速。</div>
   <div style="margin-top:130px;font-size:11px;letter-spacing:2px;color:var(--gold)">買った物は「装備」で着ける。</div></div>
 ${guide(K('↑ ↓', '選ぶ') + K('○', '買う') + K('✕', '戻る'))}`,
@@ -167,9 +168,6 @@ ${guide(K('↑ ↓', '選ぶ') + K('○', '入れる / 外す') + K('✕', '戻�
     pillar: (active, focus) => `<div class="pil"><div class="t">MENU</div>${MENU.map(([m, n], i) => `<div class="tab ${focus && i === active ? 'on' : ''} ${!focus && i === active ? 'cur' : ''} ${n ? 'off' : ''}" style="top:${90 + i * 46}px">${m}${n ? `<small>${n}</small>` : ''}</div>`).join('')}
 <div class="sm" style="left:30px;top:442px">所持金</div><div class="abs n" style="left:30px;top:458px;font-size:24px">310<span style="font-size:11px;color:var(--sub);margin-left:6px">G</span></div></div>`,
     menu: function () { return `${this.pillar(0, true)}${corners}
-<div class="pg">いまの装備</div>
-${LOADOUT.slice(0, 5).map(([k, v], i) => `<div class="row" style="left:270px;top:${100 + i * 52}px;width:640px;height:52px;color:var(--sub)">${k}<span class="r" style="font-size:15px;letter-spacing:2px;color:${v === 'なし' ? 'var(--off)' : '#fff'}">${v}</span></div>`).join('')}
-<div class="abs" style="left:270px;top:390px;width:640px;font-size:11px;letter-spacing:2px;color:var(--sub)">武器の威力　${chips([1, 2, 3, 10])}</div>
 ${guide(K('↑ ↓', '選ぶ') + K('○', '決定') + K('✕', '閉じる'))}`; },
     equip: function () { return `${this.pillar(0, false)}${corners}
 <div class="pg">装備</div>
@@ -179,8 +177,7 @@ ${guide(K('↑ ↓', '選ぶ') + K('○', '決定') + K('✕', '閉じる'))}`; 
 <div class="vl" style="left:600px;top:92px;width:1px;height:380px;position:absolute;background:rgba(216,180,106,.4)"></div>
 <div class="hd" style="left:630px;top:92px">武器を選ぶ</div>
 ${rows(WEAPONS.map(w => [w[0], w[2]]), 630, 110, 290, PICK, 42)}
-<div class="abs" style="left:630px;top:262px;font-size:16px;letter-spacing:3px">${WEAPONS[PICK][0]}</div>
-${weaponCompare(630, 296, 290)}
+${weaponCompare(630, 262, 290)}
 ${guide(K('↑ ↓', '選ぶ') + K('○', 'セット') + K('✕', 'やめる'))}`; },
     shop: function () { return `${this.pillar(2, false)}${corners}
 <div class="pg">ショップ</div>
@@ -188,10 +185,9 @@ ${guide(K('↑ ↓', '選ぶ') + K('○', 'セット') + K('✕', 'やめる'))}
 <div class="hd" style="left:270px;top:100px">武器</div>${rows(SHOP.slice(0, 2).map(s => [s[1], s[2], '', s[2] === '購入済み' ? 'off' : '']), 270, 118, 300, SHOP_PICK)}
 <div class="hd" style="left:270px;top:222px">防具</div>${rows(SHOP.slice(2).map(s => [s[1], s[2]]), 270, 240, 300, -1)}
 <div class="abs" style="left:600px;top:100px;width:1px;height:372px;background:rgba(216,180,106,.4)"></div>
-<div class="abs" style="left:630px;top:96px;font-size:20px;letter-spacing:4px">鉄の弓</div><div class="abs n" style="right:40px;top:100px;font-size:18px;color:var(--gold)">200 G</div>
-<div class="abs" style="left:630px;top:150px;width:290px">
-  <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid rgba(216,180,106,.25)"><span style="font-size:13px;letter-spacing:2px">鉄の弓</span>${chips([1, 1, 1, 10], '', [1, 2, 3, 10])}</div>
-  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px"><span style="font-size:12px;letter-spacing:2px;color:var(--dim)">現在: 鉄の剣</span>${chips([1, 2, 3, 10], 'old')}</div>
+<div class="abs" style="left:630px;top:118px;width:290px">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid rgba(216,180,106,.25)"><span style="font-size:13px;letter-spacing:2px;white-space:nowrap">鉄の弓</span>${chips([1, 1, 1, 10], '', [1, 2, 3, 10])}</div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px"><span style="font-size:11px;letter-spacing:1px;color:var(--dim);white-space:nowrap">現在: 鉄の剣</span>${chips([1, 2, 3, 10], 'old')}</div>
   <div style="margin-top:18px;font-size:11px;letter-spacing:1px;line-height:1.7;color:var(--sub)">威力は控えめだが、カード入れ替えが高速。</div>
   <div style="margin-top:110px;font-size:11px;letter-spacing:2px;color:var(--gold)">買った物は「装備」で着ける。</div></div>
 ${guide(K('↑ ↓', '選ぶ') + K('○', '買う') + K('✕', '戻る'))}`; },
