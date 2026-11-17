@@ -56,7 +56,7 @@ export async function start(page: Page) { await key(page, 'Enter'); await waitTo
 
 /** いま出せるアタックを1枚出す（出せるものが来るまで待つ） */
 export async function playAttack(page: Page) {
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < 600; i++) {      // 遅い環境では、入れ替えを待つのに時間がかかる
     const st = await battle(page, b => ({ res: b.result, lock: b.lock, slots: b.slots.map((s: any) => !!s.card && s.card.type === 'attack' && b.canPlay(s.card)) }));
     if (st.res !== 'playing') return;
     const k = st.lock > 0 ? -1 : st.slots.indexOf(true);

@@ -270,7 +270,7 @@ describe('ダンジョン', () => {
   it('サイコロで進み、モンスターのマスで戦う。HPとアイテムの使用を持ち越し、戦利品が入る', async () => {
     g = await open();
     await enter();
-    await scene(g.page, s => { s.run.state.pos = 1; });
+    await scene(g.page, s => { s.run.state.pos = 1; s.toBoard(); });
     await fix(0);
     await roll();
     await mode('landed');
@@ -298,7 +298,7 @@ describe('ダンジョン', () => {
   it('分かれ道は盤面の上で選ぶ。先を見ることもできる', async () => {
     g = await open();
     await enter();
-    await scene(g.page, s => { s.run.state.pos = 11; });
+    await scene(g.page, s => { s.run.state.pos = 11; s.toBoard(); });
     await fix(0);
     await roll();
     await mode('choose');
@@ -317,7 +317,7 @@ describe('ダンジョン', () => {
   it('負けると入口に戻り、最大HPアップは消える', async () => {
     g = await open();
     await enter();
-    await scene(g.page, s => { s.run.state.pos = 1; s.run.state.maxBonus = 10; s.run.state.hp = 110; });
+    await scene(g.page, s => { s.run.state.pos = 1; s.run.state.maxBonus = 10; s.run.state.hp = 110; s.toBoard(); });
     await fix(0);
     await roll();
     await mode('landed');
@@ -350,7 +350,7 @@ describe('ダンジョン', () => {
     g = await open();
     for (const first of [true, false]) {
       await enter();
-      await scene(g.page, s => { s.run.state.pos = s.run.bossIndex - 1; s.run.state.midDone = true; });
+      await scene(g.page, s => { s.run.state.pos = s.run.bossIndex - 1; s.run.state.midDone = true; s.toBoard(); });
       await fix(0);
       await roll();
       await mode('landed');
@@ -360,7 +360,7 @@ describe('ダンジョン', () => {
       await start(g.page);
       await win(g.page);
       await key(g.page, 'Enter');
-      await mode('cleared');
+      await mode('cleared').catch(async e => { throw new Error(String(e) + JSON.stringify(await scene(g.page, s => [s.base, s.bmode, s.overlays, s.run && s.run.state, s.battle.result, s.battle.hp, s.resultWait]))); });
       const sv = await stored(g.page);
       expect(sv.run).toBeNull();
       expect(sv.cleared.fire).toBe(true);
