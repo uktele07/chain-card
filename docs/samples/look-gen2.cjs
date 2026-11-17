@@ -219,14 +219,15 @@ function D4(m, start) {
   return { ...d, css: d.css + css, items: items + timers, extra: guide, start };
 }
 // D5: D4 の直し。① 効果の残り秒は数字の幅をそろえ、小数点の位置を合わせる ② 次の攻撃の行が、技名が長い・ダメージが2桁でも敵のHPに重ならないようにする
-//   「NEXT」は HP と同じ小さな見出しにして行の上へ。行は右端（ゲージの右端）にそろえ、秒とダメージの位置を固定する。技名は左へ伸び、幅 140 を超えたら文字を小さくする
+//   「NEXT」は HP と同じ小さな見出しにして行の上へ。行は左端にそろえる。技名の大きさは変えない（24、字間 2）。
+//   「！」＋全角8文字・ダメージ 30 で、右端が 680（敵のHPの手前）に収まるように、行の左端を 190 にした（ブラウザで幅を測って決めた）
 function nextRow(atk, dmg, sec, big, g = 0.3) {
-  const L = CX - 200, Wd = 400, fs = Math.min(24, Math.floor(140 / atk.length) - 4);
+  const L = 190, Wd = 490;
   return `<div class="abs sm" style="left:${L}px;top:84px;color:#d8b46a;opacity:1">NEXT</div>
-<div class="abs" style="left:${L}px;top:98px;width:${Wd}px;height:44px;display:flex;align-items:flex-end;justify-content:flex-end;gap:14px">
-  <span class="atk" style="font-size:${fs}px;letter-spacing:${fs > 18 ? 4 : 2}px;white-space:nowrap;${big ? 'color:#ff6a5a' : ''}">${big ? '！' : ''}${atk}</span>
+<div class="abs" style="left:${L}px;top:98px;width:${Wd}px;height:44px;display:flex;align-items:flex-end;justify-content:flex-start;gap:14px">
+  <span class="atk" style="font-size:24px;letter-spacing:2px;white-space:nowrap;${big ? 'color:#ff6a5a' : ''}">${big ? '！' : ''}${atk}</span>
   <span class="dmg" style="font-variant-numeric:tabular-nums;${big ? 'color:#ff2a1f;text-shadow:0 0 18px rgba(255,30,20,.8)' : ''}">${dmg}<span class="unit">ダメージ</span></span><span class="sep"></span>
-  <span class="sec" style="font-variant-numeric:tabular-nums;width:78px;text-align:right">${sec}<span class="unit">秒</span></span>
+  <span class="sec" style="font-variant-numeric:tabular-nums;width:78px">${sec}<span class="unit">秒</span></span>
 </div>
 <div class="abs gauge" style="left:${L}px;top:148px;width:${Wd}px"><div style="width:${g * 100}%;height:100%;${big ? 'background:#ff2a1f;box-shadow:0 0 8px #ff2a1f' : ''}" class="gfill"></div></div>`;
 }
@@ -287,7 +288,7 @@ ${rows.map(([m, n, st, on], i) => `<div class="row ${on ? 'on' : ''}" style="top
   }
   // D5: 次の攻撃の行を、長さの違う場合で並べる（上端 0〜180 を切り出し、縦に積む）
   if (only === 'D5') {
-    const d = STYLES['D5-fight'](monster), cases = [['いまの案（D4）: ！滅びの光 26', null], ['直した案: 爪 5', nextRow('爪', 5, '3.5', false)], ['直した案: ！滅びの光 26（大技）', nextRow('滅びの光', 26, '1.2', true, 0.78)], ['直した案: 8文字の技名 30（いまは無い。文字を小さくする）', nextRow('メテオストライク', 30, '4.0', false, 0.1)]];
+    const d = STYLES['D5-fight'](monster), cases = [['いまの案（D4）: ！滅びの光 26', null], ['直した案: 爪 5', nextRow('爪', 5, '3.5', false)], ['直した案: ！滅びの光 26（大技）', nextRow('滅びの光', 26, '1.2', true, 0.78)], ['直した案: ！＋8文字の技名 30（いちばん長い場合。いまは無い）', nextRow('メテオストライク', 30, '4.0', true, 0.1)]];
     const old = STYLES['D4-fight'](monster);
     const parts = [];
     for (const [i, [label, nx]] of cases.entries()) {
@@ -296,10 +297,10 @@ ${rows.map(([m, n, st, on], i) => `<div class="row ${on ? 'on' : ''}" style="top
       const f = `${OUT}/d5-${i}.html`; fs.writeFileSync(f, html);
       const p = await b.newPage({ viewport: { width: 960, height: 540 }, deviceScaleFactor: 2 });
       await p.goto('file://' + f); await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(500);
-      const png = `${OUT}/d5-${i}.png`; await p.screenshot({ path: png, clip: { x: 200, y: 0, width: 760, height: 180 } }); await p.close();
-      parts.push(`<div style="font:500 12px 'Noto Sans JP';color:#d8b46a;letter-spacing:2px;margin:14px 0 6px 4px">${label}</div><img src="file://${png}" style="width:760px;display:block">`);
+      const png = `${OUT}/d5-${i}.png`; await p.screenshot({ path: png, clip: { x: 150, y: 0, width: 810, height: 180 } }); await p.close();
+      parts.push(`<div style="font:500 12px 'Noto Sans JP';color:#d8b46a;letter-spacing:2px;margin:14px 0 6px 4px">${label}</div><img src="file://${png}" style="width:810px;display:block">`);
     }
-    await shoot('style-D5-next', `<!doctype html><html><head>${head}</head><body style="margin:0;padding:0 16px 16px;background:#14110f;width:792px">${parts.join('')}</body></html>`, 792, 4 * 214 + 16);
+    await shoot('style-D5-next', `<!doctype html><html><head>${head}</head><body style="margin:0;padding:0 16px 16px;background:#14110f;width:842px">${parts.join('')}</body></html>`, 842, 4 * 214 + 16);
     await shoot('style-D5-fight', `<!doctype html><html><head>${head}<style>${base}${d.css}</style></head><body>${d.back}${layout(d)}<script>${d.script}</script></body></html>`);
     await b.close(); return;
   }
