@@ -176,6 +176,12 @@ body{--gold:#d8b46a}
     const c = STYLES['C-noir'](m);
     return { ...c, css: c.css.replace('filter:blur(9px) saturate(.55) brightness(.5)', 'filter:blur(2.5px) saturate(.7) brightness(.62);image-rendering:auto'), items: revolver(0, 28, 214, true), scale: 0.9, tilt: [-1.6, 1.2, 1.8, -0.9] };
   },
+  // D2: D の敵の名前だけ、極太の書体に戻す
+  'D2-heavyname': m => {
+    const d = STYLES['D-mix'](m), rule = ".name{font-family:'Noto Sans JP'!important;font-weight:500;letter-spacing:10px;font-size:26px!important;right:22px!important}";
+    if (!d.css.includes(rule)) throw new Error('name rule not found');
+    return { ...d, css: d.css.replace(rule, '.name{letter-spacing:3px;text-shadow:0 0 18px rgba(216,180,106,.35)}') };
+  },
 };
 const head = `<meta charset="utf-8"><link rel="stylesheet" href="file://${FONTS}/node_modules/@fontsource/dela-gothic-one/400.css">${[300, 500, 700, 900].map(w => `<link rel="stylesheet" href="file://${FONTS}/node_modules/@fontsource/noto-sans-jp/${w}.css">`).join('')}`;
 
