@@ -19,12 +19,12 @@ export function resultView(gs: GameScene) {
   const chs = choices.map((c, i) => html`<div class="ch ${ready && i === sel ? 'on' : ''} ${ready ? '' : 'wait'}" style="left:${long ? 762 : 770}px;letter-spacing:${long ? 2 : 4}px;top:${244 + (choices.length === 1 ? 20 : i * 40)}px">${c}</div>`);
   const guide = html`<div class="guide">${choices.length > 1 ? html`${key(pad ? '↑ ↓' : '↑ ↓')}選ぶ` : nothing}${key(pad ? '○' : 'Enter')}決定</div>`;
   if (!won) {
-    const rows: [string, string][] = [[`${gs.enemy.name} の残りHP`, `${b.enemy!.hp} / ${gs.enemy.hp}`], ['経過時間', `${b.time.toFixed(1)} 秒`], ['最大ダメージ（1ターン）', String(b.stats.maxTurn)]];
+    const rows: [string, string][] = [[`${gs.enemy.name} の残りHP`, `${b.enemy!.hp} / ${gs.enemy.hp}`], ['経過時間', `${b.time.toFixed(1)} 秒`]];
     return html`<div class="ov" style="--ac:${accent(gs)}"><div class="dim" style="background:rgba(5,4,3,.55)"></div>
       <div class="band lose" style="top:170px;height:200px"></div>
       <div class="lose-t" style="top:248px">敗北</div>
       <div class="vl" style="left:300px;top:200px;height:140px"></div>
-      ${rows.map(([k, v], i) => html`<div class="st" style="left:330px;top:${196 + i * 50}px"><div class="k">${k}</div><div class="v">${v}</div></div>`)}
+      ${rows.map(([k, v], i) => html`<div class="st" style="left:330px;top:${214 + i * 58}px"><div class="k">${k}</div><div class="v">${v}</div></div>`)}
       <div class="vl" style="left:740px;top:200px;height:140px"></div>
       ${chs}${corners}${guide}</div>`;
   }
