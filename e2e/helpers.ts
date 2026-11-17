@@ -54,13 +54,17 @@ export async function toReady(page: Page, enemyIndex = 0) {
 /** 開始前画面から戦闘を始める */
 export async function start(page: Page) { await key(page, 'Enter'); await waitTop(page, 'fight'); }
 
-/** いま出せるアタックを1枚出す（出せるものが来るまで待つ） */
+/**
+ * いま出せるアタックを1枚出す（出せるものが来るまで待つ）。
+ * 出せるのがスペルだけの手札は自動では入れ替わらないので、そのときはスペルを出して先へ進める。
+ */
 export async function playAttack(page: Page) {
   for (let i = 0; i < 600; i++) {      // 遅い環境では、入れ替えを待つのに時間がかかる
-    const st = await battle(page, b => ({ res: b.result, lock: b.lock, slots: b.slots.map((s: any) => !!s.card && s.card.type === 'attack' && b.canPlay(s.card)) }));
+    const st = await battle(page, b => ({ res: b.result, lock: b.lock, slots: b.slots.map((s: any) => (!s.card || !b.canPlay(s.card) ? '' : s.card.type)) }));
     if (st.res !== 'playing') return;
-    const k = st.lock > 0 ? -1 : st.slots.indexOf(true);
-    if (k >= 0) { await key(page, CARD_KEYS[k]); return; }
+    const atk = st.slots.indexOf('attack'), spell = st.slots.indexOf('spell');
+    if (st.lock <= 0 && atk >= 0) { await key(page, CARD_KEYS[atk]); return; }
+    if (st.lock <= 0 && spell >= 0) await key(page, CARD_KEYS[spell]);
     await page.waitForTimeout(60);
   }
   throw new Error('no playable attack appeared');
