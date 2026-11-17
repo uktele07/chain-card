@@ -42,12 +42,12 @@ function layout(o) {
 <div class="abs num" style="right:30px;top:102px">71<span class="of"> / 110</span></div>
 <div class="abs bar" style="right:30px;top:148px;width:230px"><div class="fill ehp" style="width:64%"></div></div>
 
-<div class="abs" style="left:${CX - 190}px;top:86px;width:380px;display:flex;align-items:flex-end;justify-content:center;gap:14px">
+${o.next ? o.next : `<div class="abs" style="left:${CX - 190}px;top:86px;width:380px;display:flex;align-items:flex-end;justify-content:center;gap:14px">
   <span class="next">NEXT</span><span class="atk">爪</span>
   <span class="dmg">5<span class="unit">ダメージ</span></span><span class="sep"></span>
   <span class="sec">3.5<span class="unit">秒</span></span>
 </div>
-<div class="abs gauge" style="left:${CX - 170}px;top:144px;width:340px"><div style="width:${o.start ? 0 : 30}%;height:100%" class="gfill"></div></div>
+<div class="abs gauge" style="left:${CX - 170}px;top:144px;width:340px"><div style="width:${o.start ? 0 : 30}%;height:100%" class="gfill"></div></div>`}
 
 ${card(0, -100, 'B', '威力 2', '△', 'on')}${card(109, 0, 'C', '威力 1', '○', 'on')}${card(0, 100, 'S', '威力 10', '✕', 'off')}${card(-109, 0, 'X', 'レベルX', '□', 'sp')}
 <div class="abs chain${o.start ? ' st' : ''}" style="left:${CX - 32}px;top:${CY - 32}px;width:64px;height:64px;transform:rotate(45deg) scale(${k})"></div>
@@ -207,7 +207,7 @@ function D4(m, start) {
     + `<div class="abs" style="left:28px;top:330px;width:204px;font-size:10.5px;font-weight:500;letter-spacing:1px;line-height:1.6;color:#cfc6b4"><span style="display:inline-block;width:5px;height:5px;background:#d8b46a;transform:rotate(45deg);margin:0 8px 2px 2px"></span>敵を1秒止め、行動ゲージを0に戻す</div>`;
   // 時間で切れる効果。自分にかかる効果なので金。名前で区別し、色は増やさない
   const timer = (n, left, y) => `<div class="abs" style="left:28px;top:${y}px;width:204px">
-  <div style="display:flex;justify-content:space-between;align-items:flex-end"><span style="font-size:11px;font-weight:500;letter-spacing:3px;color:#fff">${n}</span><span style="font:300 20px/1 'Inter Display','Inter';color:#d8b46a;text-shadow:0 0 10px rgba(216,180,106,.5)">${left}<span style="font:500 9px 'Noto Sans JP';color:#cfc6b4;margin-left:4px;letter-spacing:2px">秒</span></span></div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-end"><span style="font-size:11px;font-weight:500;letter-spacing:3px;color:#fff">${n}</span><span style="font:300 20px/1 'Inter Display','Inter';font-variant-numeric:tabular-nums;color:#d8b46a;text-shadow:0 0 10px rgba(216,180,106,.5)">${left}<span style="font:500 9px 'Noto Sans JP';color:#cfc6b4;margin-left:4px;letter-spacing:2px">秒</span></span></div>
   <div style="margin-top:5px;height:2px;background:rgba(255,255,255,.15)"><div style="width:${left * 10}%;height:100%;background:#d8b46a;box-shadow:0 0 6px #d8b46a"></div></div></div>`;
   const timers = start ? '' : `<div class="abs sm" style="left:28px;top:364px">効果</div>` + timer('強化薬', 6.4, 382) + timer('時の砂', 2.1, 414);
   // 開始前: 操作の案内（右下）と、ゲームパッドの状態（下の中央。問題があるときだけ出る）
@@ -218,6 +218,19 @@ function D4(m, start) {
 .chain.st{border-color:#d8b46a;box-shadow:0 0 34px rgba(216,180,106,.75),inset 0 0 14px rgba(216,180,106,.35);outline-color:rgba(216,180,106,.7)}`;
   return { ...d, css: d.css + css, items: items + timers, extra: guide, start };
 }
+// D5: D4 の直し。① 効果の残り秒は数字の幅をそろえ、小数点の位置を合わせる ② 次の攻撃の行が、技名が長い・ダメージが2桁でも敵のHPに重ならないようにする
+//   「NEXT」は HP と同じ小さな見出しにして行の上へ。行は右端（ゲージの右端）にそろえ、秒とダメージの位置を固定する。技名は左へ伸び、幅 140 を超えたら文字を小さくする
+function nextRow(atk, dmg, sec, big, g = 0.3) {
+  const L = CX - 200, Wd = 400, fs = Math.min(24, Math.floor(140 / atk.length) - 4);
+  return `<div class="abs sm" style="left:${L}px;top:84px;color:#d8b46a;opacity:1">NEXT</div>
+<div class="abs" style="left:${L}px;top:98px;width:${Wd}px;height:44px;display:flex;align-items:flex-end;justify-content:flex-end;gap:14px">
+  <span class="atk" style="font-size:${fs}px;letter-spacing:${fs > 18 ? 4 : 2}px;white-space:nowrap;${big ? 'color:#ff6a5a' : ''}">${big ? '！' : ''}${atk}</span>
+  <span class="dmg" style="font-variant-numeric:tabular-nums;${big ? 'color:#ff2a1f;text-shadow:0 0 18px rgba(255,30,20,.8)' : ''}">${dmg}<span class="unit">ダメージ</span></span><span class="sep"></span>
+  <span class="sec" style="font-variant-numeric:tabular-nums;width:78px;text-align:right">${sec}<span class="unit">秒</span></span>
+</div>
+<div class="abs gauge" style="left:${L}px;top:148px;width:${Wd}px"><div style="width:${g * 100}%;height:100%;${big ? 'background:#ff2a1f;box-shadow:0 0 8px #ff2a1f' : ''}" class="gfill"></div></div>`;
+}
+STYLES['D5-fight'] = m => ({ ...D4(m, false), next: nextRow('滅びの光', 26, '1.2', true, 0.78) });
 const head = `<meta charset="utf-8"><link rel="stylesheet" href="file://${FONTS}/node_modules/@fontsource/dela-gothic-one/400.css">${[300, 500, 700, 900].map(w => `<link rel="stylesheet" href="file://${FONTS}/node_modules/@fontsource/noto-sans-jp/${w}.css">`).join('')}`;
 
 (async () => {
@@ -271,6 +284,24 @@ ${rows.map(([m, n, st, on], i) => `<div class="row ${on ? 'on' : ''}" style="top
 <script>${pixelBg}</script></body></html>`;
     await shoot('style-menu-select', html);
     if (only === 'menu') { await b.close(); return; }
+  }
+  // D5: 次の攻撃の行を、長さの違う場合で並べる（上端 0〜180 を切り出し、縦に積む）
+  if (only === 'D5') {
+    const d = STYLES['D5-fight'](monster), cases = [['いまの案（D4）: ！滅びの光 26', null], ['直した案: 爪 5', nextRow('爪', 5, '3.5', false)], ['直した案: ！滅びの光 26（大技）', nextRow('滅びの光', 26, '1.2', true, 0.78)], ['直した案: 8文字の技名 30（いまは無い。文字を小さくする）', nextRow('メテオストライク', 30, '4.0', false, 0.1)]];
+    const old = STYLES['D4-fight'](monster);
+    const parts = [];
+    for (const [i, [label, nx]] of cases.entries()) {
+      const s = nx ? { ...d, next: nx } : old;
+      const html = `<!doctype html><html><head>${head}<style>${base}${s.css}</style></head><body>${s.back}${nx ? layout(s) : layout(s).replace('<span class="atk">爪</span>', '<span class="atk" style="color:#ff6a5a">！滅びの光</span>').replace('5<span class="unit">ダメージ', '26<span class="unit">ダメージ')}<script>${s.script}</script></body></html>`;
+      const f = `${OUT}/d5-${i}.html`; fs.writeFileSync(f, html);
+      const p = await b.newPage({ viewport: { width: 960, height: 540 }, deviceScaleFactor: 2 });
+      await p.goto('file://' + f); await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(500);
+      const png = `${OUT}/d5-${i}.png`; await p.screenshot({ path: png, clip: { x: 200, y: 0, width: 760, height: 180 } }); await p.close();
+      parts.push(`<div style="font:500 12px 'Noto Sans JP';color:#d8b46a;letter-spacing:2px;margin:14px 0 6px 4px">${label}</div><img src="file://${png}" style="width:760px;display:block">`);
+    }
+    await shoot('style-D5-next', `<!doctype html><html><head>${head}</head><body style="margin:0;padding:0 16px 16px;background:#14110f;width:792px">${parts.join('')}</body></html>`, 792, 4 * 214 + 16);
+    await shoot('style-D5-fight', `<!doctype html><html><head>${head}<style>${base}${d.css}</style></head><body>${d.back}${layout(d)}<script>${d.script}</script></body></html>`);
+    await b.close(); return;
   }
   // リボルバーの動き: 4コマ
   const a = STYLES['A-depth'](monster);
