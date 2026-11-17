@@ -1,13 +1,15 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
+// 使い方: フォントを入れた作業用の場所を FONTS で渡す（@fontsource/dela-gothic-one と noto-sans-jp）。 node look-gen.cjs 1
+const FONTS = process.env.FONTS || __dirname, OUT = process.env.OUT || __dirname;
 const THEMES = {
   fire: { ac: '#ff4b1f', ac2: '#ffb23a', name: '炎獣', en: 'FLAME BEAST', stage: '火の神殿', wall: ['#1a1210', '#2a1c18', '#3a2620'], floor: ['#3a2f2a', '#2a211d'], glow: '#ff7a2a', hue: 0 },
   water: { ac: '#1fa8ff', ac2: '#8fe3ff', name: '水竜', en: 'TIDE DRAKE', stage: '水の神殿', wall: ['#0e1620', '#16263a', '#1f3650'], floor: ['#24364a', '#172433'], glow: '#3ac0ff', hue: 190 },
 };
 const page = (t, monster, kind) => `<!doctype html><html><head><meta charset="utf-8">
-<link rel="stylesheet" href="file://${__dirname}/node_modules/@fontsource/dela-gothic-one/400.css">
-<link rel="stylesheet" href="file://${__dirname}/node_modules/@fontsource/noto-sans-jp/900.css">
-<link rel="stylesheet" href="file://${__dirname}/node_modules/@fontsource/noto-sans-jp/500.css">
+<link rel="stylesheet" href="file://${FONTS}/node_modules/@fontsource/dela-gothic-one/400.css">
+<link rel="stylesheet" href="file://${FONTS}/node_modules/@fontsource/noto-sans-jp/900.css">
+<link rel="stylesheet" href="file://${FONTS}/node_modules/@fontsource/noto-sans-jp/500.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{width:960px;height:540px;overflow:hidden;background:#000;font-family:'Noto Sans JP',sans-serif;color:#fff;--ac:${t.ac};--ac2:${t.ac2}}
@@ -64,36 +66,44 @@ const m=document.getElementById('mon');if(m){const im=new Image();im.onload=()=>
 </script></body></html>`;
 
 function battle(t) {
-  const card = (x, y, lv, pw, gl, cls = '') => `<div class="card ${cls}" style="left:${x}px;top:${y}px"><div class="in"></div><div class="lv d">${lv}</div><div class="pw">${pw}</div><div class="gl">${gl}</div></div>`;
-  return `
-<div class="abs d stroke" style="right:-20px;bottom:6px;font-size:120px;line-height:1;opacity:.5;transform:skewX(-12deg)">${t.stage}</div>
-<canvas id="mon" width="76" height="76" class="abs" style="left:640px;top:150px;width:320px;height:320px;image-rendering:pixelated;filter:${t.hue ? `hue-rotate(${t.hue}deg) ` : ''}drop-shadow(0 0 18px ${t.glow}88)"></canvas>
-<div class="abs para band" style="left:-30px;top:22px;width:500px;height:64px"></div>
-<div class="abs d" style="left:28px;top:20px;font-size:44px;line-height:64px">${t.name}</div>
-<div class="abs it" style="left:${t.name.length * 46 + 44}px;top:54px;font-size:13px;letter-spacing:2px;color:var(--ac)">${t.en}</div>
-<div class="abs tag" style="left:392px;top:30px">BOSS</div>
-<div class="abs para" style="left:14px;top:92px;width:430px;height:16px;background:#000;outline:2px solid #fff"><div style="width:64%;height:100%;background:var(--ac)"></div></div>
-<div class="abs it" style="left:456px;top:76px;font-size:38px">71<span style="font-size:16px;opacity:.7"> /110</span></div>
-<div class="abs b9" style="left:20px;top:120px;font-size:15px"><span class="tag" style="font-size:13px">次</span>　爪　<span class="it" style="font-size:22px">5</span> ダメージ</div>
-<div class="abs para" style="left:190px;top:126px;width:210px;height:8px;background:rgba(0,0,0,.7)"><div style="width:30%;height:100%;background:#fff"></div></div>
-<div class="abs it" style="left:410px;top:116px;font-size:20px">3.5<span style="font-size:11px">s</span></div>
+  // 2版: 極太と斜めは「敵の名前」と「チェイン」だけ。ほかはまっすぐ、細めの文字で静かに置く
+  const card = (x, y, lv, pw, gl, cls = '') => `<div class="card2 ${cls}" style="left:${x}px;top:${y}px"><div class="lv">${lv}</div><div class="pw">${pw}</div><div class="gl">${gl}</div></div>`;
+  return `<style>
+.card2{position:absolute;width:96px;height:108px;background:#f4f4f2;color:#111;box-shadow:5px 5px 0 var(--ac)}
+.card2.off{background:rgba(12,12,12,.85);color:#6a6a6a;box-shadow:none;outline:1px solid #444}
+.card2.sp{background:var(--ac);color:#fff;box-shadow:5px 5px 0 #f4f4f2}
+.card2 .lv{position:absolute;left:0;right:0;top:12px;text-align:center;font:900 58px/1 'Inter Display','Inter'}
+.card2 .pw{position:absolute;left:0;right:0;bottom:10px;text-align:center;font-size:11px;font-weight:500;letter-spacing:1px}
+.card2 .gl{position:absolute;left:6px;top:5px;font-size:12px;opacity:.75}
+.it2{position:absolute;left:28px;width:200px;height:34px;font-size:13px;font-weight:500;line-height:34px;padding-left:14px;background:rgba(0,0,0,.6);border-left:2px solid rgba(255,255,255,.5)}
+.it2.on{background:#f4f4f2;color:#111;border-left:4px solid var(--ac)}
+.sm{font-size:11px;font-weight:500;letter-spacing:2px;opacity:.75}
+</style>
+<img class="abs" src="${t.monsterSrc}" style="left:650px;top:170px;width:300px;height:300px;filter:drop-shadow(0 0 22px ${t.glow}66)">
+<div class="abs sm" style="right:30px;top:26px;border-bottom:1px solid var(--ac);padding-bottom:4px">${t.stage}</div>
 
-${card(388, 172, 'B', '威力 2', '△')}${card(520, 286, 'C', '威力 1', '○')}${card(388, 400, 'S', '威力 10', '✕', 'off')}${card(256, 286, 'X', 'レベルX', '□', 'sp')}
-<div class="abs" style="left:398px;top:296px;width:84px;height:84px;background:var(--ac);transform:rotate(45deg);outline:4px solid #fff;outline-offset:5px"></div>
-<div class="abs d" style="left:398px;top:290px;width:84px;text-align:center;font-size:58px;line-height:84px;color:#000">B</div>
-<div class="abs it" style="left:398px;top:278px;width:84px;text-align:center;font-size:10px;letter-spacing:2px;color:#000">CHAIN</div>
+<div class="abs para band" style="left:-30px;top:24px;width:360px;height:52px;border-right-width:6px"></div>
+<div class="abs d" style="left:30px;top:24px;font-size:34px;line-height:52px">${t.name}</div>
+<div class="abs sm" style="left:${t.name.length * 36 + 46}px;top:48px;color:var(--ac);opacity:1">BOSS</div>
+<div class="abs" style="left:30px;top:86px;width:300px;height:8px;background:rgba(0,0,0,.7)"><div style="width:64%;height:100%;background:var(--ac)"></div></div>
+<div class="abs" style="left:340px;top:76px;font:700 22px 'Inter'">71<span style="font-size:12px;font-weight:500;opacity:.6"> / 110</span></div>
+<div class="abs" style="left:30px;top:106px;font-size:12px;font-weight:500"><span style="opacity:.6">次の攻撃</span>　爪　5 ダメージ</div>
+<div class="abs" style="left:190px;top:112px;width:140px;height:3px;background:rgba(255,255,255,.2)"><div style="width:30%;height:100%;background:#fff"></div></div>
+<div class="abs" style="left:340px;top:104px;font:500 13px 'Inter'">3.5 秒</div>
 
-<div class="item on" style="top:196px;width:228px"><span>回復薬</span></div>
-<div class="abs tag" style="left:150px;top:206px;font-size:13px">R2 使う</div>
-<div class="item" style="top:242px;width:208px"><span>閃光弾</span></div>
-<div class="item" style="top:288px;width:188px"><span>チェインの実</span></div>
+${card(392, 170, 'B', '威力 2', '△')}${card(520, 288, 'C', '威力 1', '○')}${card(392, 406, 'S', '威力 10', '✕', 'off')}${card(264, 288, 'X', 'レベルX', '□', 'sp')}
+<div class="abs" style="left:402px;top:304px;width:76px;height:76px;background:var(--ac);transform:rotate(45deg);outline:2px solid #f4f4f2;outline-offset:5px"></div>
+<div class="abs d" style="left:402px;top:300px;width:76px;text-align:center;font-size:50px;line-height:76px;color:#111">B</div>
+<div class="abs sm" style="left:402px;top:392px;width:76px;text-align:center;font-size:9px">CHAIN</div>
 
-<div class="abs para band" style="left:-30px;bottom:18px;width:330px;height:74px;border-right-color:#fff"></div>
-<div class="abs it" style="left:22px;bottom:18px;font-size:64px;line-height:74px">84</div>
-<div class="abs it" style="left:112px;bottom:30px;font-size:18px;opacity:.7">/100</div>
-<div class="abs b9" style="left:170px;bottom:62px;font-size:11px;letter-spacing:3px">HP</div>
-<div class="abs para" style="left:168px;bottom:40px;width:110px;height:10px;background:#333"><div style="width:84%;height:100%;background:#fff"></div></div>
-<div class="abs tag" style="left:16px;bottom:100px;font-size:12px">やけど　3秒ごとに −1</div>`;
+<div class="abs sm" style="left:28px;top:196px">アイテム</div>
+<div class="it2 on" style="top:216px">回復薬<span style="position:absolute;right:10px;font-size:11px;color:var(--ac);font-weight:900">R2</span></div>
+<div class="it2" style="top:254px">閃光弾</div>
+<div class="it2" style="top:292px">チェインの実</div>
+
+<div class="abs sm" style="left:30px;bottom:66px">HP<span style="margin-left:14px;color:var(--ac);opacity:1;letter-spacing:0">やけど　3秒ごとに −1</span></div>
+<div class="abs" style="left:30px;bottom:24px;font:800 italic 40px/1 'Inter Display','Inter'">84<span style="font:500 14px 'Inter';opacity:.6;font-style:normal"> / 100</span></div>
+<div class="abs" style="left:30px;bottom:14px;width:230px;height:4px;background:rgba(255,255,255,.2)"><div style="width:84%;height:100%;background:#f4f4f2"></div></div>`;
 }
 function select(t) {
   const rows = [['火', '火の神殿', '探索中', 1], ['水', '水の神殿', '準備中', 0], ['風', '風の神殿', '準備中', 0], ['城', '魔王城', '準備中', 0]];
@@ -118,11 +128,14 @@ ${rows.map(([m, n, st, on], i) => `<div class="row" style="top:${148 + i * 72}px
   await g.waitForFunction(() => window.__scene && window.__scene.textures.exists('monster-fire_beast'));
   const monster = await g.evaluate(() => window.__scene.textures.get('monster-fire_beast').getSourceImage().src);
   await g.close();
+  const only = process.argv[2];
   for (const [name, t, kind] of [['1-battle-fire', THEMES.fire, 'battle'], ['2-battle-water', THEMES.water, 'battle'], ['3-select', THEMES.fire, 'select']]) {
-    const f = `${__dirname}/${name}.html`; fs.writeFileSync(f, page(t, monster, kind));
+    if (only && !name.startsWith(only)) continue;
+    t.monsterSrc = monster;
+    const f = `${OUT}/${name}.html`; fs.writeFileSync(f, page(t, monster, kind));
     const p = await b.newPage({ viewport: { width: 960, height: 540 }, deviceScaleFactor: 2 });
     await p.goto('file://' + f); await p.waitForFunction(() => document.body.dataset.ready === '1'); await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(600);
-    await p.screenshot({ path: `${__dirname}/look-${name}.png` }); await p.close();
+    await p.screenshot({ path: `${__dirname}/look-${name}${only ? '-v2' : ''}.png` }); await p.close();
   }
   await b.close();
 })();
