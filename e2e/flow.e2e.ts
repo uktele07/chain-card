@@ -236,6 +236,8 @@ describe('ダンジョン', () => {
   const enter = async () => { await key(g.page, 'ArrowRight', 'Enter'); await waitTop(g.page, 'board'); };
   const mode = (m: string) => g.page.waitForFunction(x => (window as any).__scene.bmode === x, m);
   /** サイコロの目と敵の抽選を固定する（v=0 なら 1 の目） */
+  /** サイコロを回して、止める */
+  const roll = async () => { await key(g.page, 'Enter'); await mode('rolling'); await key(g.page, 'Enter'); };
   const fix = (v: number) => g.page.evaluate(x => { (window as any).__scene.run.rng = () => x; }, v);
 
   it('準備中のダンジョンには入れない。火の神殿に入ると盤面が出る', async () => {
@@ -247,12 +249,30 @@ describe('ダンジョン', () => {
     expect(await scene(g.page, s => [s.run.state.pos, s.bmode])).toEqual([0, 'idle']);
   });
 
+  it('サイコロは ○ で回し、もう一度 ○ で止める。✕ でやめられる。△ でマスの説明', async () => {
+    g = await open();
+    await enter();
+    await key(g.page, 'Enter');
+    await mode('rolling');
+    await key(g.page, 'Backspace');
+    await mode('idle');
+    expect(await scene(g.page, s => [s.run.state.pos, s.run.state.steps])).toEqual([0, 0]);
+    await key(g.page, 'KeyW');
+    await waitTop(g.page, 'legend');
+    await key(g.page, 'Backspace');
+    await waitTop(g.page, 'board');
+    await fix(0.99);
+    await roll();
+    await g.page.waitForFunction(() => (window as any).__scene.bmode !== 'moving');
+    expect(await scene(g.page, s => [s.rolled, s.run.state.pos])).toEqual([6, 6]);
+  });
+
   it('サイコロで進み、モンスターのマスで戦う。HPとアイテムの使用を持ち越し、戦利品が入る', async () => {
     g = await open();
     await enter();
     await scene(g.page, s => { s.run.state.pos = 1; });
     await fix(0);
-    await key(g.page, 'Enter');
+    await roll();
     await mode('landed');
     expect(await scene(g.page, s => [s.run.state.pos, s.effect.kind])).toEqual([2, 'monster']);
     await key(g.page, 'Enter');
@@ -280,8 +300,9 @@ describe('ダンジョン', () => {
     await enter();
     await scene(g.page, s => { s.run.state.pos = 11; });
     await fix(0);
-    await key(g.page, 'Enter');
+    await roll();
     await mode('choose');
+    expect(await scene(g.page, s => s.run.options().map((o: number) => s.stopFrom(o)))).toEqual([12, 15]);   // 1の目: 止まるのは最初のマス
     await key(g.page, 'KeyA');
     await mode('look');
     await key(g.page, 'KeyA');
@@ -298,7 +319,7 @@ describe('ダンジョン', () => {
     await enter();
     await scene(g.page, s => { s.run.state.pos = 1; s.run.state.maxBonus = 10; s.run.state.hp = 110; });
     await fix(0);
-    await key(g.page, 'Enter');
+    await roll();
     await mode('landed');
     await key(g.page, 'Enter');
     await waitTop(g.page, 'ready');
@@ -316,7 +337,7 @@ describe('ダンジョン', () => {
     g = await open();
     await enter();
     await scene(g.page, s => { s.run.state.pos = 4; s.run.state.hp = 55; s.keepRun(); });
-    await key(g.page, 'Escape', 'ArrowDown', 'ArrowDown', 'Enter');   // ダンジョンから出る
+    await key(g.page, 'Escape', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'Enter');   // ダンジョンから出る
     await waitTop(g.page, 'list');
     expect((await stored(g.page)).run.pos).toBe(4);
     await g.page.reload();
@@ -331,7 +352,7 @@ describe('ダンジョン', () => {
       await enter();
       await scene(g.page, s => { s.run.state.pos = s.run.bossIndex - 1; s.run.state.midDone = true; });
       await fix(0);
-      await key(g.page, 'Enter');
+      await roll();
       await mode('landed');
       await key(g.page, 'Enter');
       await waitTop(g.page, 'ready');

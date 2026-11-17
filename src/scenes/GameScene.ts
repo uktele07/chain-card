@@ -18,7 +18,7 @@ import { drawEquip } from '../screens/equip';
 import { drawDeck } from '../screens/deck';
 import { drawShop } from '../screens/shop';
 import { drawHelp } from '../screens/help';
-import { drawBoard, drawDMenu } from '../screens/board';
+import { drawBoard, drawDMenu, drawLegend } from '../screens/board';
 
 export type BoardMode = 'idle' | 'rolling' | 'moving' | 'choose' | 'landed' | 'look' | 'cleared';
 
@@ -47,7 +47,7 @@ export class GameScene extends Phaser.Scene {
   piece = { x: 0, y: 0 };   // 駒の位置（盤面の座標）
   target: { x: number; y: number } | null = null;
   landAfter = false;
-  diceFace = 0; rolled = 0; rollLeft = 0; landLeft = 0;
+  diceFace = 0; rolled = 0; landLeft = 0;
   pick = 0;                 // 分かれ道で選んでいる行き先
   effect: Effect | null = null;
   reward: { accessory?: string; gold?: number } | null = null;
@@ -209,6 +209,17 @@ export class GameScene extends Phaser.Scene {
     const d = this.run!.def, G = d.cell, P = BOARD_PAD;
     return { x: Phaser.Math.Clamp(this.piece.x - 480, -P, d.size[0] * G + P - 960), y: Phaser.Math.Clamp(this.piece.y - 262, -P, d.size[1] * G + P - 540) };
   }
+  /** 分かれ道で first を選んだとき、いまの出目で止まるマス（先にまた分かれ道があれば、そこまで） */
+  stopFrom(first: number): number {
+    const run = this.run!;
+    let pos = first;
+    for (let left = run.state.steps - 1; left > 0; left--) {
+      const k = run.board[pos].kind, next = run.board[pos].next;
+      if (k === 'boss' || (k === 'mid' && !run.state.midDone) || next.length !== 1) break;
+      pos = next[0];
+    }
+    return pos;
+  }
   /** 1マス進める。分かれ道なら選ぶ画面にする */
   advance(choice?: number) {
     const run = this.run!, r = run.step(choice);
@@ -236,8 +247,7 @@ export class GameScene extends Phaser.Scene {
     const d = run.def, G = d.cell, P = BOARD_PAD;
     if (this.top === 'board') {
       if (this.bmode === 'rolling') {
-        this.rollLeft -= dt; this.diceFace = 1 + Math.floor(this.clock * 20) % 6;
-        if (this.rollLeft <= 0) { this.rolled = run.roll(); this.diceFace = this.rolled; this.keepRun(); this.advance(); }
+        this.diceFace = 1 + Math.floor(this.clock * 20) % 6;      // 回っている間の目は飾り。止めた瞬間に抽選する
       } else if (this.bmode === 'moving' && this.target) {
         const dx = this.target.x - this.piece.x, dy = this.target.y - this.piece.y, dist = Math.hypot(dx, dy), stepLen = 340 * dt;
         if (dist <= stepLen) {
@@ -305,10 +315,16 @@ export class GameScene extends Phaser.Scene {
         if (m === 'look') { if (b === 'square' || back) { this.bmode = this.lookFrom; this.snd.uiBack(); } break; }
         if (m === 'cleared') { if (ok) { this.snd.uiOk(); this.leaveDungeon(); } break; }
         if (m === 'landed') { if (ok) this.closeLanded(); break; }
-        if (m !== 'idle' && m !== 'choose') break;      // サイコロと移動の間は待つ
+        if (m === 'rolling') {      // 回っているサイコロ: ○で止める、✕でやめる
+          if (ok) { this.rolled = run.roll(); this.diceFace = this.rolled; this.snd.uiOk(); this.keepRun(); this.advance(); }
+          else if (back) { this.bmode = 'idle'; this.diceFace = 0; this.snd.uiBack(); }
+          break;
+        }
+        if (m !== 'idle' && m !== 'choose') break;      // 移動の間は待つ
         if (b === 'options') { this.cur.dmenu = 0; this.restartArmed = false; this.overlays.push('dmenu'); this.snd.uiOk(); }
         else if (b === 'square') { this.lookFrom = m; this.bmode = 'look'; this.snd.uiOk(); }
-        else if (m === 'idle') { if (ok) { this.bmode = 'rolling'; this.rollLeft = 0.45; this.snd.refill(); } }
+        else if (b === 'tri') { this.overlays.push('legend'); this.snd.uiOk(); }
+        else if (m === 'idle') { if (ok) { this.bmode = 'rolling'; this.snd.refill(); } }
         else if (ok) { this.snd.uiOk(); this.advance(run.options()[this.pick]); }
         else {
           // 押した向きにいちばん近い行き先を選ぶ
@@ -323,13 +339,13 @@ export class GameScene extends Phaser.Scene {
 
       case 'dmenu':
         if (b === 'up' || b === 'down') { this.move('dmenu', b === 'up' ? -1 : 1, DMENU.length); this.restartArmed = false; }
-        else if (back || b === 'options' || (ok && this.cur.dmenu === 3)) { this.snd.uiBack(); this.pop(); }
-        else if (ok && this.cur.dmenu === 0) { this.snd.uiOk(); this.overlays.push('help'); }
-        else if (ok && this.cur.dmenu === 1) {
+        else if (back || b === 'options' || (ok && this.cur.dmenu === 4)) { this.snd.uiBack(); this.pop(); }
+        else if (ok && this.cur.dmenu <= 1) { this.snd.uiOk(); this.overlays.push(this.cur.dmenu === 0 ? 'legend' : 'help'); }
+        else if (ok && this.cur.dmenu === 2) {
           if (!this.restartArmed) { this.restartArmed = true; this.snd.uiMove(); }      // 押し間違いを防ぐため、2回押して実行
           else { this.snd.uiOk(); this.save.run = null; this.enterDungeon(this.run!.def); }
         }
-        else if (ok && this.cur.dmenu === 2) { this.snd.uiBack(); this.leaveDungeon(); }
+        else if (ok && this.cur.dmenu === 3) { this.snd.uiBack(); this.leaveDungeon(); }
         break;
 
       case 'fight': {
@@ -466,6 +482,7 @@ export class GameScene extends Phaser.Scene {
         break;
       }
 
+      case 'legend':
       case 'help':
         if (ok || back || b === 'options') { this.snd.uiBack(); this.pop(); }
         break;
@@ -583,7 +600,7 @@ export class GameScene extends Phaser.Scene {
       // 盤面は3層を使う。メニューなどは、いちばん手前の1枚だけを最上層に描く
       drawBoard(this, a, b, this.L[2]);
       const o = this.top;
-      if (o === 'dmenu') drawDMenu(this, this.L[3]); else if (o === 'help') drawHelp(this, this.L[3]);
+      if (o === 'dmenu') drawDMenu(this, this.L[3]); else if (o === 'help') drawHelp(this, this.L[3]); else if (o === 'legend') drawLegend(this, this.L[3]);
       for (const l of this.L) l.end();
       return;
     }

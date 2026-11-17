@@ -24,7 +24,7 @@ export const MON = { x: 808, y: 330, size: 258 };
 export const RESULT_WAIT = 0.8;
 
 export type Base = 'list' | 'ready' | 'fight' | 'result' | 'board';
-export type Overlay = 'menu' | 'equip' | 'deck' | 'shop' | 'confirm' | 'help' | 'reset' | 'pause' | 'resume' | 'dmenu';
+export type Overlay = 'menu' | 'equip' | 'deck' | 'shop' | 'confirm' | 'help' | 'reset' | 'pause' | 'resume' | 'dmenu' | 'legend';
 /** 売買の確認。buy=購入 / sell=個数を選んで売る / sellAll=戦利品をすべて売る */
 export type Deal = { kind: 'buy'; index: number } | { kind: 'sell'; id: string; qty: number } | { kind: 'sellAll' };
 export const MENU: { label: string; off?: boolean; act?: Overlay | 'close' }[] = [
@@ -35,7 +35,7 @@ export const PAUSE = ['戦闘再開', 'やり直す', '戦闘終了'];
 /** ダンジョンの戦闘中のポーズ（逃げる手段はないので、やり直しはない） */
 export const PAUSE_DUNGEON = ['戦闘再開', 'ダンジョンから出る'];
 /** 盤面でのメニュー */
-export const DMENU = ['操作説明', '最初からやり直す', 'ダンジョンから出る', '閉じる'];
+export const DMENU = ['マスの説明', '操作説明', '最初からやり直す', 'ダンジョンから出る', '閉じる'];
 /** マスの種類ごとの色と絵 */
 export const SQUARE: Record<string, { color: string; icon: string; name: string }> = {
   start: { color: '#8a93a3', icon: 'gate', name: '入口' }, none: { color: '#6b5f58', icon: '', name: '何も起こらない' },

@@ -1,11 +1,11 @@
 // 画面: ダンジョンの盤面（すごろく）
 // 層の使い方: 0=盤面の絵 / 1=マスの絵柄と行き先の印 / 2=駒と情報の枠 / 3=メニューなど
-import { W } from '../game/display';
+import { W, H } from '../game/display';
 import { BOARD_PAD, boardKey, squareIconKey } from '../game/art';
 import type { Layer } from '../game/ui';
 import type { Effect, Square } from '../game/dungeon';
 import { enemyById, itemOf, ACCESSORIES } from '../game/content';
-import { C, CX, SQUARE, DMENU, guide, dim, panel } from './common';
+import { C, CX, SQUARE, DMENU, guide, dim, panel, rows } from './common';
 import type { GameScene } from '../scenes/GameScene';
 
 const BOX = '#0b0d13';
@@ -32,7 +32,7 @@ export function drawBoard(gs: GameScene, l0: Layer, l1: Layer, l2: Layer) {
   l0.image(boardKey(def.id), Wd / 2 - cx, Hd / 2 - cy, Wd + P * 2, 1, undefined, Hd + P * 2);
 
   // マス
-  const ahead = gs.aheadOf(st.pos), reach = mode === 'idle' || look ? gs.reachOf(st.pos) : new Set<number>();
+  const ahead = gs.aheadOf(st.pos), reach = mode === 'idle' || mode === 'rolling' || look ? gs.reachOf(st.pos) : new Set<number>();
   const opts = mode === 'choose' ? run.options() : [];
   const mid = (q: Square) => ({ x: q.x * G + G / 2 - cx, y: q.y * G + G / 2 - cy });
   for (const q of run.board) {
@@ -52,9 +52,16 @@ export function drawBoard(gs: GameScene, l0: Layer, l1: Layer, l2: Layer) {
     const a = Math.atan2(y - from.y, x - from.x), n = run.board.filter(o => o.seg === q.seg).length;
     l1.rect(x - G / 2 + 1, y - G / 2 + 1, G - 2, G - 2, { stroke: col, sw: on ? 5 : 3, rx: 5 });
     l1.tri((x + from.x) / 2, (y + from.y) / 2, on ? 13 : 10, a, col);
-    const ly = y + (a > 0.1 ? 46 : -46);
-    l1.rect(x - 44, ly - 12, 88, 24, { fill: BOX, stroke: col, sw: 1.5, rx: 12 });
-    l1.text(x, ly, `${n}マスの道`, 12, col, 'middle', true);
+    // 道の名札は、進む向きの横に置く（先のマスに重ねない）
+    const vert = Math.abs(Math.sin(a)) > 0.7, lx = vert ? x - G / 2 - 50 : x, ly = vert ? y : y - 46;
+    l1.rect(lx - 44, ly - 12, 88, 24, { fill: BOX, stroke: col, sw: 1.5, rx: 12 });
+    l1.text(lx, ly, `${n}マスの道`, 12, col, 'middle', true);
+    // いまの出目で止まるマス
+    const s = mid(run.board[gs.stopFrom(id)]), pulse = on ? 0.2 + 0.12 * Math.sin(gs.clock * 7) : 0.1;
+    l1.rect(s.x - G / 2 - 3, s.y - G / 2 - 3, G + 6, G + 6, { fill: col, alpha: pulse, rx: 7 });
+    l1.rect(s.x - G / 2 - 3, s.y - G / 2 - 3, G + 6, G + 6, { stroke: col, sw: on ? 5 : 3, rx: 7 });
+    l1.rect(s.x - 26, s.y + G / 2 - 6, 52, 20, { fill: col, rx: 10 });
+    l1.text(s.x, s.y + G / 2 + 4, '止まる', 11, C.ink, 'middle', true);
   });
   // いまのマスと駒
   const here = mid(run.square), px = gs.piece.x - cx, py = gs.piece.y - cy;
@@ -107,9 +114,10 @@ export function drawBoard(gs: GameScene, l0: Layer, l1: Layer, l2: Layer) {
     l2.text(CX, 475, '進む道を選ぶ', 14, C.keep, 'middle', true);
   }
   if (look) guide(gs, l2, '十字キー 動かす　　□ / ✕ 戻る', '矢印キー 動かす　　A / Backspace 戻る');
-  else if (mode === 'choose') guide(gs, l2, '十字キー 選ぶ　　○ 決定　　□ 先を見る', '矢印キー 選ぶ　　Enter 決定　　A 先を見る');
+  else if (mode === 'choose') guide(gs, l2, '十字キー 選ぶ　　○ 決定　　□ 先を見る　　△ マスの説明', '矢印キー 選ぶ　　Enter 決定　　A 先を見る　　W マスの説明');
   else if (mode === 'landed') guide(gs, l2, gs.effect?.kind === 'monster' ? '○ 戦う' : '○ 次へ', gs.effect?.kind === 'monster' ? 'Enter 戦う' : 'Enter 次へ');
-  else if (mode === 'idle') guide(gs, l2, '○ サイコロを振る　　□ 先を見る　　OPTIONS メニュー', 'Enter サイコロを振る　　A 先を見る　　Esc メニュー');
+  else if (mode === 'idle') guide(gs, l2, '○ サイコロ　　□ 先を見る　　△ マスの説明　　OPTIONS メニュー', 'Enter サイコロ　　A 先を見る　　W マスの説明　　Esc メニュー');
+  else if (mode === 'rolling') guide(gs, l2, '○ 止める　　✕ やめる', 'Enter 止める　　Backspace やめる');
   else guide(gs, l2, '', '');
 }
 
@@ -119,7 +127,7 @@ function drawDice(gs: GameScene, l: Layer) {
   l.rect(x - 34, y - 34, 68, 68, { fill: n ? '#f4f6fb' : '#1d2330', stroke: n ? '#c9cfdb' : C.line, rx: 14 });
   for (const [dx, dy] of PIPS[n] ?? []) l.circle(x + dx * 18, y + dy * 18, 6.5, { fill: C.ink });
   if (!n) l.text(x, y, '？', 28, C.dim, 'middle', true);
-  const label = mode === 'idle' ? `${gs.pad ? '○' : 'Enter'} 振る` : mode === 'rolling' ? '…' : st.steps > 0 ? `あと ${st.steps}マス` : `${gs.rolled} 進んだ`;
+  const label = mode === 'idle' ? `${gs.pad ? '○' : 'Enter'} 振る` : mode === 'rolling' ? `${gs.pad ? '○' : 'Enter'} 止める` : st.steps > 0 ? `あと ${st.steps}マス` : `${gs.rolled} 進んだ`;
   l.rect(x - 46, y + 42, 92, 24, { fill: BOX, rx: 12, alpha: 0.85 });
   l.text(x, y + 54, label, 12, C.keep, 'middle', true);
 }
@@ -162,6 +170,36 @@ function drawCleared(gs: GameScene, l: Layer) {
 
 export function drawDMenu(gs: GameScene, l: Layer) {
   dim(l, 0.6);
-  panel(l, gs.run?.def.name ?? '', DMENU.map((label, i) => ({ label: i === 1 && gs.restartArmed ? 'もう一度押すと、やり直す' : label, note: i === 2 ? '続きから再開できる' : undefined })), gs.cur.dmenu, 130, 380);
+  panel(l, gs.run?.def.name ?? '', DMENU.map((label, i) => ({ label: i === 2 && gs.restartArmed ? 'もう一度押すと、やり直す' : label, note: i === 3 ? '続きから再開できる' : undefined })), gs.cur.dmenu, 106, 380);
   guide(gs, l, '↑↓ 選ぶ　　○ 決定　　✕ / OPTIONS 閉じる', '↑↓ 選ぶ　　Enter 決定　　Backspace / Esc 閉じる');
+}
+
+/** マスの絵柄の意味 */
+export function drawLegend(gs: GameScene, l: Layer) {
+  const d = gs.run!.def;
+  l.rect(0, 0, W, H, { fill: C.bg });
+  l.text(40, 40, 'マスの説明', 24, C.text, 'start', true);
+  const list: [string, string][] = [
+    ['monster', '敵と戦う。討伐すると戦利品を1つ得る。'],
+    ['heal', `HP +${d.heal}。`],
+    ['maxhp', `最大HP +${d.maxHpUp}。HPも同じだけ回復。負けると消える。`],
+    ['item', '使ったアイテムが1つ復活する。'],
+    ['event', `${d.event.name}。${d.event.damage} ダメージ（HPは1残る）。`],
+    ['random', '上のどれか、または何も起こらない。'],
+    ['mid', '必ず止まる。討伐すると、負けてもここから再開。'],
+    ['boss', '必ず止まる。討伐すると踏破。'],
+  ];
+  const ys = rows(l, 40, 72, 880, 46, list.length + 1, -1);
+  list.forEach(([k, text], i) => {
+    const sq = SQUARE[k], y = ys[i];
+    l.rect(62, y - 17, 34, 34, { fill: sq.color, stroke: '#1b1513', sw: 2, rx: 7 });
+    l.image(squareIconKey(sq.icon), 79, y, 42);
+    l.text(116, y, sq.name, 16, C.text, 'start', true);
+    l.text(290, y, text, 14, C.dim, 'start');
+  });
+  const y = ys[list.length];
+  l.rect(62, y - 17, 34, 34, { fill: '#4a433d', stroke: '#241d1a', sw: 2, rx: 4 });
+  l.text(116, y, '絵のないマス', 16, C.text, 'start', true);
+  l.text(290, y, '何も起こらない。', 14, C.dim, 'start');
+  guide(gs, l, '✕ 戻る', 'Backspace 戻る');
 }
