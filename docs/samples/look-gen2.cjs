@@ -7,13 +7,14 @@ const AC = '#ff4b1f', AC2 = '#ffb23a';
 const CX = 480, CY = 368;
 
 // アイテムの「リボルバー」: 上が選択中。下の段ほど左へずれ、小さく暗くなる。p は回転の進み（0→1 で A が後ろを通って最下段へ）
-function revolver(p, x0 = 28, y0 = 214) {
+function revolver(p, x0 = 28, y0 = 214, gold = false) {
   const slot = [{ x: 0, y: 0, w: 204, h: 38, fs: 14, a: 1 }, { x: -9, y: 43, w: 190, h: 32, fs: 12.5, a: 0.8 }, { x: -18, y: 80, w: 174, h: 26, fs: 11, a: 0.6 }];
   const mix = (a, b, t) => a + (b - a) * t, e = t => t * t * (3 - 2 * t), q = e(p);
   const at = (from, to, back) => { const s = {}; for (const k of Object.keys(slot[0])) s[k] = mix(slot[from][k], slot[to][k], q); if (back) { const b = Math.sin(Math.PI * q); s.x -= 34 * b; s.a *= 1 - 0.75 * b; s.w -= 30 * b; } return s; };
   const rows = [['回復薬', at(0, 2, true), p > 0.02 ? 0 : 3], ['閃光弾', at(1, 0), 2], ['チェインの実', at(2, 1), 1]];
   return `<div class="abs sm" style="left:${x0}px;top:${y0 - 22}px">アイテム</div>` + rows.map(([n, s, z], i) => {
     const sel = (i === 0 && p < 0.5) || (i === 1 && p >= 0.5), k = i === 0 ? 1 - q : i === 1 ? q : 0;   // k: 選択中の見た目の濃さ
+    if (gold) return `<div class="rv" style="left:${x0 + s.x}px;top:${y0 + s.y}px;width:${s.w}px;height:${s.h}px;line-height:${s.h}px;font-size:${s.fs}px;letter-spacing:2px;opacity:${s.a};z-index:${z};background:linear-gradient(90deg,rgba(216,180,106,${mix(0.1, 0.42, k)}),rgba(20,17,14,${mix(0.85, 0.7, k)}) 85%);color:${k > 0.5 ? '#fff' : '#cfc6b4'};border:1px solid rgba(216,180,106,${mix(0.3, 1, k)});border-left:${mix(2, 4, k)}px solid #d8b46a;box-shadow:0 6px 14px rgba(0,0,0,.5)${k > 0.5 ? ',0 0 16px rgba(216,180,106,.3)' : ''}">${n}${sel && (p < 0.05 || p > 0.95) ? `<span style="position:absolute;right:10px;font:500 10px 'Inter';letter-spacing:2px;color:#d8b46a">R2</span>` : ''}</div>`;
     return `<div class="rv" style="left:${x0 + s.x}px;top:${y0 + s.y}px;width:${s.w}px;height:${s.h}px;line-height:${s.h}px;font-size:${s.fs}px;opacity:${s.a};z-index:${z};background:rgba(${mix(18, 244, k)},${mix(16, 244, k)},${mix(14, 242, k)},${mix(0.82, 1, k)});color:${k > 0.5 ? '#111' : '#eee'};border-left:${mix(2, 4, k)}px solid ${k > 0.5 ? AC : 'rgba(255,255,255,.5)'}">${n}${sel && (p < 0.05 || p > 0.95) ? `<span style="position:absolute;right:10px;font-size:11px;color:${AC};font-weight:900">R2</span>` : ''}</div>`;
   }).join('');
 }
@@ -31,7 +32,8 @@ body{width:960px;height:540px;overflow:hidden;background:#000;font-family:'Noto 
 
 // 6版の配置。見た目は CSS のクラスで差し替える
 function layout(o) {
-  const card = (dx, dy, lv, pw, gl, cls) => `<div class="c ${cls}" style="left:${CX + dx - 41}px;top:${CY + dy - 46}px${o.tilt ? `;transform:rotate(${o.tilt[cls === 'sp' ? 0 : cls === 'off' ? 1 : lv === 'B' ? 2 : 3]}deg)` : ''}"><div class="lv">${lv}</div><div class="pw">${pw}</div><div class="gl">${gl}</div></div>`;
+  const k = o.scale || 1;
+  const card = (dx, dy, lv, pw, gl, cls) => `<div class="c ${cls}" style="left:${CX + dx * k - 41}px;top:${CY + dy * k - 46}px;transform:rotate(${o.tilt ? o.tilt[cls === 'sp' ? 0 : cls === 'off' ? 1 : lv === 'B' ? 2 : 3] : 0}deg) scale(${k})"><div class="lv">${lv}</div><div class="pw">${pw}</div><div class="gl">${gl}</div></div>`;
   return `
 <div class="abs band" style="right:-30px;top:24px;width:316px;height:52px;transform:skewX(-12deg)"></div>
 <div class="abs sm boss" style="right:118px;top:48px">BOSS</div>
@@ -48,7 +50,7 @@ function layout(o) {
 <div class="abs gauge" style="left:${CX - 170}px;top:144px;width:340px"><div style="width:30%;height:100%" class="gfill"></div></div>
 
 ${card(0, -100, 'B', '威力 2', '△', 'on')}${card(109, 0, 'C', '威力 1', '○', 'on')}${card(0, 100, 'S', '威力 10', '✕', 'off')}${card(-109, 0, 'X', 'レベルX', '□', 'sp')}
-<div class="abs chain" style="left:${CX - 32}px;top:${CY - 32}px;width:64px;height:64px;transform:rotate(45deg)"></div>
+<div class="abs chain" style="left:${CX - 32}px;top:${CY - 32}px;width:64px;height:64px;transform:rotate(45deg) scale(${k})"></div>
 <div class="abs d chl" style="left:${CX - 32}px;top:${CY - 30}px;width:64px;text-align:center;font-size:40px;line-height:64px">B</div>
 <div class="abs chs" style="left:${CX - 32}px;top:${CY - 27}px;width:64px;text-align:center;font:700 7px 'Inter';letter-spacing:2px">CHAIN</div>
 
@@ -169,6 +171,11 @@ body{--gold:#d8b46a}
 <div class="abs" style="right:14px;bottom:14px;width:26px;height:26px;border-right:1px solid var(--gold);border-bottom:1px solid var(--gold);opacity:.7"></div>`,
     items: plainItems, script: pixelBg,
   }),
+  // D: 持ち主が選んだ組み合わせ。C（暗さと細い線）が土台 / アイテムはリボルバー / 背景のぼかしは弱め / カードは90%で、±2度の範囲で少し傾ける（入れ替えのたびに角度を変える）
+  'D-mix': m => {
+    const c = STYLES['C-noir'](m);
+    return { ...c, css: c.css.replace('filter:blur(9px) saturate(.55) brightness(.5)', 'filter:blur(2.5px) saturate(.7) brightness(.62);image-rendering:auto'), items: revolver(0, 28, 214, true), scale: 0.9, tilt: [-1.6, 1.2, 1.8, -0.9] };
+  },
 };
 const head = `<meta charset="utf-8"><link rel="stylesheet" href="file://${FONTS}/node_modules/@fontsource/dela-gothic-one/400.css">${[300, 500, 700, 900].map(w => `<link rel="stylesheet" href="file://${FONTS}/node_modules/@fontsource/noto-sans-jp/${w}.css">`).join('')}`;
 
@@ -186,11 +193,15 @@ const head = `<meta charset="utf-8"><link rel="stylesheet" href="file://${FONTS}
     await p.screenshot({ path: `${__dirname}/${name}.png` }); await p.close();
   };
   for (const [name, make] of Object.entries(STYLES)) {
+    if (process.argv[2] && !name.startsWith(process.argv[2])) continue;
     const s = make(monster);
     await shoot(`style-${name}`, `<!doctype html><html><head>${head}<style>${base}${s.css}</style></head><body>${s.back}${layout(s)}<script>${s.script}</script></body></html>`);
   }
   // リボルバーの動き: 4コマ
+  const only = process.argv[2];
   const a = STYLES['A-depth'](monster);
+  if (only === 'D') { const d = STYLES['D-mix'](monster); const fr = [0, 0.33, 0.66, 1].map((p, i) => `<div style="position:absolute;left:${i * 250}px;top:0;width:250px;height:170px"><div style="position:absolute;left:14px;top:8px;font-size:11px;opacity:.7">${['① 押す前', '② 回り始め', '③ 後ろを通る', '④ 押した後'][i]}</div>${revolver(p, 44, 60, true)}</div>`).join(''); await shoot('style-D-revolver', `<!doctype html><html><head>${head}<style>${base}${d.css}body{width:1000px;height:170px;background:#14110f}</style></head><body>${fr}</body></html>`, 1000, 170); await b.close(); return; }
+  if (only) { await b.close(); return; }
   const frames = [0, 0.33, 0.66, 1].map((p, i) => `<div style="position:absolute;left:${i * 250}px;top:0;width:250px;height:170px"><div style="position:absolute;left:14px;top:8px;font-size:11px;opacity:.7">${['① 押す前', '② 回り始め', '③ 後ろを通る', '④ 押した後'][i]}</div>${revolver(p, 44, 60)}</div>`).join('');
   await shoot('style-A-revolver', `<!doctype html><html><head>${head}<style>${base}${a.css}body{width:1000px;height:170px;background:#1a1412}</style></head><body>${frames}</body></html>`, 1000, 170);
   await b.close();
