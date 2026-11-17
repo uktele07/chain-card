@@ -33,7 +33,7 @@ body{width:960px;height:540px;overflow:hidden;background:#000;font-family:'Noto 
 // 6版の配置。見た目は CSS のクラスで差し替える
 function layout(o) {
   const k = o.scale || 1;
-  const card = (dx, dy, lv, pw, gl, cls) => `<div class="c ${cls}" style="left:${CX + dx * k - 41}px;top:${CY + dy * k - 46}px;transform:rotate(${o.tilt ? o.tilt[cls === 'sp' ? 0 : cls === 'off' ? 1 : lv === 'B' ? 2 : 3] : 0}deg) scale(${k})"><div class="lv">${lv}</div><div class="pw">${pw}</div><div class="gl">${gl}</div></div>`;
+  const card = (dx, dy, lv, pw, gl, cls) => o.start ? `<div class="c off q" style="left:${CX + dx * k - 41}px;top:${CY + dy * k - 46}px;transform:rotate(${o.tilt ? o.tilt[cls === 'sp' ? 0 : cls === 'off' ? 1 : lv === 'B' ? 2 : 3] : 0}deg) scale(${k})"><div class="lv">?</div><div class="gl">${gl}</div></div>` : `<div class="c ${cls}" style="left:${CX + dx * k - 41}px;top:${CY + dy * k - 46}px;transform:rotate(${o.tilt ? o.tilt[cls === 'sp' ? 0 : cls === 'off' ? 1 : lv === 'B' ? 2 : 3] : 0}deg) scale(${k})"><div class="lv">${lv}</div><div class="pw">${pw}</div><div class="gl">${gl}</div></div>`;
   return `
 <div class="abs band" style="right:-30px;top:24px;width:316px;height:52px;transform:skewX(-12deg)"></div>
 <div class="abs sm boss" style="right:118px;top:48px">BOSS</div>
@@ -47,12 +47,14 @@ function layout(o) {
   <span class="dmg">5<span class="unit">ダメージ</span></span><span class="sep"></span>
   <span class="sec">3.5<span class="unit">秒</span></span>
 </div>
-<div class="abs gauge" style="left:${CX - 170}px;top:144px;width:340px"><div style="width:30%;height:100%" class="gfill"></div></div>
+<div class="abs gauge" style="left:${CX - 170}px;top:144px;width:340px"><div style="width:${o.start ? 0 : 30}%;height:100%" class="gfill"></div></div>
 
 ${card(0, -100, 'B', '威力 2', '△', 'on')}${card(109, 0, 'C', '威力 1', '○', 'on')}${card(0, 100, 'S', '威力 10', '✕', 'off')}${card(-109, 0, 'X', 'レベルX', '□', 'sp')}
-<div class="abs chain" style="left:${CX - 32}px;top:${CY - 32}px;width:64px;height:64px;transform:rotate(45deg) scale(${k})"></div>
-<div class="abs d chl" style="left:${CX - 32}px;top:${CY - 30}px;width:64px;text-align:center;font-size:40px;line-height:64px">B</div>
-<div class="abs chs" style="left:${CX - 32}px;top:${CY - 27}px;width:64px;text-align:center;font:700 7px 'Inter';letter-spacing:2px">CHAIN</div>
+<div class="abs chain${o.start ? ' st' : ''}" style="left:${CX - 32}px;top:${CY - 32}px;width:64px;height:64px;transform:rotate(45deg) scale(${k})"></div>
+${o.start ? `<div class="abs chs" style="left:${CX - 32}px;top:${CY - 20}px;width:64px;text-align:center;font:500 8px 'Inter';letter-spacing:3px">START</div>
+<div class="abs chl" style="left:${CX - 32}px;top:${CY - 8}px;width:64px;text-align:center;font:300 26px/30px 'Noto Sans JP'">○</div>` : `<div class="abs d chl" style="left:${CX - 32}px;top:${CY - 30}px;width:64px;text-align:center;font-size:40px;line-height:64px">B</div>
+<div class="abs chs" style="left:${CX - 32}px;top:${CY - 27}px;width:64px;text-align:center;font:700 7px 'Inter';letter-spacing:2px">CHAIN</div>`}
+${o.extra || ''}
 
 ${o.items}
 <div class="abs sm" style="left:30px;bottom:66px">HP<span class="burn">やけど　3秒ごとに −1</span></div>
@@ -187,7 +189,35 @@ body{--gold:#d8b46a}
     const d = STYLES['D2-heavyname'](m);
     return { ...d, css: d.css + ".num{font-weight:500}.of{font-weight:400}.bar{height:3px}" };
   },
+  // D4: D3 に、載せきれなかった情報を足す（持ち主の指示: アイテムの説明は小さく残す / 強化薬・時の砂の残り時間は残す / 無敵の表示は消す / ゲームパッドの案内と START は残す）
+  'D4-fight': m => D4(m, false),
+  'D4-start': m => D4(m, true),
 };
+// D4 の部品。アイテムの段は D3 のリボルバーと同じ寸法。使用済みは暗く残す
+function D4(m, start) {
+  const d = STYLES['D3-final'](m);
+  const slot = [{ x: 0, y: 0, w: 204, h: 38, fs: 14, a: 1 }, { x: -9, y: 43, w: 190, h: 32, fs: 12.5, a: 0.8 }, { x: -18, y: 80, w: 174, h: 26, fs: 11, a: 0.6 }];
+  const names = [['閃光弾', false], ['強化薬', !start], ['時の砂', !start]];   // 開始前は、まだ何も使っていない
+  const items = `<div class="abs sm" style="left:28px;top:192px">アイテム</div>` + names.map(([n, used], i) => { const s = slot[i], x = 28 + s.x, y = 214 + s.y;
+    return i === 0
+      ? `<div class="rv" style="left:${x}px;top:${y}px;width:${s.w}px;height:${s.h}px;line-height:${s.h}px;font-size:${s.fs}px;letter-spacing:2px;z-index:3;background:linear-gradient(90deg,rgba(216,180,106,.42),rgba(20,17,14,.7) 85%);color:#fff;border:1px solid #d8b46a;border-left:4px solid #d8b46a;box-shadow:0 6px 14px rgba(0,0,0,.5),0 0 16px rgba(216,180,106,.3)">${n}${start ? '' : `<span style="position:absolute;right:10px;font:500 10px 'Inter';letter-spacing:2px;color:#d8b46a">R2</span>`}</div>`
+      : `<div class="rv" style="left:${x}px;top:${y}px;width:${s.w}px;height:${s.h}px;line-height:${s.h}px;font-size:${s.fs}px;letter-spacing:2px;opacity:${used ? s.a * 0.45 : s.a};z-index:${3 - i};background:linear-gradient(90deg,rgba(216,180,106,.1),rgba(20,17,14,.85) 85%);color:#cfc6b4;border:1px solid rgba(216,180,106,.3);border-left:2px solid #d8b46a">${n}${used ? `<span style="position:absolute;right:10px;font-size:9px;letter-spacing:2px;color:#8d8576">使用済み</span>` : ''}</div>`;
+  }).join('')
+    // 選択中のアイテムの説明（小さく）
+    + `<div class="abs" style="left:28px;top:330px;width:204px;font-size:10.5px;font-weight:500;letter-spacing:1px;line-height:1.6;color:#cfc6b4"><span style="display:inline-block;width:5px;height:5px;background:#d8b46a;transform:rotate(45deg);margin:0 8px 2px 2px"></span>敵を1秒止め、行動ゲージを0に戻す</div>`;
+  // 時間で切れる効果。自分にかかる効果なので金。名前で区別し、色は増やさない
+  const timer = (n, left, y) => `<div class="abs" style="left:28px;top:${y}px;width:204px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-end"><span style="font-size:11px;font-weight:500;letter-spacing:3px;color:#fff">${n}</span><span style="font:300 20px/1 'Inter Display','Inter';color:#d8b46a;text-shadow:0 0 10px rgba(216,180,106,.5)">${left}<span style="font:500 9px 'Noto Sans JP';color:#cfc6b4;margin-left:4px;letter-spacing:2px">秒</span></span></div>
+  <div style="margin-top:5px;height:2px;background:rgba(255,255,255,.15)"><div style="width:${left * 10}%;height:100%;background:#d8b46a;box-shadow:0 0 6px #d8b46a"></div></div></div>`;
+  const timers = start ? '' : `<div class="abs sm" style="left:28px;top:364px">効果</div>` + timer('強化薬', 6.4, 382) + timer('時の砂', 2.1, 414);
+  // 開始前: 操作の案内（右下）と、ゲームパッドの状態（下の中央。問題があるときだけ出る）
+  const guide = !start ? '' : `<div class="abs" style="right:48px;bottom:16px;font-size:11px;font-weight:500;letter-spacing:2px;color:#cfc6b4"><span class="key">✕</span>戻る<span class="key">OPTIONS</span>メニュー</div>
+<div class="abs" style="left:300px;width:360px;bottom:18px;text-align:center;font-size:10.5px;font-weight:500;letter-spacing:1px;color:var(--ac)"><span style="display:inline-block;width:5px;height:5px;border:1px solid var(--ac);transform:rotate(45deg);margin:0 8px 2px 0"></span>ゲームパッドのボタン配置が標準と違う可能性あり</div>`;
+  const css = `.key{display:inline-block;border:1px solid #d8b46a;color:#d8b46a;font:500 10px 'Inter';letter-spacing:2px;padding:2px 7px;margin:0 8px 0 22px}
+.c.q .lv{color:#5c554a}.c.q .gl{color:#8d8576}
+.chain.st{border-color:#d8b46a;box-shadow:0 0 34px rgba(216,180,106,.75),inset 0 0 14px rgba(216,180,106,.35);outline-color:rgba(216,180,106,.7)}`;
+  return { ...d, css: d.css + css, items: items + timers, extra: guide, start };
+}
 const head = `<meta charset="utf-8"><link rel="stylesheet" href="file://${FONTS}/node_modules/@fontsource/dela-gothic-one/400.css">${[300, 500, 700, 900].map(w => `<link rel="stylesheet" href="file://${FONTS}/node_modules/@fontsource/noto-sans-jp/${w}.css">`).join('')}`;
 
 (async () => {
