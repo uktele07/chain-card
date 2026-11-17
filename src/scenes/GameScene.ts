@@ -178,7 +178,7 @@ export class GameScene extends Phaser.Scene {
     const atStart = !!this.run && this.run.state.pos === 0;
     return [
       ...(atStart ? [{ label: '装備', act: 'equip' as const, note: '入口でだけ変えられる' }] : []),
-      { label: 'マスの説明', act: 'legend' }, { label: '操作説明', act: 'help' },
+      { label: '操作説明', act: 'help' },   // マスの説明は盤面の △ で開く（メニューには置かない）
       { label: this.restartArmed ? 'もう一度押すと、やり直す' : '最初からやり直す', act: 'restart' },
       { label: 'ダンジョンから出る', act: 'leave', note: '続きから再開できる' }, { label: '閉じる', act: 'close' },
     ];

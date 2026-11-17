@@ -10,3 +10,6 @@
 #ui .abs { position: absolute; }
 /* 位置合わせの目印（?uidebug）。Canvas 側にも同じ位置に別の色で描く */
 #ui .dbg { position: absolute; width: 20px; height: 20px; border: 2px solid #3cf; }
+/* 操作の案内のボタン名の枠。どの画面でも、文字を枠の中央に置く。
+   字間（letter-spacing）は最後の字の後ろにも付くので、左の余白を字間の分だけ広げる（4倍で撮って測った） */
+#ui .key { display: inline-flex; align-items: center; justify-content: center; height: 18px; padding: 0 5px 0 7px; line-height: 1; vertical-align: middle; }

@@ -221,8 +221,9 @@ export function legendView(gs: GameScene) {
     ['event', `${d.event.name}。${d.event.damage} ダメージ（HPは1残る）。`], ['random', '上のどれか、または何も起こらない。'],
     ['mid', '必ず止まる。討伐すると、負けてもここから再開。'], ['boss', '必ず止まる。討伐すると踏破。'],
   ];
-  return page(gs, 'legend', html`<div class="pg">マスの説明</div>
-    ${list.map(([k, t], i) => { const sq = SQUARE[k], url = iconUrl(gs, squareIconKey(sq.icon)); return html`<div class="row" style="left:270px;top:${92 + i * 44}px;width:650px;height:44px;color:#fff"><span class="sq" style="background:${sq.color}">${url ? html`<img src=${url}>` : nothing}</span><span style="width:150px">${sq.name}</span><span style="font-size:12px;letter-spacing:1px;color:var(--sub);white-space:normal">${t}</span></div>`; })}
-    <div class="row" style="left:270px;top:${92 + list.length * 44}px;width:650px;height:44px;color:#fff"><span class="sq" style="background:#4a433d"></span><span style="width:150px">絵のないマス</span><span style="font-size:12px;letter-spacing:1px;color:var(--sub)">何も起こらない。</span></div>
-    ${guide(gs, [BACK])}`);
+  // メニューの柱は出さない（盤面の △ で開く画面。メニューの項目ではない）
+  return html`<div class="mn">${corners}<div class="pg" style="left:40px">マスの説明</div>
+    ${list.map(([k, t], i) => { const sq = SQUARE[k], url = iconUrl(gs, squareIconKey(sq.icon)); return html`<div class="row" style="left:40px;top:${92 + i * 44}px;width:880px;height:44px;color:#fff"><span class="sq" style="background:${sq.color}">${url ? html`<img src=${url}>` : nothing}</span><span style="width:150px">${sq.name}</span><span style="font-size:12px;letter-spacing:1px;color:var(--sub);white-space:normal">${t}</span></div>`; })}
+    <div class="row" style="left:40px;top:${92 + list.length * 44}px;width:880px;height:44px;color:#fff"><span class="sq" style="background:#4a433d"></span><span style="width:150px">絵のないマス</span><span style="font-size:12px;letter-spacing:1px;color:var(--sub)">何も起こらない。</span></div>
+    ${guide(gs, [BACK])}</div>`;
 }
