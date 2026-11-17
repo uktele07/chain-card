@@ -39,7 +39,7 @@ body{width:960px;height:540px;overflow:hidden;background:#000;font-family:'Noto 
 <div class="tilt" style="top:0;height:110px;-webkit-mask:linear-gradient(#000,transparent)"></div>
 <div class="tilt" style="bottom:0;height:120px;backdrop-filter:blur(4px);-webkit-mask:linear-gradient(transparent,#000)"></div>
 <div class="vg"></div>
-${kind === 'battle' ? battle(t) : kind === 'select' ? select(t) : battleAlt(t, kind)}
+${kind === 'battle' ? battle(t) : kind === 'select' ? select(t) : kind === 'v3' ? battleV3(t) : battleAlt(t, kind)}
 <script>
 const T=${JSON.stringify(t)};
 const c=document.getElementById('bg'),x=c.getContext('2d');let seed=7;const R=()=>(seed=(seed*1664525+1013904223)%4294967296)/4294967296;
@@ -166,6 +166,47 @@ ${hand(250, 262, 92, 102, 112, 112, 52)}
 <div class="chip" style="left:486px;bottom:14px">チェインの実</div>
 <div class="abs sm" style="right:30px;bottom:18px;border-bottom:1px solid var(--ac);padding-bottom:4px">${t.stage}</div>`;
 }
+// 3版: 2版への指摘を反映。ダンジョン名なし / 敵の名前とHPは右上（HPは自分のHPと同じ大きさ）/ 次の攻撃はチェインの真上 / カードは85%
+function battleV3(t) {
+  const CXc = 440, CYc = 346, w = 82, h = 92, dx = 109, dy = 100;
+  const c = (x, y, lv, pw, gl, cls = '') => `<div class="c3 ${cls}" style="left:${x - w / 2}px;top:${y - h / 2}px;width:${w}px;height:${h}px"><div class="lv" style="top:11px;font-size:49px">${lv}</div><div class="pw">${pw}</div><div class="gl">${gl}</div></div>`;
+  const r = 32, nameW = t.name.length * 36 + 110;
+  return `<style>
+.c3{position:absolute;background:#f4f4f2;color:#111;box-shadow:4px 4px 0 var(--ac)}
+.c3.off{background:rgba(12,12,12,.85);color:#6a6a6a;box-shadow:none;outline:1px solid #444}
+.c3.sp{background:var(--ac);color:#fff;box-shadow:4px 4px 0 #f4f4f2}
+.c3 .lv{position:absolute;left:0;right:0;text-align:center;font-weight:900;font-family:'Inter Display','Inter';line-height:1}
+.c3 .pw{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:10px;font-weight:500;letter-spacing:1px}
+.c3 .gl{position:absolute;left:6px;top:4px;font-size:11px;opacity:.75}
+.it2{position:absolute;left:28px;width:200px;height:34px;font-size:13px;font-weight:500;line-height:34px;padding-left:14px;background:rgba(0,0,0,.6);border-left:2px solid rgba(255,255,255,.5)}
+.it2.on{background:#f4f4f2;color:#111;border-left:4px solid var(--ac)}
+.sm{font-size:11px;font-weight:500;letter-spacing:2px;opacity:.75}
+</style>
+<img class="abs" src="${t.monsterSrc}" style="left:650px;top:176px;width:300px;height:300px;filter:drop-shadow(0 0 22px ${t.glow}66)">
+
+<div class="abs band" style="right:-30px;top:24px;width:${nameW + 30}px;height:52px;transform:skewX(-12deg);border-right:0;border-left:6px solid var(--ac)"></div>
+<div class="abs sm" style="right:${t.name.length * 36 + 46}px;top:48px;color:var(--ac);opacity:1">BOSS</div>
+<div class="abs d" style="right:30px;top:24px;font-size:34px;line-height:52px">${t.name}</div>
+<div class="abs" style="right:30px;top:92px;font:800 italic 40px/1 'Inter Display','Inter'">71<span style="font:500 14px 'Inter';opacity:.6;font-style:normal"> / 110</span></div>
+<div class="abs" style="right:30px;top:138px;width:230px;height:4px;background:rgba(255,255,255,.2)"><div style="width:64%;height:100%;background:var(--ac)"></div></div>
+
+<div class="abs" style="left:${CXc - 150}px;top:92px;width:300px;text-align:center;font-size:12px;font-weight:500"><span style="opacity:.6">次の攻撃</span>　爪　5 ダメージ　<span style="font:700 15px 'Inter'">3.5</span> 秒</div>
+<div class="abs" style="left:${CXc - 100}px;top:116px;width:200px;height:3px;background:rgba(255,255,255,.2)"><div style="width:30%;height:100%;background:#fff"></div></div>
+
+${c(CXc, CYc - dy, 'B', '威力 2', '△')}${c(CXc + dx, CYc, 'C', '威力 1', '○')}${c(CXc, CYc + dy, 'S', '威力 10', '✕', 'off')}${c(CXc - dx, CYc, 'X', 'レベルX', '□', 'sp')}
+<div class="abs" style="left:${CXc - r}px;top:${CYc - r}px;width:${r * 2}px;height:${r * 2}px;background:var(--ac);transform:rotate(45deg);outline:2px solid #f4f4f2;outline-offset:4px"></div>
+<div class="abs d" style="left:${CXc - r}px;top:${CYc - r + 2}px;width:${r * 2}px;text-align:center;font-size:40px;line-height:${r * 2}px;color:#111">B</div>
+<div class="abs" style="left:${CXc - r}px;top:${CYc - 27}px;width:${r * 2}px;text-align:center;font:700 7px 'Inter';letter-spacing:2px;color:#111">CHAIN</div>
+
+<div class="abs sm" style="left:28px;top:196px">アイテム</div>
+<div class="it2 on" style="top:216px">回復薬<span style="position:absolute;right:10px;font-size:11px;color:var(--ac);font-weight:900">R2</span></div>
+<div class="it2" style="top:254px">閃光弾</div>
+<div class="it2" style="top:292px">チェインの実</div>
+
+<div class="abs sm" style="left:30px;bottom:66px">HP<span style="margin-left:14px;color:var(--ac);opacity:1;letter-spacing:0">やけど　3秒ごとに −1</span></div>
+<div class="abs" style="left:30px;bottom:24px;font:800 italic 40px/1 'Inter Display','Inter'">84<span style="font:500 14px 'Inter';opacity:.6;font-style:normal"> / 100</span></div>
+<div class="abs" style="left:30px;bottom:14px;width:230px;height:4px;background:rgba(255,255,255,.2)"><div style="width:84%;height:100%;background:#f4f4f2"></div></div>`;
+}
 function select(t) {
   const rows = [['火', '火の神殿', '探索中', 1], ['水', '水の神殿', '準備中', 0], ['風', '風の神殿', '準備中', 0], ['城', '魔王城', '準備中', 0]];
   return `<div class="abs" style="inset:0;background:linear-gradient(100deg,rgba(0,0,0,.92) 46%,rgba(0,0,0,.15) 62%)"></div>
@@ -190,7 +231,7 @@ ${rows.map(([m, n, st, on], i) => `<div class="row" style="top:${148 + i * 72}px
   const monster = await g.evaluate(() => window.__scene.textures.get('monster-fire_beast').getSourceImage().src);
   await g.close();
   const only = process.argv[2];
-  for (const [name, t, kind] of [['1-battle-fire', THEMES.fire, 'battle'], ['2-battle-water', THEMES.water, 'battle'], ['3-select', THEMES.fire, 'select'], ['4-battle-center', THEMES.fire, 'center'], ['5-battle-split', THEMES.fire, 'split']]) {
+  for (const [name, t, kind] of [['1-battle-fire', THEMES.fire, 'battle'], ['2-battle-water', THEMES.water, 'battle'], ['3-select', THEMES.fire, 'select'], ['4-battle-center', THEMES.fire, 'center'], ['5-battle-split', THEMES.fire, 'split'], ['6-battle-fire-v3', THEMES.fire, 'v3']]) {
     if (only && !name.startsWith(only)) continue;
     t.monsterSrc = monster;
     const f = `${OUT}/${name}.html`; fs.writeFileSync(f, page(t, monster, kind));
