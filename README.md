@@ -14,6 +14,10 @@
 | アイテムを切り替える / 使う | L2 / R2 | Q / E |
 | メニュー / ポーズ | OPTIONS | Esc |
 | 決定 / 戻る（メニュー） | ○ / ✕ | Enter / Backspace |
+| 行き先の切り替え（討伐 / ダンジョン） | L1・R1 | ← → |
+| ダンジョン: サイコロを回す / 止める | ○ / ○ | Enter / Enter |
+| ダンジョン: サイコロをやめる | ✕ | Backspace |
+| ダンジョン: 先を見る / マスの説明 | □ / △ | A / W |
 | 消音 | – | M |
 | 無敵（テスト用） | タッチパッド | T |
 
@@ -31,6 +35,7 @@ npm run dev
 - `npm run e2e`: 画面を通しで動かすテスト（先に `npm run build` が必要。初回は `npx playwright install chromium`）
 - `npm run check`: 上の2つとビルドをまとめて実行
 - `npm run sim`: 自動プレイヤーによる勝率のシミュレーション
+- `npm run sim:dungeon`: ダンジョンの踏破率と所要時間のシミュレーション
 - `npm run build`: 公開用のビルド（`dist/`）。main に push すると GitHub Pages へ自動で公開されます
 - `npm run page`: 1ファイルにまとめた版（`dist-single/`）
 
