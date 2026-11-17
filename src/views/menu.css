@@ -1,0 +1,91 @@
+/* メニュー類（C 柱）。見本は docs/samples/style-S4-C.png。左に柱を立ててメニューの項目を縦に並べ、右に選んだ画面の中身を出す */
+.mn { position: absolute; inset: 0; z-index: 20; background: #0b0a09; }
+.mn .sm { position: absolute; font-size: 10px; letter-spacing: 4px; color: var(--sub); }
+.mn .hd { position: absolute; font-size: 10px; letter-spacing: 4px; color: var(--gold); }
+.mn .corner { position: absolute; width: 26px; height: 26px; opacity: .7; }
+.mn .n { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+
+/* 柱 */
+.mn .pil { position: absolute; left: 0; top: 0; bottom: 0; width: 230px; background: linear-gradient(180deg, rgba(20,17,14,.96), rgba(8,7,6,.98)); border-right: 1px solid var(--gold); }
+.mn .pil .t { position: absolute; left: 30px; top: 34px; font: 700 13px var(--f-num); letter-spacing: 10px; color: var(--gold); }
+.mn .pil .t small { display: block; margin-top: 6px; font: 500 10px var(--f-ja); letter-spacing: 3px; color: var(--sub); }
+.mn .tab { position: absolute; left: 0; width: 229px; height: 42px; padding-left: 44px; line-height: 42px; font-size: 14px; letter-spacing: 4px; color: #8d8576; white-space: nowrap; overflow: hidden; }
+.mn .tab.on { color: #fff; background: linear-gradient(90deg, rgba(216,180,106,.3), transparent); }
+.mn .tab.on::before { content: ''; position: absolute; left: 24px; top: 17px; width: 7px; height: 7px; background: var(--gold); transform: rotate(45deg); }
+.mn .tab.cur { color: var(--gold); }
+.mn .tab.cur::after { content: ''; position: absolute; right: -1px; top: 8px; bottom: 8px; width: 3px; background: var(--gold); }
+.mn .tab.off { color: #5c554a; }
+.mn .tab small { font-size: 9px; letter-spacing: 2px; margin-left: 10px; color: #5c554a; }
+.mn .tab.warn { color: var(--ac); }
+
+/* 右側 */
+.mn .pg { position: absolute; left: 270px; top: 30px; font: 400 28px/1.3 var(--f-heavy); letter-spacing: 4px; white-space: nowrap; }
+.mn .vl { position: absolute; width: 1px; background: rgba(216,180,106,.4); }
+.mn .row { position: absolute; height: 42px; border-bottom: 1px solid rgba(216,180,106,.22); display: flex; align-items: center; padding: 0 16px 0 22px; font-size: 14px; letter-spacing: 3px; color: #8d8576; white-space: nowrap; }
+.mn .row.on { background: linear-gradient(90deg, rgba(216,180,106,.3), rgba(216,180,106,.04) 80%, transparent); border-bottom: 1px solid var(--gold); border-top: 1px solid rgba(216,180,106,.5); color: #fff; font-size: 16px; }
+.mn .row.on::before { content: ''; position: absolute; left: -3px; top: 17px; width: 7px; height: 7px; background: var(--gold); transform: rotate(45deg); }
+.mn .row.mark { outline: 1px solid var(--gold); outline-offset: -1px; }   /* 選んでいる枠（右の一覧を操作している間） */
+.mn .row.lit { color: #fff; }
+.mn .row .r { margin-left: auto; font-size: 12px; letter-spacing: 2px; color: var(--sub); }
+.mn .row.on .r { color: var(--gold); }
+.mn .row .r.off, .mn .row.off { color: #5c554a; }
+.mn .row .r.warn { color: var(--ac); }
+.mn .row .r.g { color: var(--gold); }
+.mn .desc { position: absolute; font-size: 11px; letter-spacing: 1px; line-height: 1.8; color: var(--sub); }
+.mn .note { position: absolute; font-size: 11px; letter-spacing: 2px; color: var(--ac); }
+
+/* 武器の威力の札。幅を固定して、比べる2行の縦の列をそろえる */
+.mn .cmp { position: absolute; }
+.mn .cmp .ln { display: flex; justify-content: space-between; align-items: center; }
+.mn .cmp .ln + .ln { padding-top: 10px; }
+.mn .cmp .ln:first-child { padding-bottom: 10px; border-bottom: 1px solid rgba(216,180,106,.25); }
+.mn .cmp .nm { font-size: 13px; letter-spacing: 2px; white-space: nowrap; }
+.mn .cmp .ln.old .nm { font-size: 11px; letter-spacing: 1px; color: #8d8576; }
+.mn .chips { display: inline-flex; align-items: center; }
+.mn .chip { display: inline-flex; align-items: center; gap: 6px; width: 52px; font: 300 16px/1 var(--f-num); font-variant-numeric: tabular-nums; }
+.mn .chip b { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid rgba(216,180,106,.7); color: var(--gold); font: 600 11px/1 var(--f-num); }
+.mn .chip span { min-width: 18px; }
+.mn .old .chips { opacity: .5; }
+.mn .up { color: var(--gold); }
+.mn .down { color: var(--ac); }
+.mn .def { font: 300 16px/1 var(--f-num); }
+.mn .def small { font: 500 10px var(--f-ja); letter-spacing: 1px; color: var(--sub); margin-left: 6px; }
+
+/* カード編集の印。文字の画素の中心が上にずれるので、少し下げる（4倍で撮って測った） */
+.mn .mk { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 26px; height: 26px; padding-top: 2.6px; margin-right: 12px; border: 1px solid var(--ac); color: var(--ac); font: 600 13px/1 var(--f-num); letter-spacing: 0; }
+.mn .mk.gold { border-color: var(--gold); color: var(--gold); }
+.mn .mk.off { border-color: rgba(216,180,106,.35); color: #8d8576; }
+.mn .cnt { position: absolute; display: flex; align-items: baseline; gap: 6px; color: var(--gold); }
+.mn .cnt .big { font: 500 36px/1 var(--f-num); color: #fff; text-shadow: 0 0 14px rgba(216,180,106,.55); }
+.mn .cnt .of { font: 300 16px var(--f-num); letter-spacing: 2px; }
+.mn .cnt .u { font-size: 10px; letter-spacing: 2px; }
+
+.mn .tabs { position: absolute; display: flex; gap: 26px; font-size: 14px; letter-spacing: 4px; }
+.mn .tabs span { color: #8d8576; padding: 0 4px 6px; }
+.mn .tabs span.on { color: #fff; border-bottom: 2px solid var(--gold); }
+.mn .tabs .sw { font-size: 10px; color: var(--gold); padding: 0; border: 0; }
+
+/* 確認（売買）とセーブリセット: 右側に金の二重の細い枠 */
+.mn .dim { position: absolute; left: 231px; top: 0; right: 0; bottom: 0; background: rgba(5,4,3,.75); }
+.mn .fr { position: absolute; border: 1px solid var(--gold); background: linear-gradient(180deg, rgba(20,17,14,.97), rgba(8,7,6,.98)); }
+.mn .fr2 { position: absolute; border: 1px solid rgba(216,180,106,.3); }
+.mn .fr.warn { border-color: var(--ac); }
+.mn .ask { position: absolute; left: 0; right: 0; text-align: center; font-size: 17px; letter-spacing: 3px; }
+.mn .ch { position: absolute; height: 40px; border: 1px solid rgba(216,180,106,.35); text-align: center; line-height: 38px; font-size: 14px; letter-spacing: 4px; color: var(--sub); }
+.mn .ch.on { border-color: var(--gold); background: linear-gradient(90deg, rgba(216,180,106,.32), rgba(216,180,106,.06)); color: #fff; }
+.mn .ch.on::before { content: ''; position: absolute; left: -4px; top: 16px; width: 7px; height: 7px; background: var(--gold); transform: rotate(45deg); }
+.mn .ch.warn { color: var(--ac); }
+
+/* 操作説明・マスの説明 */
+.mn table { position: absolute; border-collapse: collapse; font-size: 12px; letter-spacing: 1px; }
+.mn th { text-align: left; font-weight: 500; font-size: 10px; letter-spacing: 4px; color: var(--gold); padding: 0 0 8px; }
+.mn td { padding: 3px 0; border-bottom: 1px solid rgba(216,180,106,.18); color: var(--sub); white-space: nowrap; }
+.mn td.k { color: #fff; }
+.mn .rules { position: absolute; margin: 0; padding: 0; font-size: 11px; letter-spacing: 1px; line-height: 1.6; color: var(--sub); }
+.mn .rules li { list-style: none; position: relative; padding-left: 14px; }
+.mn .rules li::before { content: ''; position: absolute; left: 0; top: 8px; width: 4px; height: 4px; background: var(--gold); transform: rotate(45deg); }
+.mn .sq { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 6px; margin-right: 14px; flex: none; }
+.mn .sq img { width: 36px; height: 36px; }
+
+.mn .guide { position: absolute; right: 40px; bottom: 10px; padding: 6px 0 6px 10px; background: #0b0a09; font-size: 11px; letter-spacing: 2px; color: var(--sub); white-space: nowrap; }
+.mn .key { display: inline-block; border: 1px solid var(--gold); color: var(--gold); font: 500 10px var(--f-num); letter-spacing: 2px; padding: 2px 7px; margin: 0 8px 0 22px; }

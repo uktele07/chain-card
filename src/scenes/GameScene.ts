@@ -680,5 +680,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   get pad() { return this.input2.padConnected; }
+  /** アイテムの名前（無ければ null） */
+  itemName(id: string | null) { return itemOf(id)?.name ?? null; }
 
 }
