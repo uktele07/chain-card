@@ -231,6 +231,30 @@ function nextRow(atk, dmg, sec, big, g = 0.3) {
 </div>
 <div class="abs gauge" style="left:${L}px;top:148px;width:${Wd}px"><div style="width:${g * 100}%;height:100%;${big ? 'background:#ff2a1f;box-shadow:0 0 8px #ff2a1f' : ''}" class="gfill"></div></div>`;
 }
+
+// D6: 枠は D3 のまま（ゲージ 310〜650、幅 340）。技名だけ左詰めにし、半角スペースほど字下げする。技名の大きさは固定（全角8文字が入る最大）。
+//   A: 1行のまま。数字（ダメージ・秒）は右端 650 にそろえ、残りの幅に技名を入れる → 8文字だと 9 まで小さくなる（ブラウザで幅を測って確かめた）
+//   B: 技名を1段上（NEXT の札の横）へ出す。数字の行は D3 と同じ。技名は 24（D3 と同じ）のまま8文字入る
+const F6 = { L: 310, W: 340 };
+function nextA(atk, dmg, sec, big, g = 0.3) {
+  const fs = 9;
+  return `<div class="abs sm" style="left:${F6.L}px;top:84px;color:#d8b46a;opacity:1">NEXT</div>
+<div class="abs atk" style="left:${F6.L}px;top:${146 - fs - 6}px;padding-left:.3em;font-size:${fs}px;letter-spacing:1px;white-space:nowrap;margin:0;${big ? 'color:#ff6a5a' : ''}">${big ? '！' : ''}${atk}</div>
+<div class="abs" style="left:${F6.L}px;top:98px;width:${F6.W}px;height:44px;display:flex;align-items:flex-end;justify-content:flex-end;gap:14px">
+  <span class="dmg" style="font-variant-numeric:tabular-nums;${big ? 'color:#ff2a1f;text-shadow:0 0 18px rgba(255,30,20,.8)' : ''}">${dmg}<span class="unit">ダメージ</span></span><span class="sep"></span>
+  <span class="sec" style="font-variant-numeric:tabular-nums;width:78px">${sec}<span class="unit">秒</span></span></div>
+<div class="abs gauge" style="left:${F6.L}px;top:144px;width:${F6.W}px"><div style="width:${g * 100}%;height:100%;${big ? 'background:#ff2a1f;box-shadow:0 0 8px #ff2a1f' : ''}" class="gfill"></div></div>`;
+}
+function nextB(atk, dmg, sec, big, g = 0.3) {
+  return `<div class="abs" style="left:${F6.L}px;top:50px;width:${F6.W}px;height:30px;display:flex;align-items:flex-end;gap:10px">
+  <span class="next" style="margin-bottom:4px">NEXT</span>
+  <span class="atk" style="font-size:24px;letter-spacing:2px;padding-left:.3em;margin:0;white-space:nowrap;${big ? 'color:#ff6a5a' : ''}">${big ? '！' : ''}${atk}</span></div>
+<div class="abs" style="left:${F6.L}px;top:92px;width:${F6.W}px;height:44px;display:flex;align-items:flex-end;justify-content:center;gap:14px">
+  <span class="dmg" style="font-variant-numeric:tabular-nums;${big ? 'color:#ff2a1f;text-shadow:0 0 18px rgba(255,30,20,.8)' : ''}">${dmg}<span class="unit">ダメージ</span></span><span class="sep"></span>
+  <span class="sec" style="font-variant-numeric:tabular-nums">${sec}<span class="unit">秒</span></span></div>
+<div class="abs gauge" style="left:${F6.L}px;top:144px;width:${F6.W}px"><div style="width:${g * 100}%;height:100%;${big ? 'background:#ff2a1f;box-shadow:0 0 8px #ff2a1f' : ''}" class="gfill"></div></div>`;
+}
+STYLES['D6B-fight'] = m => ({ ...D4(m, false), next: nextB('滅びの光', 26, '1.2', true, 0.78) });
 STYLES['D5-fight'] = m => ({ ...D4(m, false), next: nextRow('滅びの光', 26, '1.2', true, 0.78) });
 const head = `<meta charset="utf-8"><link rel="stylesheet" href="file://${FONTS}/node_modules/@fontsource/dela-gothic-one/400.css">${[300, 500, 700, 900].map(w => `<link rel="stylesheet" href="file://${FONTS}/node_modules/@fontsource/noto-sans-jp/${w}.css">`).join('')}`;
 
@@ -302,6 +326,22 @@ ${rows.map(([m, n, st, on], i) => `<div class="row ${on ? 'on' : ''}" style="top
     }
     await shoot('style-D5-next', `<!doctype html><html><head>${head}</head><body style="margin:0;padding:0 16px 16px;background:#14110f;width:842px">${parts.join('')}</body></html>`, 842, 4 * 214 + 16);
     await shoot('style-D5-fight', `<!doctype html><html><head>${head}<style>${base}${d.css}</style></head><body>${d.back}${layout(d)}<script>${d.script}</script></body></html>`);
+    await b.close(); return;
+  }
+  if (only === 'D6') {
+    const d = STYLES['D6B-fight'](monster), D = STYLES['D4-fight'](monster);
+    const cases = [['A: 1行のまま（！＋7文字 30。技名は 9 になる）', nextA('メテオストライ', 30, '4.0', true, 0.1)], ['B: 爪 5', nextB('爪', 5, '3.5', false)], ['B: ！滅びの光 26（大技）', nextB('滅びの光', 26, '1.2', true, 0.78)], ['B: ！＋7文字 30（全角8文字。いちばん長い場合、いまは無い）', nextB('メテオストライ', 30, '4.0', true, 0.1)]];
+    const parts = [];
+    for (const [i, [label, nx]] of cases.entries()) {
+      const s = { ...D, next: nx };
+      const f = `${OUT}/d6-${i}.html`; fs.writeFileSync(f, `<!doctype html><html><head>${head}<style>${base}${s.css}</style></head><body>${s.back}${layout(s)}<script>${s.script}</script></body></html>`);
+      const p = await b.newPage({ viewport: { width: 960, height: 540 }, deviceScaleFactor: 2 });
+      await p.goto('file://' + f); await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(500);
+      const png = `${OUT}/d6-${i}.png`; await p.screenshot({ path: png, clip: { x: 150, y: 0, width: 810, height: 180 } }); await p.close();
+      parts.push(`<div style="font:500 12px 'Noto Sans JP';color:#d8b46a;letter-spacing:2px;margin:14px 0 6px 4px">${label}</div><img src="file://${png}" style="width:810px;display:block">`);
+    }
+    await shoot('style-D6-next', `<!doctype html><html><head>${head}</head><body style="margin:0;padding:0 16px 16px;background:#14110f;width:842px">${parts.join('')}</body></html>`, 842, 4 * 214 + 16);
+    await shoot('style-D6B-fight', `<!doctype html><html><head>${head}<style>${base}${d.css}</style></head><body>${d.back}${layout(d)}<script>${d.script}</script></body></html>`);
     await b.close(); return;
   }
   // リボルバーの動き: 4コマ
