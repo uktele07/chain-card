@@ -62,8 +62,11 @@ function minimap(s, w) {
 const PLANS = {
   // A 角: 戦闘画面と同じ作り。四隅に文字だけを置き、枠は使わない。盤面を広く見せる。止まったマスの知らせは、結果・ポーズと同じ横の帯
   A: {
-    name: 'A 角（戦闘画面と同じ作り。四隅に文字だけ）',
+    name: 'A 角（直し: 右上は全体図だけ、WARNING、踏破は B の作り）',
     css: `.band{position:absolute;left:0;right:0;border-top:1px solid var(--gold);border-bottom:1px solid var(--gold);background:linear-gradient(90deg,rgba(0,0,0,.85),rgba(0,0,0,.93) 30%,rgba(0,0,0,.93) 70%,rgba(0,0,0,.85))}
+.band.warn{border-color:var(--ac);background:linear-gradient(90deg,rgba(40,6,2,.86),rgba(12,2,1,.94) 30%,rgba(12,2,1,.94) 70%,rgba(40,6,2,.86))}
+.haz{position:absolute;left:0;right:0;height:6px;opacity:.85;background:repeating-linear-gradient(-45deg,var(--ac) 0 10px,transparent 10px 20px)}
+.warnt{font:800 italic 36px/1 'Inter Display','Inter';letter-spacing:16px;color:var(--ac);text-shadow:0 0 18px rgba(255,75,31,.8),0 0 2px #fff}
 .shade-tl{position:absolute;left:0;top:0;width:520px;height:200px;background:radial-gradient(ellipse at 0 0,rgba(0,0,0,.85),transparent 70%)}
 .shade-bl{position:absolute;left:0;bottom:0;width:520px;height:200px;background:radial-gradient(ellipse at 0 100%,rgba(0,0,0,.88),transparent 70%)}
 .shade-r{position:absolute;right:0;top:0;bottom:0;width:300px;background:linear-gradient(90deg,transparent,rgba(0,0,0,.7))}`,
@@ -71,8 +74,7 @@ const PLANS = {
       return `<div class="shade-tl"></div><div class="shade-bl"></div><div class="shade-r"></div>
 <div class="abs d" style="left:40px;top:28px;font-size:28px;letter-spacing:4px">火の神殿</div>
 <div class="abs sm" style="left:42px;top:76px;color:var(--gold)">${c.gate}</div>
-<div class="abs" style="right:40px;top:30px;text-align:right"><span class="n" style="font-size:24px;color:var(--gold)">310<span style="font-size:11px;margin-left:5px">G</span></span><div class="sm" style="margin-top:6px">火の欠片 ×2</div></div>
-<div class="abs" style="right:40px;top:96px;padding:6px;border:1px solid rgba(216,180,106,.35);background:rgba(10,9,8,.7)">${minimap(s, 120)}</div>
+<div class="abs" style="right:40px;top:30px;padding:6px;border:1px solid rgba(216,180,106,.35);background:rgba(10,9,8,.7)">${minimap(s, 120)}</div>
 <div class="abs" style="left:40px;bottom:96px">${ITEMS.map(([n, u]) => `<span class="item ${u ? 'used' : ''}">${n}</span>`).join('')}</div>
 <div class="abs sm" style="left:40px;bottom:66px">HP</div>
 <div class="abs n" style="left:40px;bottom:24px;font-size:40px;line-height:1">${c.hp}<span style="font-size:14px;opacity:.6"> / 100</span></div>
@@ -81,19 +83,18 @@ ${dice(c.dice, 860, 380)}<div class="dlabel" style="right:40px;top:448px;width:2
 ${guide(s, 'right:40px;bottom:14px')}`;
     },
     idle() { return this.hud('idle', SCENES.idle) + corners; },
-    landed() { const c = SCENES.landed, m = c.msg; return this.hud('landed', c) + `<div class="band" style="top:300px;height:84px"></div>
-<div class="abs" style="left:300px;top:320px;display:flex;align-items:center;gap:18px"><span class="sqi" style="background:${m.color}"><img src="${img('bg-icon-mon.png')}" style="width:52px"></span>
-<div><div class="sm" style="color:var(--gold)">${m.head}</div><div style="font-size:20px;letter-spacing:3px;margin-top:6px">${m.main}</div></div></div>
-<div class="abs" style="left:660px;top:333px;font-size:13px;letter-spacing:3px;color:var(--sub)"><span class="key" style="margin-left:0">○</span>${m.act}</div>` + corners; },
+    // 敵が出た: 差し色の帯に「WARNING」。帯の上下の縁に、注意の斜めの縞
+    landed() { const c = SCENES.landed, m = c.msg; return this.hud('landed', c) + `<div class="band warn" style="top:292px;height:80px"></div>
+<div class="haz" style="top:286px"></div><div class="haz" style="top:372px"></div>
+<div class="abs warnt" style="left:0;right:0;top:302px;text-align:center;font-size:30px">WARNING</div>
+<div class="abs" style="left:0;right:0;top:342px;text-align:center;font-size:17px;letter-spacing:4px">${m.main}</div>` + corners; },
     choose() { const c = SCENES.choose; return this.hud('choose', c) + `<div class="abs" style="left:380px;top:96px;width:200px;text-align:center;padding:7px 0;border-top:1px solid var(--gold);border-bottom:1px solid var(--gold);background:rgba(0,0,0,.8);font-size:13px;letter-spacing:5px;color:var(--gold)">${c.prompt}</div>` + corners; },
-    cleared() { return `<div class="abs" style="inset:0;background:rgba(5,4,3,.6)"></div><div class="band" style="top:150px;height:240px"></div>
-<div class="abs d" style="left:60px;top:176px;font-size:30px;letter-spacing:4px">火の神殿<span style="font-family:'Noto Sans JP';font-weight:500;font-size:16px;letter-spacing:6px;color:var(--gold);margin-left:14px">踏破</span></div>
-<div class="abs sm" style="left:60px;top:250px;color:var(--gold)">初回の踏破報酬</div>
-<div class="abs" style="left:80px;top:286px"><div class="ring"></div></div>
-<div class="abs" style="left:190px;top:290px;font-size:20px;letter-spacing:4px">炎の指輪</div>
-<div class="abs" style="left:190px;top:326px;font-size:12px;letter-spacing:1px;color:var(--sub)">使い切りボーナスが +3 になる。</div>
-<div class="abs" style="left:740px;top:180px;width:1px;height:180px;background:rgba(216,180,106,.4)"></div>
-<div class="abs" style="left:770px;top:262px;font-size:14px;letter-spacing:4px;padding-left:18px"><span style="position:absolute;left:0;top:7px;width:7px;height:7px;background:var(--gold);transform:rotate(45deg)"></span>外に出る</div>
+    // 踏破: B 案と同じく、報酬を真ん中に。左上の「踏破」は、名前より大きく、少し薄く、名前の末尾に少し重ねて、名前の後ろに置く
+    cleared() { return `<div class="abs" style="inset:0;background:rgba(5,4,3,.68)"></div><div class="shade-tl"></div>
+<div class="abs d" style="left:150px;top:6px;font-size:64px;letter-spacing:6px;color:var(--gold);opacity:.38;z-index:1">踏破</div>
+<div class="abs d" style="left:40px;top:28px;font-size:28px;letter-spacing:4px;z-index:2;text-shadow:0 2px 10px rgba(0,0,0,.8)">火の神殿</div>
+<div class="abs" style="left:0;right:0;top:150px;text-align:center"><div class="sm" style="color:var(--gold)">初回の踏破報酬</div><div style="display:flex;justify-content:center;margin-top:30px"><div class="ring"></div></div>
+<div style="font-size:22px;letter-spacing:5px;margin-top:22px">炎の指輪</div><div style="font-size:12px;letter-spacing:1px;color:var(--sub);margin-top:10px">使い切りボーナスが +3 になる。</div></div>
 ${guide('cleared', 'right:40px;bottom:14px')}${corners}`; },
   },
 

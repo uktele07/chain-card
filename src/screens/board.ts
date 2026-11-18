@@ -49,13 +49,10 @@ export function drawBoard(gs: GameScene, l0: Layer, l1: Layer, l2: Layer) {
   // 分かれ道: 行き先のマスを強調して選ぶ
   opts.forEach((id, i) => {
     const q = run.board[id], { x, y } = mid(q), from = mid(run.square), on = i === gs.pick, col = on ? C.white : C.keep;
-    const a = Math.atan2(y - from.y, x - from.x), n = run.board.filter(o => o.seg === q.seg).length;
+    const a = Math.atan2(y - from.y, x - from.x);
     l1.rect(x - G / 2 + 1, y - G / 2 + 1, G - 2, G - 2, { stroke: col, sw: on ? 5 : 3, rx: 5 });
     l1.tri((x + from.x) / 2, (y + from.y) / 2, on ? 13 : 10, a, col);
-    // 道の名札は、進む向きの横に置く（先のマスに重ねない）
-    const vert = Math.abs(Math.sin(a)) > 0.7, lx = vert ? x - G / 2 - 50 : x, ly = vert ? y : y - 46;
-    l1.rect(lx - 44, ly - 12, 88, 24, { fill: BOX, stroke: col, sw: 1.5, rx: 12 });
-    l1.text(lx, ly, `${n}マスの道`, 12, col, 'middle', true);
+    // 「○マスの道」の名札は出さない（選んでいる道の矢印と、止まるマスの強調で分かる。持ち主の指示）
     // いまの出目で止まるマス
     const s = mid(run.board[gs.stopFrom(id)]), pulse = on ? 0.2 + 0.12 * Math.sin(gs.clock * 7) : 0.1;
     l1.rect(s.x - G / 2 - 3, s.y - G / 2 - 3, G + 6, G + 6, { fill: col, alpha: pulse, rx: 7 });
