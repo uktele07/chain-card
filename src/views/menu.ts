@@ -2,7 +2,7 @@
 // 左に柱を立ててメニューの項目を縦に並べ、右に選んだ画面の中身を出す。盤面から開いたときは、柱に盤面のメニューの項目を出す
 import { html, nothing, type TemplateResult } from 'lit-html';
 import { LEVEL_LABELS } from '../game/battle';
-import { squareIconKey } from '../game/art';
+import { runeKey } from '../game/runes';
 import { ATTACKS, ENEMIES, RULES, SHOP, SPELLS } from '../game/content';
 import { EQUIP_ROWS, MENU, SQUARE } from '../screens/common';
 import type { GameScene } from '../scenes/GameScene';
@@ -223,7 +223,7 @@ export function legendView(gs: GameScene) {
   ];
   // メニューの柱は出さない（盤面の △ で開く画面。メニューの項目ではない）
   return html`<div class="mn">${corners}<div class="pg" style="left:40px">マスの説明</div>
-    ${list.map(([k, t], i) => { const sq = SQUARE[k], url = iconUrl(gs, squareIconKey(sq.icon)); return html`<div class="row" style="left:40px;top:${92 + i * 44}px;width:880px;height:44px;color:#fff"><span class="sq" style="background:${sq.color}">${url ? html`<img src=${url}>` : nothing}</span><span style="width:150px">${sq.name}</span><span style="font-size:12px;letter-spacing:1px;color:var(--sub);white-space:normal">${t}</span></div>`; })}
-    <div class="row" style="left:40px;top:${92 + list.length * 44}px;width:880px;height:44px;color:#fff"><span class="sq" style="background:#4a433d"></span><span style="width:150px">絵のないマス</span><span style="font-size:12px;letter-spacing:1px;color:var(--sub)">何も起こらない。</span></div>
+    ${list.map(([k, t], i) => { const sq = SQUARE[k], url = iconUrl(gs, runeKey(k)); return html`<div class="row" style="left:40px;top:${92 + i * 44}px;width:880px;height:44px;color:#fff"><span class="sq">${url ? html`<img src=${url}>` : nothing}</span><span style="width:150px">${sq.name}</span><span style="font-size:12px;letter-spacing:1px;color:var(--sub);white-space:normal">${t}</span></div>`; })}
+    <div class="row" style="left:40px;top:${92 + list.length * 44}px;width:880px;height:44px;color:#fff"><span class="sq" style="background:linear-gradient(135deg,#585049,#3d3631);border-radius:3px"></span><span style="width:150px">絵のないマス</span><span style="font-size:12px;letter-spacing:1px;color:var(--sub)">何も起こらない。</span></div>
     ${guide(gs, [BACK])}</div>`;
 }

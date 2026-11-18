@@ -15,6 +15,7 @@ import { drawBattle } from '../screens/battle';
 import { drawBattleScene, CHAIN_AT, ITEM_AT, HP_AT } from '../screens/battlescene';
 import { ENEMY_AT } from '../game/battlebg';
 import { drawListScene } from '../screens/listscene';
+import { loadRunes } from '../game/runes';
 import { UIRoot, isHtml, UI_DEBUG, DEBUG_MARKS, type ViewName } from '../views/root';
 import { drawResult } from '../screens/result';
 import { drawMenu, drawPause, drawResume, drawReset, drawConfirm } from '../screens/menus';
@@ -85,6 +86,7 @@ export class GameScene extends Phaser.Scene {
     this.ui.attach(this.game.canvas);
     loadArt(this, ZOOM);
     loadTempleArt(this, ZOOM);
+    loadRunes(this, ZOOM);
     this.save = loadSave(SAVE_CONFIG);
     this.input.on('pointerdown', () => this.snd.unlock());
     window.addEventListener('keydown', () => this.snd.unlock());
@@ -650,7 +652,8 @@ export class GameScene extends Phaser.Scene {
     const show = (v: ViewName, canvas: () => void) => { views.push(v); if (!isHtml(v)) canvas(); };
     if (this.base === 'board') {
       // 盤面は3層を使う。メニューなどは、いちばん手前の1枚だけを最上層に描く
-      show('board', () => drawBoard(this, a, b, this.L[2]));
+      if (isHtml('board')) { drawBoard(this, a, b, this.L[2], false); views.push('board'); }   // 盤面・マス・駒は Canvas、情報は HTML
+      else show('board', () => drawBoard(this, a, b, this.L[2]));
       const o = this.top;
       if (o === 'dmenu') show('dmenu', () => drawDMenu(this, this.L[3])); else if (o === 'equip') show('equip', () => drawEquip(this, this.L[3]));
       else if (o === 'help') show('help', () => drawHelp(this, this.L[3])); else if (o === 'legend') show('legend', () => drawLegend(this, this.L[3]));

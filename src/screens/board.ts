@@ -2,6 +2,7 @@
 // 層の使い方: 0=盤面の絵 / 1=マスの絵柄と行き先の印 / 2=駒と情報の枠 / 3=メニューなど
 import { W, H } from '../game/display';
 import { BOARD_PAD, boardKey, squareIconKey } from '../game/art';
+import { runeKey, SMOKE } from '../game/runes';
 import type { Layer } from '../game/ui';
 import type { Effect, Square } from '../game/dungeon';
 import { enemyById, itemOf, ACCESSORIES } from '../game/content';
@@ -23,7 +24,8 @@ export function effectText(gs: GameScene, eff: Effect): { head: string; main: st
   return { head, main, color: sq.color, icon: sq.icon };
 }
 
-export function drawBoard(gs: GameScene, l0: Layer, l1: Layer, l2: Layer) {
+/** hud: 情報の枠・サイコロ・全体図・知らせ・案内も Canvas に描く（HTML へ移したあとは false。src/views/board.ts が描く） */
+export function drawBoard(gs: GameScene, l0: Layer, l1: Layer, l2: Layer, hud = true) {
   const run = gs.run;
   if (!run) return;
   const def = run.def, G = def.cell, Wd = def.size[0] * G, Hd = def.size[1] * G, P = BOARD_PAD;
@@ -39,12 +41,31 @@ export function drawBoard(gs: GameScene, l0: Layer, l1: Layer, l2: Layer) {
     const { x, y } = mid(q);
     if (x < -G || x > W + G || y < -G || y > 540 + G) continue;
     const sq = SQUARE[q.kind], passed = !ahead.has(q.id) && q.id !== st.pos, al = passed ? 0.4 : 1;
-    const big = q.kind === 'boss' ? 54 : q.kind === 'mid' ? 48 : 38;
-    if (sq.icon) {
+    const big = q.kind === 'boss' ? 54 : q.kind === 'mid' ? 50 : 44;
+    // マスの絵は紋章（刻印石の板と光る溝）。HTML へ移す前の見た目では、以前の色の板と白い絵
+    if (sq.icon && !hud) l1.image(runeKey(q.kind), x, y, big, al);
+    else if (sq.icon) {
       l1.rect(x - big / 2, y - big / 2, big, big, { fill: sq.color, stroke: '#1b1513', sw: 3, rx: 8, alpha: al });
       l1.image(squareIconKey(sq.icon), x, y, big * 1.25, al);
     }
     if (reach.has(q.id)) l1.rect(x - G / 2 + 2, y - G / 2 + 2, G - 4, G - 4, { stroke: C.keep, sw: 3, rx: 5 });
+  }
+  // ボスのマスの瘴気: 板の上に赤い光、脈打つ靄、逆向きに回る2段の煙、立ちのぼる細い煙（いちばん手前）
+  if (!hud) {
+    const b = run.board.find(q => q.kind === 'boss');
+    if (b) {
+      const { x, y } = mid(b), t = gs.clock, beat = 0.5 + 0.5 * Math.sin(t * Math.PI * 2 / 2.4);
+      if (x > -120 && x < W + 120 && y > -120 && y < 540 + 120) {
+        l1.image(SMOKE.glow, x, y, 46, 0.7 + beat * 0.3);
+        l1.image(SMOKE.mist, x, y, 76, 0.6 + beat * 0.4);
+        l1.image(SMOKE.a, x, y, 100, 1, undefined, 100, t * Math.PI * 2 / 5.5);
+        l1.image(SMOKE.b, x, y, 81, 0.9, undefined, 81, -t * Math.PI * 2 / 3.6);
+        [0, 0.9, 1.7].forEach((d, i) => {
+          const k = ((t + d) % 2.6) / 2.6, dx = [-12, 0, 12][i];
+          l1.image(SMOKE.wisp, x + dx, y - 10 - k * 46, 10 + k * 14, (k < 0.3 ? k / 0.3 : 1 - (k - 0.3) / 0.7) * 0.9, undefined, 22 + k * 30);
+        });
+      }
+    }
   }
   // 分かれ道: 行き先のマスを強調して選ぶ
   opts.forEach((id, i) => {
@@ -67,6 +88,7 @@ export function drawBoard(gs: GameScene, l0: Layer, l1: Layer, l2: Layer) {
   l2.circle(px, py, 15, { fill: '#f4f6fb', stroke: '#10141c', sw: 2.5 });
   l2.circle(px, py, 7, { fill: '#4a8fd9' });
 
+  if (!hud) return;   // 情報の枠などは HTML（src/views/board.ts）
   if (mode === 'cleared') { drawCleared(gs, l2); return; }
 
   // 情報の枠（先を見ている間は隠す）

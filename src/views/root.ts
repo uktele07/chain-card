@@ -11,6 +11,8 @@ import { listView } from './list';
 import ovCss from './overlays.css?inline';
 import { resultView, pauseView, resumeView } from './overlays';
 import menuCss from './menu.css?inline';
+import boardCss from './board.css?inline';
+import { boardView } from './board';
 import { menuView, dmenuView, equipView, deckView, shopView, confirmView, helpView, resetView, legendView } from './menu';
 import type { GameScene } from '../scenes/GameScene';
 
@@ -23,6 +25,7 @@ export const VIEWS: Partial<Record<ViewName, (gs: GameScene) => TemplateResult>>
   pause: pauseView,
   resume: resumeView,
   menu: menuView,       // 段階4: メニュー類（C 柱）
+  board: boardView,     // 段階5: すごろくの盤面の上の情報（A 角）
   dmenu: dmenuView, equip: equipView, deck: deckView, shop: shopView, confirm: confirmView, help: helpView, reset: resetView, legend: legendView,
 };
 export const isHtml = (v: ViewName) => v in VIEWS;
@@ -39,7 +42,7 @@ export class UIRoot {
 
   constructor(parent: HTMLElement) {
     const style = document.createElement('style');
-    style.textContent = tokens + base + battleCss + listCss + ovCss + menuCss;
+    style.textContent = tokens + base + battleCss + listCss + ovCss + menuCss + boardCss;
     document.head.appendChild(style);
     this.el = document.createElement('div');
     this.el.id = 'ui';
