@@ -21,11 +21,21 @@ function slab(glow) {
   <path d="M4 3h40l2 3v37l-3 2H5l-2-3V6Z" fill="url(#l${id})"/><path d="M4 3h40l2 3v37l-3 2H5l-2-3V6Z" fill="#fff" filter="url(#n${id})" opacity=".45"/>
   <path d="M4 3h40l2 3v37l-3 2H5l-2-3V6Z" fill="none" stroke="${glow}" stroke-opacity=".7" stroke-width=".8"/>`;
 }
-/** tile: 板あり / なし。板なしは、頭蓋を床の上に直接置き、黒い影を落とす */
+// 宝石: 上の平らな面（テーブル）と、斜めの面（クラウン）、下へすぼまる面（パビリオン）。24×24
+const GEM = [
+  ['M7 6h10l-1.6 3.4H8.6Z', 1.0],                       // テーブル（いちばん明るい）
+  ['M7 6 3 9.4h5.6Z', .55], ['M17 6l4 3.4h-5.6Z', .75],  // クラウンの左右
+  ['M8.6 9.4h6.8L12 21.5Z', .8],                        // パビリオンの真ん中
+  ['M3 9.4h5.6L12 21.5Z', .4], ['M21 9.4h-5.6L12 21.5Z', .6],   // パビリオンの左右
+];
+/** tile: 板あり / なし。板なしは、宝石を壁の上に浮かべ、下に淡い影を落とす */
 const glyph = (col, tile, glow) => `<svg class="tile" viewBox="0 0 48 48" style="overflow:visible">${tile ? slab(glow) : ''}
-  <g transform="translate(${tile ? 11 : 7} ${tile ? 10.5 : 6}) scale(${tile ? 1.08 : 1.42})">
-  <path d="${SKULL}" fill="#000" fill-opacity="${tile ? 1 : .7}" fill-rule="evenodd" transform="translate(.5 ${tile ? .7 : 1.4})" ${tile ? '' : 'style="filter:blur(1px)"'}/>
-  <path d="${SKULL}" fill="${col}" fill-rule="evenodd" class="sk"/><path d="${EYES}" fill="#fff6d0" class="eye"/></g></svg>`;
+  <g transform="translate(${tile ? 11 : 7} ${tile ? 10.5 : 4}) scale(${tile ? 1.08 : 1.42})" class="gem">
+  ${tile ? '' : '<ellipse cx="12" cy="26" rx="6" ry="1.4" fill="#000" opacity=".55" style="filter:blur(1px)"/>'}
+  <g class="sk">${GEM.map(([d, l]) => `<path d="${d}" fill="${col}" style="filter:brightness(${.45 + l * .9})"/>`).join('')}
+  <path d="M7 6h10l4 3.4L12 21.5 3 9.4Z" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width=".4" stroke-linejoin="round"/>
+  <path d="M3 9.4h18M8.6 9.4 12 21.5 15.4 9.4M7 6l1.6 3.4M17 6l-1.6 3.4" stroke="#fff" stroke-opacity=".3" stroke-width=".3" fill="none"/></g>
+  <path d="M9 6.8h2.6l-.8 1.6H9.6Z" fill="#fff" class="eye"/></g></svg>`;
 
 const PLANS = {
   // B 瘴気: 黒紫の煙が渦巻き、頭蓋は暗く、眼だけが赤く光る
@@ -35,10 +45,11 @@ const PLANS = {
   background:conic-gradient(from 0deg,transparent 0deg,rgba(110,25,140,.7) 40deg,transparent 90deg,rgba(15,0,20,.85) 150deg,transparent 200deg,rgba(150,20,70,.6) 260deg,transparent 320deg);filter:blur(6px);animation:spin 6s linear infinite}
 .B .sm.b{width:135%;height:135%;margin:-67.5% 0 0 -67.5%;animation-duration:4s;animation-direction:reverse;opacity:.85}
 .B .dk{position:absolute;left:50%;top:50%;width:120%;height:120%;margin:-60% 0 0 -60%;border-radius:50%;background:radial-gradient(circle,rgba(10,0,12,.75),transparent 70%)}
-.B .sk{filter:drop-shadow(0 0 3px #5a1a5a)}
-.B .eye{fill:#ff2a1a;filter:drop-shadow(0 0 2px #ff2a1a) drop-shadow(0 0 5px #ff0a0a);animation:eyeB 2.4s ease-in-out infinite}
+.B .sk{filter:drop-shadow(0 0 3px #b040ff) drop-shadow(0 0 7px #7a10c0);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.75}50%{opacity:1}}
+.B .eye{filter:drop-shadow(0 0 2px #fff);animation:eyeB 2.4s ease-in-out infinite}
 @keyframes eyeB{0%,100%{opacity:.35}50%{opacity:1}}`,
-    html: tile => `<div class="aura"><div class="dk"></div><div class="sm"></div><div class="sm b"></div></div>${glyph('#3a2234', tile, '#7a2a8a')}`,
+    html: tile => `<div class="aura"><div class="dk"></div><div class="sm"></div><div class="sm b"></div></div>${glyph('#9a3ad0', tile, '#7a2a8a')}`,
   },
   // C 魔法陣: 下で赤い陣が回り、波紋が広がる
   C: {
@@ -69,15 +80,16 @@ ${Object.values(PLANS).map(p => p.css).join('\n')}`;
 function view([k, tile], z) {
   const w = 460 / z, h = 259 / z, ox = Math.min(960 - w, Math.max(0, AT.x - w / 2)), oy = Math.min(540 - h, Math.max(0, AT.y - h / 2));
   return `<div class="view"><div class="zoom" style="transform:scale(${z}) translate(${-ox}px,${-oy}px)"><img src="${img('bg-board-boss.png')}">
+  ${tile ? '' : `<div style="position:absolute;left:${AT.x - AT.G / 2 - 2}px;top:${AT.y - AT.G / 2 - 2}px;width:${AT.G + 4}px;height:${AT.G + 4}px;background:url(${img('bg-board-boss.png')}) ${-(AT.x - AT.G / 2 - 2)}px ${-(AT.y - AT.G / 2 - 2 - AT.G * 2)}px/960px 540px"></div>`}
   <div class="boss ${k}" style="left:${AT.x - SIZE / 2}px;top:${AT.y - SIZE / 2}px;width:${SIZE}px;height:${SIZE}px">${PLANS[k].html(tile)}</div></div></div>`;
 }
 const page = (z, title) => `<!doctype html><html><head>${head}<style>${css}</style></head><body style="width:960px">
-  ${title ? `<div style="padding:14px 14px 0;font-size:18px">${title}</div><div style="padding:4px 14px 0;font-size:12px;color:#cfc6b4;letter-spacing:1px">実際の盤面の上（右端の何もないマスがボスのマス）。盤面を ${z} 倍に拡大して見せている。マスの大きさは実際と同じ ${SIZE}。動きは style-S5-boss2.webm。</div>` : ''}
+  ${title ? `<div style="padding:14px 14px 0;font-size:18px">${title}</div><div style="padding:4px 14px 0;font-size:12px;color:#cfc6b4;letter-spacing:1px">実際の盤面の上。板なしは、ボスのマスの床も消して、壁の上に浮かべた。盤面を ${z} 倍に拡大して見せている。マスの大きさは実際と同じ ${SIZE}。動きは style-S5-boss2.webm。</div>` : ''}
   <div class="grid">${CASES.map(c => `<div><div class="cap">${c[2]}</div>${view(c, z)}</div>`).join('')}</div></body></html>`;
 
 (async () => {
   const b = await chromium.launch();
-  const f = path.join(OUT, 'boss2.html'); fs.writeFileSync(f, page(1.6, 'ボスのマス（2回目）: 実際の盤面の上で、板あり・板なし'));
+  const f = path.join(OUT, 'boss2.html'); fs.writeFileSync(f, page(1.6, 'ボスのマス（3回目）: 宝石の絵。板なしは床のマスも消した'));
   const p = await b.newPage({ viewport: { width: 960, height: 640 }, deviceScaleFactor: 2 });
   await p.goto('file://' + f); await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(300);
   await p.evaluate(() => { for (const a of document.getAnimations()) { a.pause(); a.currentTime = 700 + (a.effect.getTiming().delay < 0 ? -a.effect.getTiming().delay : 0); } });
