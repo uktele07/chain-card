@@ -30,7 +30,7 @@ function tabs(gs: GameScene): { items: Tab[]; title: string; sub?: string } {
 function pillar(gs: GameScene, active: number, focus: boolean) {
   const { items, title, sub } = tabs(gs);
   return html`<div class="pil"><div class="t">${title}${sub ? html`<small>${sub}</small>` : nothing}</div>
-    ${items.map((t, i) => html`<div class="tab ${focus && i === active ? 'on' : ''} ${!focus && i === active ? 'cur' : ''} ${t.off ? 'off' : ''} ${gs.restartArmed && t.act === 'restart' ? 'warn' : ''}" style="top:${90 + i * 46}px">${t.label}${t.note ? html`<small>${t.note}</small>` : nothing}</div>`)}
+    ${items.map((t, i) => html`<div class="tab ${focus && i === active ? 'on' : ''} ${!focus && i === active ? 'cur' : ''} ${t.off ? 'off' : ''} ${gs.restartArmed && t.act === 'restart' ? 'cur' : ''}" style="top:${90 + i * 46}px">${t.label}${t.note ? html`<small>${t.note}</small>` : nothing}</div>`)}
     <div class="sm" style="left:30px;top:442px">所持金</div>
     <div class="n" style="position:absolute;left:30px;top:458px;font-size:24px">${gs.save.gold}<span style="font-size:11px;color:var(--sub);margin-left:6px">G</span></div></div>`;
 }
@@ -45,9 +45,17 @@ export function menuView(gs: GameScene) {
 /** 盤面のメニュー。項目の注記は柱に出しきれないので、選んでいる項目の注記だけ右に出す */
 export function dmenuView(gs: GameScene) {
   const items = gs.dmenuItems(), cur = items[gs.cur.dmenu];
-  return html`<div class="mn">${pillar(gs, gs.cur.dmenu, true)}${corners}
-    ${cur?.note ? html`<div class="desc" style="left:270px;top:${90 + gs.cur.dmenu * 46 + 12}px">${cur.note}</div>` : nothing}
-    ${guide(gs, [['↑ ↓', '↑ ↓', '選ぶ'], ['○', 'Enter', '決定'], ['✕', 'Esc', '閉じる']])}</div>`;
+  // 「最初からやり直す」の確認（セーブリセットと同じ作りの、差し色の枠）
+  const confirm = gs.restartArmed ? html`<div class="dim"></div>
+    <div class="fr2" style="left:329px;top:134px;width:562px;height:252px"></div><div class="fr warn" style="left:335px;top:140px;width:550px;height:240px">
+      <div class="ask" style="top:36px">最初からやり直しますか？</div>
+      <div class="ask" style="top:78px;font-size:12px;color:var(--sub)">場所、HP、アイテムの使用、最大HPアップが消え、入口から始まる。</div>
+      <div class="ask" style="top:102px;font-size:12px;color:var(--ac)">元に戻せません。</div></div>
+    ${['いいえ', 'はい、やり直す'].map((l, i) => html`<div class="ch ${i === gs.cur.restart ? 'on' : ''} ${i ? 'warn' : ''}" style="left:${420 + i * 196}px;top:310px;width:184px">${l}</div>`)}` : nothing;
+  return html`<div class="mn">${pillar(gs, gs.cur.dmenu, !gs.restartArmed)}${corners}
+    ${!gs.restartArmed && cur?.note ? html`<div class="desc" style="left:270px;top:${90 + gs.cur.dmenu * 46 + 12}px">${cur.note}</div>` : nothing}
+    ${confirm}
+    ${guide(gs, gs.restartArmed ? [['← →', '← →', '選ぶ'], ['○', 'Enter', '決定'], ['✕', 'Backspace', 'やめる']] : [['↑ ↓', '↑ ↓', '選ぶ'], ['○', 'Enter', '決定'], ['✕', 'Esc', '閉じる']])}</div>`;
 }
 
 // ---------------- 装備 ----------------

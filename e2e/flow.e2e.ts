@@ -378,6 +378,19 @@ describe('ダンジョン', () => {
     expect(await scene(g.page, s => s.diceTest)).toBe(false);
   });
 
+  it('最初からやり直すときは確認が出る。「いいえ」ではやり直さない', async () => {
+    g = await open();
+    await enter();
+    await scene(g.page, s => { s.run.state.pos = 4; s.toBoard(); });
+    await key(g.page, 'Escape', 'ArrowDown', 'Enter');   // 最初からやり直す（入口以外: 操作説明・やり直す・出る・閉じる）
+    expect(await scene(g.page, s => s.restartArmed)).toBe(true);
+    await key(g.page, 'Enter');                           // 初めは「いいえ」
+    expect(await scene(g.page, s => [s.restartArmed, s.run.state.pos])).toEqual([false, 4]);
+    await key(g.page, 'Enter', 'ArrowRight', 'Enter');    // はい、やり直す
+    await waitTop(g.page, 'board');
+    expect(await scene(g.page, s => s.run.state.pos)).toBe(0);
+  });
+
   it('外に出ても、続きから再開できる', async () => {
     g = await open();
     await enter();

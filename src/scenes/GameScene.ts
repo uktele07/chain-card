@@ -43,7 +43,7 @@ export class GameScene extends Phaser.Scene {
 
   base: Base = 'list';
   overlays: Overlay[] = [];
-  cur = { list: 0, menu: 0, pause: 0, result: 0, reset: 0, slot: 0, opt: 0, deck: 0, shop: 0, sell: 0, dlist: 0, dmenu: 0 };
+  cur = { list: 0, menu: 0, pause: 0, result: 0, reset: 0, slot: 0, opt: 0, deck: 0, shop: 0, sell: 0, dlist: 0, dmenu: 0, restart: 0 };
   listTab: 0 | 1 = 0;       // 0=討伐 1=ダンジョン
   // --- ダンジョン ---
   run: DungeonRun | null = null;
@@ -58,6 +58,7 @@ export class GameScene extends Phaser.Scene {
   pick = 0;                 // 分かれ道で選んでいる行き先
   effect: Effect | null = null;
   reward: { accessory?: string; gold?: number } | null = null;
+  /** 盤面のメニューで「最初からやり直す」の確認を出している（cur.restart: 0=いいえ 1=はい） */
   restartArmed = false;
   private setCache = new Map<string, Set<number>>();
   shopTab: 0 | 1 = 0;       // 0=買う 1=売る
@@ -181,7 +182,7 @@ export class GameScene extends Phaser.Scene {
     return [
       ...(atStart ? [{ label: '装備', act: 'equip' as const, note: '入口でだけ変えられる' }] : []),
       { label: '操作説明', act: 'help' },   // マスの説明は盤面の △ で開く（メニューには置かない）
-      { label: this.restartArmed ? 'もう一度押すと、やり直す' : '最初からやり直す', act: 'restart' },
+      { label: '最初からやり直す', act: 'restart' },
       { label: 'ダンジョンから出る', act: 'leave', note: '続きから再開できる' }, { label: '閉じる', act: 'close' },
     ];
   }
@@ -378,14 +379,19 @@ export class GameScene extends Phaser.Scene {
 
       case 'dmenu': {
         const items = this.dmenuItems(), act = items[this.cur.dmenu]?.act;
-        if (b === 'up' || b === 'down') { this.move('dmenu', b === 'up' ? -1 : 1, items.length); this.restartArmed = false; }
+        if (this.restartArmed) {   // 確認: 左右で選び、○で決める。✕ でやめる
+          if (b === 'left' || b === 'right') this.move('restart', b === 'left' ? -1 : 1, 2);
+          else if (back || b === 'options' || (ok && this.cur.restart === 0)) { this.restartArmed = false; this.snd.uiBack(); }
+          else if (ok) { this.snd.uiOk(); this.restartArmed = false; this.save.run = null; this.enterDungeon(this.run!.def); }
+          break;
+        }
+        if (b === 'up' || b === 'down') this.move('dmenu', b === 'up' ? -1 : 1, items.length);
         else if (back || b === 'options' || (ok && act === 'close')) { this.snd.uiBack(); this.pop(); }
         else if (!ok) break;
         else if (act === 'equip') { this.snd.uiOk(); this.cur.slot = 0; this.equipFocus = 'slots'; this.overlays.push('equip'); }
         else if (act === 'legend' || act === 'help') { this.snd.uiOk(); this.overlays.push(act); }
         else if (act === 'restart') {
-          if (!this.restartArmed) { this.restartArmed = true; this.snd.uiMove(); }      // 押し間違いを防ぐため、2回押して実行
-          else { this.snd.uiOk(); this.save.run = null; this.enterDungeon(this.run!.def); }
+          this.restartArmed = true; this.cur.restart = 0; this.snd.uiOk();      // 押し間違いを防ぐため、確認を出す（初めは「いいえ」）
         }
         else if (act === 'leave') { this.snd.uiBack(); this.leaveDungeon(); }
         break;

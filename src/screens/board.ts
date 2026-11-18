@@ -69,7 +69,8 @@ export function drawBoard(gs: GameScene, l0: Layer, l1: Layer, l2: Layer, hud = 
   }
   // 分かれ道: 行き先のマスを強調して選ぶ
   opts.forEach((id, i) => {
-    const q = run.board[id], { x, y } = mid(q), from = mid(run.square), on = i === gs.pick, col = on ? C.white : C.keep;
+    // 選んでいる道を金で強く、選んでいない道は控えめな灰色（色が付いている方が進む道。持ち主の指示）
+    const q = run.board[id], { x, y } = mid(q), from = mid(run.square), on = i === gs.pick, col = on ? C.keep : '#8a8f99';
     const a = Math.atan2(y - from.y, x - from.x);
     l1.rect(x - G / 2 + 1, y - G / 2 + 1, G - 2, G - 2, { stroke: col, sw: on ? 5 : 3, rx: 5 });
     l1.tri((x + from.x) / 2, (y + from.y) / 2, on ? 13 : 10, a, col);
