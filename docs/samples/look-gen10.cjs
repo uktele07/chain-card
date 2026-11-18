@@ -4,6 +4,7 @@
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path');
 const FONTS = process.env.FONTS || __dirname, OUT = process.env.OUT || __dirname, RUBY = process.env.RUBY;
+const NAME = RUBY ? 'style-S5-boss4' : 'style-S5-boss5';   // RUBY を渡さなければ、ルビーの絵を抜いた版
 const head = `<meta charset="utf-8">${[500, 700].map(w => `<link rel="stylesheet" href="file://${FONTS}/node_modules/@fontsource/noto-sans-jp/${w}.css">`).join('')}`;
 const img = f => `file://${path.resolve(__dirname, f)}`;
 const AT = JSON.parse(fs.readFileSync(path.join(__dirname, 'bg-board-boss.json'), 'utf8')), SIZE = 54;
@@ -33,7 +34,7 @@ const css = `*{box-sizing:border-box;margin:0;padding:0}body{background:#14110f;
 .wisp.b{left:22%;animation-delay:-.9s}.wisp.c{left:68%;animation-delay:-1.7s}
 @keyframes wisp{0%{transform:translateY(40%) scale(.6);opacity:0}30%{opacity:1}100%{transform:translateY(-70%) scale(1.4);opacity:0}}`;
 const boss = `<div class="boss" style="left:${AT.x - SIZE / 2}px;top:${AT.y - SIZE / 2}px;width:${SIZE}px;height:${SIZE}px">
-  ${slab}<div class="glow"></div><img class="ruby" src="file://${RUBY}">
+  ${slab}<div class="glow"></div>${RUBY ? `<img class="ruby" src="file://${RUBY}">` : ''}
   <div class="mist"></div><div class="sm a"></div><div class="sm b"></div><div class="wisp"></div><div class="wisp b"></div><div class="wisp c"></div></div>`;
 function view(z) {
   const w = (+process.env.VW || 460) / z, h = (+process.env.VH || 259) / z, ox = Math.min(960 - w, Math.max(0, AT.x - w / 2)), oy = Math.min(540 - h, Math.max(0, AT.y - h / 2));
@@ -42,7 +43,7 @@ function view(z) {
 (async () => {
   const b = await chromium.launch();
   const frames = [0, 600, 1200, 1800];
-  const body = `<div style="padding:14px 14px 4px;font-size:18px">ボスのマス（4回目）: ルビーの画像、板あり、瘴気を最前面に</div>
+  const body = `<div style="padding:14px 14px 4px;font-size:18px">${RUBY ? 'ボスのマス（4回目）: ルビーの画像、板あり、瘴気を最前面に' : 'ボスのマス（5回目）: 4回目からルビーの絵を抜いたもの'}</div>
   <div style="padding:0 14px 10px;font-size:12px;color:#cfc6b4;letter-spacing:1px">上の4つは動きの途中（0.0 / 0.6 / 1.2 / 1.8 秒）を盤面の2.4倍で。下は盤面での大きさ（1倍）。</div>
   <div style="display:grid;grid-template-columns:repeat(2,460px);gap:16px;padding:0 12px 14px">${frames.map((t, i) => `<div class="f" data-t="${t}"><div style="font-size:12px;margin-bottom:4px">${(t / 1000).toFixed(1)} 秒</div>${view(2.4)}</div>`).join('')}</div>
   <div style="padding:0 12px 16px"><div style="font-size:12px;margin-bottom:4px">盤面での大きさ</div>${view(1)}</div>`;
@@ -52,7 +53,7 @@ function view(z) {
   await p.evaluate(() => { for (const el of document.querySelectorAll('.f, .view')) { const t = +(el.closest('.f')?.dataset.t ?? 900);
     for (const a of el.getAnimations({ subtree: true })) { a.pause(); a.currentTime = t + (a.effect.getTiming().delay < 0 ? -a.effect.getTiming().delay : 0); } } });
   await p.waitForTimeout(200);
-  await p.screenshot({ path: path.join(OUT, 'style-S5-boss4.png'), fullPage: true }); await p.close();
+  await p.screenshot({ path: path.join(OUT, NAME + '.png'), fullPage: true }); await p.close();
   // 動画: 盤面の2.4倍、6秒
   const vdir = path.join(OUT, 'video4'); fs.rmSync(vdir, { recursive: true, force: true });
   const ctx = await b.newContext({ viewport: { width: 920, height: 520 }, recordVideo: { dir: vdir, size: { width: 920, height: 520 } } });
@@ -60,6 +61,6 @@ function view(z) {
   const vf = path.join(OUT, 'boss4-video.html'); fs.writeFileSync(vf, `<!doctype html><html><head>${head}<style>${css.replace(/width:460px;height:259px/, 'width:920px;height:518px')}</style></head><body style="margin:0">${view(4.8).replace('class="view"', 'class="view" style="width:920px;height:518px"')}</body></html>`);
   await v.goto('file://' + vf); await v.waitForTimeout(6500);
   const vp = await v.video().path(); await ctx.close();
-  fs.copyFileSync(vp, path.join(OUT, 'style-S5-boss4.webm'));
+  fs.copyFileSync(vp, path.join(OUT, NAME + '.webm'));
   await b.close();
 })();
