@@ -40,6 +40,18 @@ const KINDS = [
     'M5 21V10a7 7 0 0 1 14 0v11M5 21h14M9 21v-6h6v6M12 3v4', '門'],
 ];
 
+// 紋章の中に入れる、分かりやすい記号（24×24 の線）。悪魔の顔、十字、ハートと上向きの矢印、薬瓶、炎、？、角のある骸骨、王冠と骸骨、門
+const PICTO = [
+  'M5 3.5 8 9M19 3.5 16 9M6 12.5a6 6 0 1 0 12 0a6 6 0 1 0-12 0M9.5 12v.4M14.5 12v.4M10 16h4',
+  'M12 5v14M5 12h14',
+  'M12 20C4.5 14.5 4 9 7.5 7.5 9.6 6.6 11.3 7.6 12 9.2 12.7 7.6 14.4 6.6 16.5 7.5 20 9 19.5 14.5 12 20ZM12 15.5v-5M9.8 12.6 12 10.4l2.2 2.2',
+  'M9.5 3.5h5M10.5 3.5v5L6.8 15.2A3.4 3.4 0 0 0 9.8 20.5h4.4a3.4 3.4 0 0 0 3-5.3L13.5 8.5v-5M8.2 14.5h7.6',
+  'M12 3c1 4 6 6 6 11a6 6 0 0 1-12 0c0-3 2-4.5 3-6.5.3 2 1.2 3.2 2.3 3.4C11 8.5 11 6 12 3Z',
+  'M8.8 9.2a3.2 3.2 0 1 1 4.6 2.9c-1 .5-1.4 1.3-1.4 2.6M12 18.2v.4',
+  'M3.5 3 7.5 9.5M20.5 3l-4 6.5M5.5 13a6.5 6.5 0 0 1 13 0v3.5h-2V20h-9v-3.5h-2ZM9 13.2h1.4M13.6 13.2H15M10.5 20v-2M13.5 20v-2',
+  'M4.5 4.5 7.5 8 12 3l4.5 5 3-3.5V10h-15ZM6 12.5h12V16l-2 4H8l-2-4ZM9.2 15h1.3M13.5 15h1.3',
+  'M5.5 20.5V10.5a6.5 6.5 0 0 1 13 0v10M3.5 20.5h17M12 4v16.5',
+];
 // 刻印石の板（前回の C と同じ）
 function slab(id, size, inner) {
   return `<svg width="${size}" height="${size}" viewBox="0 0 48 48">
@@ -72,6 +84,16 @@ function tileKanji([, col, , , ch], size) {
   <text x="24" y="34" text-anchor="middle" font-family="Noto Sans JP" font-weight="900" font-size="25" fill="${col}" style="filter:drop-shadow(0 0 2px ${col}) drop-shadow(0 0 5px ${col})">${ch}</text>
   <text x="23.6" y="33.6" text-anchor="middle" font-family="Noto Sans JP" font-weight="900" font-size="25" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width=".4">${ch}</text>`);
 }
+// B2 紋章（分かりやすく）: B の円の紋はそのまま、中の記号を物の形に。溝が種類の色で光る
+function tileRune2(k, size) {
+  const [, col] = k, d = PICTO[KINDS.indexOf(k)], id = 'e' + (uid++);
+  return slab(id, size, `<circle cx="24" cy="24" r="18" fill="none" stroke="#0a0806" stroke-width="2.4"/><circle cx="24" cy="24" r="18" fill="none" stroke="${col}" stroke-opacity=".5" stroke-width=".8"/>
+  <g transform="translate(12.5 12.5) scale(.96)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="${d}" stroke="#0a0806" stroke-width="3.8"/>
+    <path d="${d}" stroke="${col}" stroke-width="1.8" style="filter:drop-shadow(0 0 2.5px ${col}) drop-shadow(0 0 5px ${col})"/>
+    <path d="${d}" stroke="#fff" stroke-opacity=".3" stroke-width=".5" transform="translate(-.5 -.5)"/></g>`);
+}
+const ICON_PLANS2 = [['B 紋章（分かりやすく）', '前回の B の円の紋と、光る溝はそのまま。中の記号を、ひと目で分かる物の形にした（悪魔の顔、十字、ハートと上向きの矢印、薬瓶、炎、？、角のある骸骨、王冠、門）。', '弱点: 中ボス（角のある骸骨）とボス（王冠）は、小さいとモンスターと似て見える。盤面では中ボス・ボスを大きく置いて区別する。', tileRune2]];
 const ICON_PLANS = [
   ['A 影絵', '具体的な物の形を塗りで彫る。悪魔の頭、薬草、心臓、宝箱、炎、水晶玉、兜、竜の頭、門。初めて見ても意味が分かる。', '弱点: 形が細かいので、小さいと形が読みにくい。種類が増えるたびに絵を描く手間がかかる。', tileSilhouette],
   ['B 紋章', '三角・円・菱形・線で組んだ、古代の紋のような記号。外側の円で全部をそろえる。神殿の床の刻印らしい。', '弱点: 記号の意味は覚える必要がある（色が手がかり）。最初は「マスの説明」を見ることになる。', tileRune],
@@ -80,11 +102,15 @@ const ICON_PLANS = [
 
 // ---- サイコロ: 黒曜石の立方体。上の面を読む（見下ろす角度）。向かいの面の和は 7 ----
 const PIPS = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] };
-const SIDES = { 1: [2, 3], 2: [1, 3], 3: [1, 2], 4: [1, 5], 5: [1, 4], 6: [2, 4] };   // 上の目に対して、手前と右に見える目（向かいの和が 7 になる組み合わせ）
+const SIDES = { 1: [2, 3], 2: [6, 3], 3: [2, 6], 4: [5, 1], 5: [3, 6], 6: [4, 5] };   // 上の目に対して、手前と右に見える目。上と向かい合う目（和が 7）は出さない
+// 石のざらつき（細かい斑点）と、うっすらした筋
+const GRAIN = `url('data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><filter id="f"><feTurbulence type="fractalNoise" baseFrequency=".7" numOctaves="2" seed="7"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 .95  0 0 0 0 .9  0 0 0 .22 -.06"/></filter><rect width="120" height="120" filter="url(#f)"/></svg>')}')`;
+const VEIN = `url('data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><path d="M-5 70 C20 60 30 75 55 52 S90 40 105 30" stroke="rgba(255,240,220,.08)" stroke-width="1.2" fill="none"/><path d="M10 105 C25 85 45 92 60 70" stroke="rgba(255,240,220,.05)" stroke-width="1" fill="none"/></svg>')}')`;
 function face(k, s, tf, light, glow) {
   const r = s * (k === 1 ? .1 : .075);
-  return `<div style="position:absolute;width:${s}px;height:${s}px;transform:${tf};border-radius:${s * .16}px;
-    background:linear-gradient(150deg,rgba(255,255,255,${light * .5}) 0%,#2a2623 18%,#0c0a09 60%,#050404 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,${light * .35}),inset 0 0 ${s * .2}px rgba(0,0,0,.8)">
+  return `<div style="position:absolute;width:${s}px;height:${s}px;transform:${tf};border-radius:${s * .13}px;
+    background:${GRAIN},${VEIN},linear-gradient(150deg,hsl(25 6% ${10 + light * 14}%) 0%,hsl(25 6% ${6 + light * 6}%) 55%,#060505 100%);background-size:${s * .9}px,${s}px,100%;
+    box-shadow:inset 0 0 0 1px rgba(255,240,220,.07),inset ${s * .03}px ${s * .03}px ${s * .06}px rgba(255,240,220,${.04 + light * .05}),inset 0 0 ${s * .22}px rgba(0,0,0,.75)">
     ${PIPS[k].map(([x, y]) => `<div style="position:absolute;left:${s / 2 + x * s * .24 - r}px;top:${s / 2 + y * s * .24 - r}px;width:${r * 2}px;height:${r * 2}px;border-radius:50%;
       background:radial-gradient(circle,#fff3c0 0%,#ffb23a 35%,#ff4b1f 70%,#3a0a02 100%);box-shadow:0 0 ${r * 2 * glow}px #ff6a1f;opacity:${.55 + glow * .45}"></div>`).join('')}</div>`;
 }
@@ -93,9 +119,9 @@ function dice(n, size) {
   return `<div style="position:relative;width:${size}px;height:${size}px;perspective:${size * 5}px">
   <div style="position:absolute;left:12%;right:12%;bottom:4%;height:14%;border-radius:50%;background:radial-gradient(ellipse,rgba(255,90,30,.35),rgba(0,0,0,.6) 50%,transparent 75%);filter:blur(${size * .03}px)"></div>
   <div style="position:absolute;left:${(size - s) / 2}px;top:${(size - s) / 2 + size * .02}px;width:${s}px;height:${s}px;transform-style:preserve-3d;transform:rotateX(-52deg) rotateY(-32deg)">
-    ${face(n, s, `rotateX(90deg) translateZ(${s / 2}px)`, .9, 1)}
-    ${face(front, s, `translateZ(${s / 2}px)`, .25, .35)}
-    ${face(right, s, `rotateY(90deg) translateZ(${s / 2}px)`, .12, .25)}</div></div>`;
+    ${face(n, s, `rotateX(90deg) translateZ(${s / 2}px)`, .55, 1)}
+    ${face(front, s, `translateZ(${s / 2}px)`, .22, .35)}
+    ${face(right, s, `rotateY(90deg) translateZ(${s / 2}px)`, .08, .25)}</div></div>`;
 }
 
 const css = `*{box-sizing:border-box;margin:0;padding:0}body{background:#14110f;color:#d8b46a;font-family:'Noto Sans JP';font-weight:500;letter-spacing:2px}
@@ -112,14 +138,15 @@ const css = `*{box-sizing:border-box;margin:0;padding:0}body{background:#14110f;
     await p.goto('file://' + f); await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(400);
     await p.screenshot({ path: file, fullPage: true }); await p.close();
   };
-  const icons = ICON_PLANS.map(([t, d, w, fn]) => `<div class="sec"><div class="t">${t}</div><div class="d">${d}</div><div class="w">${w}</div>
+  const icons = (process.env.ROUND === '3' ? ICON_PLANS2 : ICON_PLANS).map(([t, d, w, fn]) => `<div class="sec"><div class="t">${t}</div><div class="d">${d}</div><div class="w">${w}</div>
   <div class="row">${KINDS.map(k => `<div class="cell">${fn(k, 72)}${k[0]}</div>`).join('')}</div>
   <div class="ctx"><img class="bg" src="${img('bg-board-idle.png')}"><div class="strip">${KINDS.map((k, i) => fn(k, i >= 6 && i <= 7 ? 54 : 40)).join('')}</div></div></div>`).join('');
-  await shoot(path.join(__dirname, 'style-S5-icons2.png'), `<!doctype html><html><head>${head}<style>${css}</style></head><body style="width:960px">
-  <div class="sec" style="padding-bottom:10px"><div class="t" style="font-size:20px">マスの絵（2回目）: 背景は刻印石、絵柄が全く違う3パターン</div><div class="d">上の列は大きく、下の帯は盤面に置いたときの実際の大きさ（中ボスとボスは大きめ）。</div></div>${icons}</body></html>`);
-  await shoot(path.join(__dirname, 'style-S5-dice2.png'), `<!doctype html><html><head>${head}<style>${css}</style></head><body style="width:960px">
-  <div class="sec"><div class="t" style="font-size:20px">サイコロ（2回目）: 黒曜石の立方体。上の面を読む</div>
-  <div class="d">見下ろす角度（上の面がいちばん大きく見える）。上の面の目だけ強く光らせ、手前と右の面の目は暗くした。向かいの面の和は 7。</div>
+  const R3 = process.env.ROUND === '3';
+  await shoot(path.join(__dirname, R3 ? 'style-S5-icons3.png' : 'style-S5-icons2.png'), `<!doctype html><html><head>${head}<style>${css}</style></head><body style="width:960px">
+  <div class="sec" style="padding-bottom:10px"><div class="t" style="font-size:20px">${R3 ? 'マスの絵（3回目）: 紋章を分かりやすく' : 'マスの絵（2回目）: 背景は刻印石、絵柄が全く違う3パターン'}</div><div class="d">上の列は大きく、下の帯は盤面に置いたときの実際の大きさ（中ボスとボスは大きめ）。</div></div>${icons}</body></html>`);
+  await shoot(path.join(__dirname, R3 ? 'style-S5-dice3.png' : 'style-S5-dice2.png'), `<!doctype html><html><head>${head}<style>${css}</style></head><body style="width:960px">
+  <div class="sec"><div class="t" style="font-size:20px">サイコロ（${R3 ? '3回目: 手前と右の目を正しく、縁の光を抑え、石の質感を足した' : '2回目'}）: 黒曜石の立方体。上の面を読む</div>
+  <div class="d">見下ろす角度（上の面がいちばん大きく見える）。上の面の目だけ強く光らせ、手前と右の面の目は暗くした。手前と右には、上と向かい合う目（和が 7）を出さない。</div>
   <div class="w">弱点: 目の多い面（5・6）は上の面でも斜めになるので、小さく出すと数えにくい。盤面では 70 以上の大きさが要る。</div>
   <div class="row" style="gap:22px;margin-top:22px"><div class="cell">${dice(5, 150)}大きく（上が 5）</div>${[1, 2, 3, 4, 5, 6].map(n => `<div class="cell">${dice(n, 96)}上が ${n}</div>`).join('')}</div></div></body></html>`, 300);
   await b.close();
