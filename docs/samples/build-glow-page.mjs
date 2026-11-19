@@ -1,11 +1,12 @@
 // マスが光る演出の見本を、ブラウザで動く1ファイルにする（録画より見やすいように）。
 // 使い方: npm run page && node docs/samples/build-glow-page.mjs → docs/samples/glow-sample.html
+// 2回目（2026-11-19）: 速さと強さを最初の見本（A 2.8秒、B 3.2秒）に戻し、A は全マスがそろって明滅する。
 // ゲーム本体は変えず、1ファイル版に見本の描画を足すだけ。画面上のボタン（またはキー 1 / 2）で A と B を切り替える
 import fs from 'node:fs';
 const base = fs.readFileSync('dist-single/chain-battle-standalone.html', 'utf8');
 const patch = String.raw`<script>
 (() => {
-  const NAMES = { A: 'にじみ（ばらばらに明滅、1周 2.0秒）', B: '波（駒から道に沿って流れる、1周 2.3秒）', N: '光なし（いまのゲーム）' };
+  const NAMES = { A: 'にじみ（全マスがそろって明滅、1周 2.8秒）', B: '波（駒から道に沿って流れる、1周 3.2秒）', N: '光なし（いまのゲーム）' };
   let v = 'A';
   const COL = { monster: 0xd9534a, heal: 0x4fae6a, maxhp: 0xe07ab0, item: 0x3fb7c9, event: 0xf2a23a, random: 0x9b7be0, mid: 0xc8453c, key: 0xf0c75e, door: 0xd0874a };
   const key = code => { for (const t of ['keydown', 'keyup']) window.dispatchEvent(new KeyboardEvent(t, { code, key: code })); };
@@ -22,7 +23,6 @@ const patch = String.raw`<script>
       g.addColorStop(0, 'rgba(255,255,255,.9)'); g.addColorStop(.45, 'rgba(255,255,255,.35)'); g.addColorStop(1, 'rgba(255,255,255,0)');
       x.fillStyle = g; x.fillRect(0, 0, 128, 128); t.refresh();
     }
-    const phase = {}; run.board.forEach(q => { phase[q.id] = Math.random(); });
     const l1 = s.L[1], end1 = l1.end.bind(l1);
     l1.end = () => {
       if (v !== 'N' && s.base === 'board') {
@@ -34,9 +34,9 @@ const patch = String.raw`<script>
           if (COL[q.kind] === undefined || !ahead.has(q.id)) continue;
           const x = q.x * G + G / 2 - s.cam.x, y = q.y * G + G / 2 - s.cam.y;
           if (x < -G || x > 960 + G || y < -G || y > 540 + G) continue;
-          const k = v === 'A' ? (t / 2.0 + phase[q.id]) : (t / 2.3 - (dist[q.id] ?? 0) * 0.08);
+          const k = v === 'A' ? t / 2.8 : (t / 3.2 - (dist[q.id] ?? 0) * 0.07);   // A は全マスで同じ間合い
           const w = 0.5 - 0.5 * Math.cos(k * Math.PI * 2);
-          l1.image('glow-soft', x, y, G * 1.35, 0.85 * w * w, COL[q.kind]);
+          l1.image('glow-soft', x, y, G * 1.25, 0.06 + 0.42 * w, COL[q.kind]);   // 最初の見本と同じ強さ
           l1.imgs[l1.ii - 1].setBlendMode(1);
         }
       }
