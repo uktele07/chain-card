@@ -5,6 +5,8 @@ import type Phaser from 'phaser';
 
 export const runeKey = (kind: string) => `rune-${kind}`;
 export const SMOKE = { a: 'boss-smoke-a', b: 'boss-smoke-b', mist: 'boss-mist', glow: 'boss-glow', wisp: 'boss-wisp' };
+/** マスがぼんやり光る演出の、白いぼかしの丸（色は tint で付ける） */
+export const SQUARE_GLOW = 'square-glow';
 
 /** マスの種類ごとの色と記号（24×24 の線）。ボスは記号なし */
 const RUNES: Record<string, [string, string]> = {
@@ -81,6 +83,7 @@ export function loadRunes(scene: Phaser.Scene, zoom: number) {
   // 手前の靄（脈打つ）
   canvasTex(scene, SMOKE.mist, px, (x, s) => { const g = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2); g.addColorStop(0, 'rgba(70,0,90,.35)'); g.addColorStop(.75, 'rgba(20,0,25,.5)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, s, s); });
   // 板の上の赤い光（瘴気の芯）
+  canvasTex(scene, SQUARE_GLOW, 128, (x, s) => { const g = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2); g.addColorStop(0, 'rgba(255,255,255,.9)'); g.addColorStop(.45, 'rgba(255,255,255,.35)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, s, s); });
   canvasTex(scene, SMOKE.glow, px, (x, s) => { const g = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2); g.addColorStop(0, 'rgba(255,30,40,.75)'); g.addColorStop(.7, 'rgba(255,30,40,0)'); x.fillStyle = g; x.fillRect(0, 0, s, s); });
   // 立ちのぼる細い煙
   canvasTex(scene, SMOKE.wisp, Math.round(40 * zoom), (x, s) => { const g = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2); g.addColorStop(0, 'rgba(80,10,100,.85)'); g.addColorStop(.7, 'rgba(80,10,100,0)'); x.fillStyle = g; x.fillRect(0, 0, s, s); });

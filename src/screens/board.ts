@@ -2,7 +2,7 @@
 // 層の使い方: 0=盤面の絵 / 1=マスの絵柄と行き先の印 / 2=駒と情報の枠 / 3=メニューなど
 import { W, H } from '../game/display';
 import { BOARD_PAD, boardKey, squareIconKey } from '../game/art';
-import { runeKey, SMOKE } from '../game/runes';
+import { runeKey, RUNE_COLOR, SMOKE, SQUARE_GLOW } from '../game/runes';
 import type { Layer } from '../game/ui';
 import type { Effect, Square } from '../game/dungeon';
 import { enemyById, itemOf, ACCESSORIES } from '../game/content';
@@ -52,6 +52,18 @@ export function drawBoard(gs: GameScene, l0: Layer, l1: Layer, l2: Layer, hud = 
       l1.image(squareIconKey(sq.icon), x, y, big * 1.25, al);
     }
     if (reach.has(q.id)) l1.rect(x - G / 2 + 2, y - G / 2 + 2, G - 4, G - 4, { stroke: C.keep, sw: 3, rx: 5 });
+  }
+  // 何かあるマスがぼんやり光る（2026-11-19 決定、案A）: これから先にある絵のあるマスに、種類の色の光を加算で重ねる。
+  // 全マスがそろって明滅する（1周 3.8秒）。入口・ボス（瘴気がある）・何もないマス・通り過ぎたマスは光らない
+  if (!hud) {
+    const w = 0.5 - 0.5 * Math.cos(gs.clock / 3.8 * Math.PI * 2), a = 0.06 + 0.42 * w;
+    for (const q of run.board) {
+      if (!SQUARE[q.kind].icon || q.kind === 'start' || q.kind === 'boss' || !ahead.has(q.id)) continue;
+      if (q.kind === 'key' && (st.key || st.doorOpen)) continue;
+      const { x, y } = mid(q);
+      if (x < -G || x > W + G || y < -G || y > 540 + G) continue;
+      l1.image(SQUARE_GLOW, x, y, G * 1.25, a, parseInt(RUNE_COLOR(q.kind).slice(1), 16), undefined, 0, true);
+    }
   }
   // ボスのマスの瘴気: 板の上に赤い光、脈打つ靄、逆向きに回る2段の煙、立ちのぼる細い煙（いちばん手前）
   if (!hud) {
