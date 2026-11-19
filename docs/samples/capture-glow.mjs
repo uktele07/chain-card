@@ -1,7 +1,7 @@
 // マスの「ぼんやり光る」演出の見本（3案）を動画で撮る。ゲームのコードは変えず、ページの中で描画に足す。
-// 使い方: node docs/samples/capture-glow.mjs（出力は docs/samples/style-S7-glow-<案>.webm と .png）
-// A にじみ: マスの絵に、種類の色の光を加算で重ね、ばらばらの間合いで明滅（1周 2.8秒）
-// B 波: 同じ光を、駒の位置から道に沿って先へ流れる波にする（1周 3.2秒）。進む向きが分かる
+// 使い方: node docs/samples/capture-glow.mjs（ONLY=ABC で案を選ぶ。既定は AB。出力は docs/samples/style-S7-glow-<案>.webm と .png）
+// A にじみ: マスの絵に、種類の色の光を加算で重ね、ばらばらの間合いで明滅（1周 2.0秒。2回目の見本で 2.8 → 2.0、明暗を強く）
+// B 波: 同じ光を、駒の位置から道に沿って先へ流れる波にする（1周 2.3秒。同じく 3.2 → 2.3）。進む向きが分かる
 // C 縁: 光は敷かず、マスの縁の細い線だけを明滅（1周 2.8秒）。いちばん控えめ
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -16,7 +16,7 @@ const server = await createServer({ server: { port: 4396, host: '127.0.0.1' }, l
 const tmp = process.env.TMPV || path.join(here, 'tmp-video');
 const b = await chromium.launch();
 const NAMES = { A: 'にじみ', B: '波', C: '縁' };
-for (const v of ['A', 'B', 'C']) {
+for (const v of (process.env.ONLY || 'AB').split('')) {
   const ctx = await b.newContext({ viewport: { width: 960, height: 540 }, recordVideo: { dir: tmp, size: { width: 960, height: 540 } } });
   const p = await ctx.newPage();
   await p.goto('http://127.0.0.1:4396/');
@@ -45,10 +45,10 @@ for (const v of ['A', 'B', 'C']) {
           if (!lit(q) || !ahead.has(q.id)) continue;
           const x = q.x * G + G / 2 - s.cam.x, y = q.y * G + G / 2 - s.cam.y;
           if (x < -G || x > 960 + G || y < -G || y > 540 + G) continue;
-          const k = v === 'A' ? (t / 2.8 + phase[q.id]) : (t / 3.2 - (dist[q.id] ?? 0) * 0.07);
+          const k = v === 'A' ? (t / 2.0 + phase[q.id]) : (t / 2.3 - (dist[q.id] ?? 0) * 0.08);
           const w = 0.5 - 0.5 * Math.cos(k * Math.PI * 2);          // 0〜1 をゆっくり往復
           // マスの絵の上に、加算で重ねる（絵が内側から光って見える）
-          l1.image('glow-soft', x, y, G * 1.25, 0.06 + 0.42 * w, COL[q.kind]);
+          l1.image('glow-soft', x, y, G * 1.35, 0.85 * w * w, COL[q.kind]);   // 暗いときは消える。2乗で明るい時間を短く、明暗をはっきり
           l1.imgs[l1.ii - 1].setBlendMode(1);
         }
       }
