@@ -116,7 +116,8 @@ export class GameScene extends Phaser.Scene {
     (window as unknown as Record<string, unknown>).__battle = this.battle;
   }
   toList() { this.base = 'list'; this.overlays = []; }
-  toReady(e: EnemyDef) { this.enemy = e; this.base = 'ready'; this.overlays = []; this.newBattle(); }
+  toReady(e: EnemyDef) { this.enemy = e; this.base = 'ready'; this.overlays = []; this.battleSeq++; this.newBattle(); }
+  private battleSeq = 0;   // 戦闘の通し番号（戦闘の曲を、新しい戦闘ごとに頭から流すため）
   pop() {
     const closed = this.overlays.pop();
     if (closed === 'equip' && this.base === 'board' && this.run) {     // 入口で装備を変えた: アイテムの枠を作り直す
@@ -646,8 +647,9 @@ export class GameScene extends Phaser.Scene {
       const step = left <= 0.5 ? 1 : left <= 1.0 ? 2 : left <= 1.5 ? 3 : 0;
       if (step && step !== this.lastTick) { this.lastTick = step; this.snd.warnTick(step); }
     }
-    // BGM: 戦闘中（ポーズ中は止める）と、すごろくの盤面の上（メニューを開いていても流す）
-    this.snd.music(this.top === 'fight' ? 'battle' : this.base === 'board' ? 'dungeon' : null, this.top === 'fight' ? bt : this.run);
+    // BGM: 戦闘は開始前の待機から流す（ポーズ中は止める）。すごろくの盤面の上（メニューを開いていても流す）
+    const fighting = this.top === 'fight' || this.base === 'ready';
+    this.snd.music(fighting ? 'battle' : this.base === 'board' ? 'dungeon' : null, fighting ? this.battleSeq : this.run);
     this.enemyShake = Math.max(0, this.enemyShake - dt);
     this.ringPulse = Math.max(0, this.ringPulse - dt);
     this.hurt = Math.max(0, this.hurt - dt);
