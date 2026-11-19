@@ -7,7 +7,7 @@ export function build() {
   const s2 = walk(f1.N, 'R2U5L5U4R7');
   const f2 = fork(s2.at(-1), 'R', 'U', SHORT[1], LONG[1]);
   const s4 = walk(f2.N, 'R2D6L2D3');
-  const ringA = walk([24, 15], 'R2D4L7U2');
+  const ringA = walk([24, 15], 'R1D3L6U1');
   const ringB = walk([19, 16], 'U1R4');
   const door = walk([18, 17], 'L2');
   const segs = [
@@ -20,6 +20,6 @@ export function build() {
     { id: 'r2', cells: ringB, kinds: 'nkmenn', next: ['r1'] },
     { id: 'dr', cells: door, kinds: 'DnB', next: [] },
   ];
-  const lava = [[9, 15, 5, 2], [19, 3, 5, 2], [20, 16, 6, 3], [12, 6, 4, 3], [2, 2, 7, 4], [15, 16, 1, 3], [1, 7, 3, 6]];
+  const lava = [[9, 15, 5, 2], [19, 3, 5, 2], [20, 16, 5, 2], [12, 6, 4, 3], [2, 2, 7, 4], [15, 16, 1, 3], [1, 7, 3, 6]];
   return { name: '蛇行', size: [28, 21], segs, lava };
 }
