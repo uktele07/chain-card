@@ -27,7 +27,9 @@ try {
     await p.keyboard.press('ArrowRight'); await p.keyboard.press('Enter');
     await p.waitForFunction(() => window.__scene.base === 'board' && window.__scene.bmode === 'idle', null, { timeout: 60000 });
     const G = await p.evaluate(() => { const s = window.__scene; document.querySelector('#ui').style.display = 'none'; s.bmode = 'cleared'; s.piece = { x: -9999, y: -9999 }; return s.run.def.cell; });
-    const Wd = b.size[0] * G, Hd = b.size[1] * G, x0 = -M, y0 = -M, x1 = Wd + M, y1 = Hd + M;
+    const Wd = b.size[0] * G, Hd = b.size[1] * G;
+    // view があれば、その範囲（マス単位 [x0, y0, x1, y1]）だけを撮る
+    const [x0, y0, x1, y1] = b.view ? b.view.map(v => v * G) : [-M, -M, Wd + M, Hd + M];
     const tiles = [];
     for (let y = y0; y < y1; y += 540) for (let x = x0; x < x1; x += 960) {
       const cx = Math.min(x, x1 - 960), cy = Math.min(y, y1 - 540);
@@ -38,9 +40,11 @@ try {
     // つなぎ合わせて、鍵と扉の印、案の名前を重ねる
     const marks = b.segs.flatMap(s => s.cells.map((c, i) => [c[0], c[1], s.kinds[i]])).filter(c => c[2] === 'k' || c[2] === 'D')
       .map(([x, y, k]) => ({ x: x * G + G / 2 - x0, y: y * G + G / 2 - y0, k }));
+    const labels = (b.labels ?? []).map(([x, y, t]) => ({ x: x * G + G / 2 - x0, y: y * G + G / 2 - y0, t }));
+    const notes = (b.notes ?? []).map(([x, y, t, side]) => ({ x: x * G + G / 2 - x0, y: y * G + G / 2 - y0, t, side }));
     const cv = await browser.newPage({ viewport: { width: x1 - x0, height: y1 - y0 } });
     await cv.setContent(`<canvas id=c width=${x1 - x0} height=${y1 - y0}></canvas><style>body{margin:0}</style>`);
-    const png = await cv.evaluate(async ({ tiles, marks, title, n }) => {
+    const png = await cv.evaluate(async ({ tiles, marks, title, n, labels, notes }) => {
       const c = document.getElementById('c'), g = c.getContext('2d');
       for (const t of tiles) { const im = new Image(); im.src = t.src; await im.decode(); g.drawImage(im, t.x, t.y); }
       for (const m of marks) {
@@ -52,11 +56,26 @@ try {
         g.fillStyle = col; g.font = '700 22px "Noto Sans JP", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
         g.fillText(key ? '鍵' : '扉', 0, 1); g.restore();
       }
-      g.fillStyle = 'rgba(8,7,6,.85)'; g.fillRect(0, 0, 360, 64);
-      g.fillStyle = '#d8b46a'; g.font = '700 26px "Noto Sans JP", sans-serif'; g.textBaseline = 'middle'; g.fillText(`案「${title}」`, 20, 32);
-      g.fillStyle = '#b8ad98'; g.font = '500 15px "Noto Sans JP", sans-serif'; g.fillText(`${n} マス`, 200, 34);
+      // 番号（輪の入口からの歩数）: マスの右上に小さな札
+      for (const l of labels) {
+        g.fillStyle = 'rgba(8,7,6,.85)'; g.strokeStyle = '#d8b46a'; g.lineWidth = 1;
+        g.beginPath(); g.roundRect(l.x + 8, l.y - 30, 22, 18, 3); g.fill(); g.stroke();
+        g.fillStyle = '#fff'; g.font = '600 12px Inter, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(l.t, l.x + 19, l.y - 20.5);
+      }
+      // 注記: マスの横に金の文字
+      for (const o of notes) {
+        g.font = '700 15px "Noto Sans JP", sans-serif'; g.textBaseline = 'middle';
+        const w = g.measureText(o.t).width + 20, h = 28;
+        const bx = o.side === 'r' ? o.x + 40 : o.side === 'l' ? o.x - 40 - w : o.x - w / 2, by = o.side === 'b' ? o.y + 38 : o.y - h / 2;
+        g.fillStyle = 'rgba(8,7,6,.9)'; g.strokeStyle = '#d8b46a'; g.beginPath(); g.roundRect(bx, by, w, h, 4); g.fill(); g.stroke();
+        g.fillStyle = '#d8b46a'; g.textAlign = 'left'; g.fillText(o.t, bx + 10, by + h / 2 + 1);
+      }
+      g.font = '700 26px "Noto Sans JP", sans-serif'; const tw = g.measureText(`案「${title}」`).width;
+      g.fillStyle = 'rgba(8,7,6,.85)'; g.fillRect(0, 0, tw + 130, 64);
+      g.fillStyle = '#d8b46a'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(`案「${title}」`, 20, 32);
+      g.fillStyle = '#b8ad98'; g.font = '500 15px "Noto Sans JP", sans-serif'; g.fillText(`${n} マス`, tw + 40, 34);
       return c.toDataURL('image/png');
-    }, { tiles, marks, title: b.name, n: b.segs.reduce((a, s) => a + s.cells.length, 0) });
+    }, { labels, notes, tiles, marks, title: b.name, n: b.segs.reduce((a, s) => a + s.cells.length, 0) });
     const file = path.join(OUT, `style-S6-board-${name}.png`);
     fs.writeFileSync(file, Buffer.from(png.split(',')[1], 'base64'));
     console.log('ok', file);
