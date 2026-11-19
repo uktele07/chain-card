@@ -1,7 +1,7 @@
 {
   "dungeons": [
     {
-      "id": "fire", "name": "火の神殿", "mark": "火", "color": "#f2a23a", "minutes": 10,
+      "id": "fire", "name": "炎の神殿", "mark": "炎", "color": "#f2a23a", "minutes": 10,
       "zako": ["fire_lizard", "fire_wisp", "lava_slime"], "midBoss": "fire_guard", "boss": "fire_beast",
       "heal": 20, "maxHpUp": 10,
       "event": { "name": "火柱", "damage": 3 },

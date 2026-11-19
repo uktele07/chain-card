@@ -99,7 +99,7 @@ export function loadBoardArt(scene: Phaser.Scene, def: { id: string; cell: numbe
   addSvg(scene, boardKey(def.id), `<svg xmlns="http://www.w3.org/2000/svg" width="${(Wd + P * 2) * k}" height="${(Hd + P * 2) * k}" viewBox="${-P} ${-P} ${Wd + P * 2} ${Hd + P * 2}">${s}</svg>`);
 }
 
-/** ダンジョンを選ぶ画面の絵（火の神殿）。450x420 */
+/** ダンジョンを選ぶ画面の絵（炎の神殿）。450x420 */
 export function loadTempleArt(scene: Phaser.Scene, zoom: number) {
   const w = 450, h = 420, cx = w / 2, by = h - 60, tw = 260;
   let seed = 11; const rnd = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;

@@ -232,7 +232,7 @@ describe('セーブデータ', () => {
 });
 
 describe('ダンジョン', () => {
-  /** 行き先をダンジョンに切り替えて、火の神殿に入る */
+  /** 行き先をダンジョンに切り替えて、炎の神殿に入る */
   const enter = async () => { await key(g.page, 'ArrowRight', 'Enter'); await waitTop(g.page, 'board'); };
   const mode = (m: string) => g.page.waitForFunction(x => (window as any).__scene.bmode === x, m);
   /** サイコロの目と敵の抽選を固定する（v=0 なら 1 の目） */
@@ -240,7 +240,7 @@ describe('ダンジョン', () => {
   const roll = async () => { await key(g.page, 'Enter'); await mode('rolling'); await key(g.page, 'Enter'); };
   const fix = (v: number) => g.page.evaluate(x => { (window as any).__scene.run.rng = () => x; }, v);
 
-  it('準備中のダンジョンには入れない。火の神殿に入ると盤面が出る', async () => {
+  it('準備中のダンジョンには入れない。炎の神殿に入ると盤面が出る', async () => {
     g = await open();
     await key(g.page, 'ArrowRight', 'ArrowDown', 'Enter');
     expect(await top(g.page)).toBe('list');
