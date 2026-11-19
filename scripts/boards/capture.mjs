@@ -19,7 +19,7 @@ try {
     const b = (await import(`./${name}.mjs`)).build();
     const data = JSON.parse(orig), fire = data.dungeons.find(d => d.id === 'fire');
     fire.size = b.size; fire.lava = b.lava;
-    fire.segments = b.segs.map(s => ({ id: s.id, next: s.next, cells: s.cells.map((c, i) => [c[0], c[1], s.kinds[i]]) }));
+    fire.segments = b.segs.map(s => ({ id: s.id, next: s.next, both: s.both, cells: s.cells.map((c, i) => [c[0], c[1], s.kinds[i]]) }));
     fs.writeFileSync(DATA, JSON.stringify(data, null, 2) + '\n');
     const p = await browser.newPage({ viewport: { width: 960, height: 540 } });
     await p.goto('http://127.0.0.1:4391/');
@@ -29,7 +29,8 @@ try {
     const G = await p.evaluate(() => { const s = window.__scene; document.querySelector('#ui').style.display = 'none'; s.bmode = 'cleared'; s.piece = { x: -9999, y: -9999 }; return s.run.def.cell; });
     const Wd = b.size[0] * G, Hd = b.size[1] * G;
     // view があれば、その範囲（マス単位 [x0, y0, x1, y1]）だけを撮る
-    const [x0, y0, x1, y1] = b.view ? b.view.map(v => v * G) : [-M, -M, Wd + M, Hd + M];
+    const view = process.env.RING ? b.ringView : b.view;   // RING=1 で輪のまわりだけ
+    const [x0, y0, x1, y1] = view ? view.map(v => v * G) : [-M, -M, Wd + M, Hd + M];
     const tiles = [];
     for (let y = y0; y < y1; y += 540) for (let x = x0; x < x1; x += 960) {
       const cx = Math.min(x, x1 - 960), cy = Math.min(y, y1 - 540);
@@ -40,8 +41,8 @@ try {
     // つなぎ合わせて、鍵と扉の印、案の名前を重ねる
     const marks = b.segs.flatMap(s => s.cells.map((c, i) => [c[0], c[1], s.kinds[i]])).filter(c => c[2] === 'k' || c[2] === 'D')
       .map(([x, y, k]) => ({ x: x * G + G / 2 - x0, y: y * G + G / 2 - y0, k }));
-    const labels = (b.labels ?? []).map(([x, y, t]) => ({ x: x * G + G / 2 - x0, y: y * G + G / 2 - y0, t }));
-    const notes = (b.notes ?? []).map(([x, y, t, side]) => ({ x: x * G + G / 2 - x0, y: y * G + G / 2 - y0, t, side }));
+    const labels = (process.env.RING ? b.labels ?? [] : []).map(([x, y, t]) => ({ x: x * G + G / 2 - x0, y: y * G + G / 2 - y0, t }));
+    const notes = (process.env.RING ? b.notes ?? [] : []).map(([x, y, t, side]) => ({ x: x * G + G / 2 - x0, y: y * G + G / 2 - y0, t, side }));
     const cv = await browser.newPage({ viewport: { width: x1 - x0, height: y1 - y0 } });
     await cv.setContent(`<canvas id=c width=${x1 - x0} height=${y1 - y0}></canvas><style>body{margin:0}</style>`);
     const png = await cv.evaluate(async ({ tiles, marks, title, n, labels, notes }) => {
@@ -76,7 +77,7 @@ try {
       g.fillStyle = '#b8ad98'; g.font = '500 15px "Noto Sans JP", sans-serif'; g.fillText(`${n} マス`, tw + 40, 34);
       return c.toDataURL('image/png');
     }, { labels, notes, tiles, marks, title: b.name, n: b.segs.reduce((a, s) => a + s.cells.length, 0) });
-    const file = path.join(OUT, `style-S6-board-${name}.png`);
+    const file = path.join(OUT, `style-S6-board-${name}${process.env.RING ? '-ring' : ''}.png`);
     fs.writeFileSync(file, Buffer.from(png.split(',')[1], 'base64'));
     console.log('ok', file);
     await p.close(); await cv.close();

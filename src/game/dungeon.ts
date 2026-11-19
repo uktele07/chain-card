@@ -12,7 +12,8 @@ export interface DungeonDef {
   reward: { accessory: string; gold: number };
   cell: number; size: [number, number];
   lava: [number, number, number, number][];                 // 溶岩の池 [x, y, w, h]（マス単位）
-  segments: { id: string; next: string[]; cells: [number, number, string][] }[];
+  // both: 両向きに進める道（輪）。中では向きを変えられない（来たマスには戻らない）
+  segments: { id: string; next: string[]; both?: boolean; cells: [number, number, string][] }[];
 }
 export interface Square { id: number; x: number; y: number; kind: SquareKind; next: number[]; seg: string }
 
@@ -28,6 +29,11 @@ export function buildBoard(def: DungeonDef): Square[] {
     });
   }
   for (const seg of def.segments) for (const n of seg.next) out[last[seg.id]].next.push(first[n]);
+  // 両向きの道: 逆向きのつながりも足す（道の中と、両向きの道どうしのつなぎ目）
+  for (const seg of def.segments) if (seg.both) {
+    for (let id = first[seg.id] + 1; id <= last[seg.id]; id++) out[id].next.push(id - 1);
+    for (const o of def.segments) if (o.both && o.next.includes(seg.id)) out[first[seg.id]].next.push(last[o.id]);
+  }
   return out;
 }
 
@@ -54,6 +60,7 @@ export interface RunState {
   cleared: boolean;
   key?: boolean;           // 最深部の鍵を持っている（負けると失い、鍵はもとのマスに戻る）
   doorOpen?: boolean;      // 最深部の扉を開けた（開いたまま。負けたらここからやり直す）
+  prev?: number | null;    // 直前にいたマス（輪の中で引き返さないため）
 }
 
 export class DungeonRun {
@@ -75,9 +82,11 @@ export class DungeonRun {
   /** 止まらずには通れないマス（中ボス、まだ開けていない扉、ボス） */
   isGate(i: number) { const k = this.board[i].kind, s = this.state; return k === 'boss' || (k === 'mid' && !s.midDone) || (k === 'door' && !s.doorOpen); }
   /** マス i から進めるマス。扉は鍵を持っているか、開いているときだけ */
-  exits(i: number): number[] {
+  exits(i: number): number[] { return this.exitsFrom(i, i === this.state.pos ? this.state.prev ?? -1 : -1); }
+  /** prev から来て、マス i にいるときに進めるマス（来たマスには戻らない） */
+  exitsFrom(i: number, prev: number): number[] {
     const s = this.state;
-    return this.board[i].next.filter(n => this.board[n].kind !== 'door' || s.key || s.doorOpen);
+    return this.board[i].next.filter(n => n !== prev && (this.board[n].kind !== 'door' || s.key || s.doorOpen));
   }
   /** 次の関所までに数えるマスの種類（輪の中で鍵がないときは、鍵のマスまで） */
   private goal(i: number) {
@@ -90,13 +99,15 @@ export class DungeonRun {
   get goalName() { const s = this.state; return !s.midDone ? '中ボス' : this.doorIndex >= 0 && !s.doorOpen ? (s.key ? '扉' : '鍵') : 'ボス'; }
   /** 次の目標（中ボス → 鍵 → 扉 → ボス）までの最短のマス数 */
   distanceToGate(): number {
-    const seen = new Map<number, number>([[this.state.pos, 0]]), q = [this.state.pos];
+    // 輪の中では向きで行き先が変わるので、（いるマス, 来たマス）の組で数える
+    const seen = new Set<string>(), q: [number, number, number][] = [[this.state.pos, this.state.prev ?? -1, 0]];
     while (q.length) {
-      const i = q.shift()!, d = seen.get(i)!;
-      for (const n of this.exits(i)) {
-        if (seen.has(n)) continue;
+      const [i, p, d] = q.shift()!;
+      for (const n of this.exitsFrom(i, p)) {
         if (this.goal(n)) return d + 1;
-        seen.set(n, d + 1); q.push(n);
+        const k = `${n},${i}`;
+        if (seen.has(k)) continue;
+        seen.add(k); q.push([n, i, d + 1]);
       }
     }
     return 0;
@@ -118,6 +129,7 @@ export class DungeonRun {
     const s = this.state, next = this.exits(s.pos);
     if (s.steps <= 0 || next.length === 0) { s.steps = 0; return 'landed'; }
     if (next.length > 1 && (choice === undefined || !next.includes(choice))) return 'choose';
+    s.prev = s.pos;
     s.pos = next.length > 1 ? choice! : next[0];
     s.steps--;
     if (this.isGate(s.pos)) s.steps = 0;     // 関所は必ず止まる
@@ -168,7 +180,7 @@ export class DungeonRun {
   battleLost() {
     const s = this.state;
     s.pos = s.doorOpen ? this.doorIndex : s.midDone ? this.midIndex : 0;
-    s.key = false;
+    s.key = false; s.prev = null;
     s.hp = this.baseMaxHp; s.maxBonus = 0;
     s.used = this.slots.map(() => false);
     s.steps = 0; s.pending = null;

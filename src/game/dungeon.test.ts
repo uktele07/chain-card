@@ -22,27 +22,31 @@ describe('盤面', () => {
     expect(board[0].kind).toBe('start');
     const r = run(); r.state.key = true;
     for (const pick of [0, 1]) {
-      let i = 0, n = 0;
+      let i = 0, p = -1, n = 0;
       // 輪の分かれ目では扉の側へ
-      while (r.exits(i).length && n++ < 200) { const o = r.exits(i), d = o.find(x => board[x].kind === 'door'); i = d ?? o[Math.min(pick, o.length - 1)]; }
+      while (r.exitsFrom(i, p).length && n++ < 200) { const o = r.exitsFrom(i, p), d = o.find(x => board[x].kind === 'door'); p = i; i = d ?? o[Math.min(pick, o.length - 1)]; }
       expect(i).toBe(r.bossIndex);
     }
   });
   it('中ボスの先に輪があり、鍵は輪の中に1本、扉は輪の出口に1つ', () => {
     const r = run(), key = board.filter(s => s.kind === 'key'), door = board.filter(s => s.kind === 'door');
     expect(key.length).toBe(1); expect(door.length).toBe(1);
-    // 扉の手前のマスから、扉を通らずに一周して戻れる
-    const junction = board.findIndex(s => s.next.includes(r.doorIndex));
-    let i = r.exits(junction)[0], n = 1;
-    const ring = [junction];
-    while (i !== junction && n < 100) { ring.push(i); i = r.exits(i)[0]; n++; }
-    expect(i).toBe(junction);
-    expect(ring.length).toBe(18);
-    expect(ring).toContain(key[0].id);
+    // 輪は16マス。入口（中ボスの次）から右回りに一周して戻れる。鍵は入口から左右どちら回りでも 8マス
+    const entry = r.midIndex + 1;
+    expect(r.exitsFrom(entry, r.midIndex).length).toBe(2);      // 入口で左右を選ぶ
+    let p = r.midIndex, i = entry, n = 0;
+    const ring: number[] = [];
+    do { ring.push(i); const o = r.exitsFrom(i, p).filter(x => board[x].kind !== 'door'); const nx = o.length > 1 ? Math.min(...o) : o[0]; p = i; i = nx; n++; } while (i !== entry && n < 100);
+    expect(ring.length).toBe(16);
+    expect(ring.indexOf(key[0].id)).toBe(8);
     expect(ring.every(x => x > r.midIndex)).toBe(true);
+    // 扉の前のマスは輪の上辺。入口との間は2マス（左回りで3マス目）
+    const junction = board.findIndex(s => s.next.includes(r.doorIndex));
+    expect(16 - ring.indexOf(junction)).toBe(3);
+    expect(board[r.doorIndex].y).toBeLessThan(board[junction].y);
   });
-  it('分かれ道が3つ、中ボスとボスが1つずつある', () => {
-    expect(board.filter(s => s.next.length > 1).length).toBe(3);
+  it('輪の外の分かれ道が2つ、中ボスとボスが1つずつある', () => {
+    expect(board.filter(s => s.next.length > 1 && !s.seg.startsWith('r')).length).toBe(2);
     expect(board.filter(s => s.kind === 'mid').length).toBe(1);
     expect(board.filter(s => s.kind === 'boss').length).toBe(1);
   });
@@ -142,20 +146,39 @@ describe('マスの効果', () => {
 describe('最深部の鍵と扉', () => {
   const junctionOf = (r: DungeonRun) => r.board.findIndex(s => s.next.includes(r.doorIndex));
   const keyIndex = (r: DungeonRun) => r.board.findIndex(s => s.kind === 'key');
+  /** マス pos に、prev から来た状態で置く（輪の中では、来た向きで進む向きが決まる） */
+  const place = (r: DungeonRun, pos: number, prev: number) => { r.state.pos = pos; r.state.prev = prev; };
+  it('輪の入口で左右を選べる。1周して入口に戻っても、向きは選び直せない', () => {
+    const r = run(); r.state.midDone = true;
+    const entry = r.midIndex + 1;
+    place(r, r.midIndex, -1); r.state.steps = 2;
+    expect(r.step()).toBe('moved');
+    expect(r.state.pos).toBe(entry);
+    expect(r.step()).toBe('choose');
+    expect(r.options().length).toBe(2);
+    place(r, entry + 15, entry + 14); r.state.steps = 2;       // 右回りで入口の手前まで来た
+    expect(r.step()).toBe('moved'); expect(r.state.pos).toBe(entry);
+    expect(r.options()).toEqual([entry + 1]);                  // そのまま右回り
+    place(r, entry + 1, entry + 2); r.state.steps = 2;         // 左回りで入口の手前まで来た
+    walk(r, 2);
+    expect(r.state.pos).toBe(entry + 15);                      // そのまま左回り
+  });
   it('鍵がないと、輪の分かれ目で扉へは進めず、輪をもう一周する（選ぶ画面も出ない）', () => {
     const r = run(); r.state.midDone = true;
     const j = junctionOf(r);
-    r.state.pos = j; r.state.steps = 3;
-    expect(r.options().length).toBe(1);
-    expect(r.step()).toBe('moved');
-    expect(r.board[r.state.pos].kind).not.toBe('door');
+    for (const from of [j - 1, j + 1]) {                      // どちら回りでも
+      place(r, j, from); r.state.steps = 3;
+      expect(r.options().length).toBe(1);
+      expect(r.step()).toBe('moved');
+      expect(r.board[r.state.pos].kind).not.toBe('door');
+    }
   });
   it('鍵は止まったときだけ手に入る。通り過ぎるだけでは得られない', () => {
     const r = run(); r.state.midDone = true;
-    r.state.pos = keyIndex(r) - 1; walk(r, 2);
+    place(r, keyIndex(r) - 1, keyIndex(r) - 2); walk(r, 2);
     expect(r.land()).toMatchObject({ kind: expect.not.stringMatching('key') });
     expect(r.state.key).toBeFalsy();
-    r.state.pos = keyIndex(r) - 1; walk(r, 1);
+    place(r, keyIndex(r) - 1, keyIndex(r) - 2); walk(r, 1);
     expect(r.land()).toEqual({ kind: 'key' });
     expect(r.state.key).toBe(true);
     expect(r.land()).toEqual({ kind: 'none' });      // 1本だけ。持っている間はもう出ない
@@ -163,7 +186,7 @@ describe('最深部の鍵と扉', () => {
   it('鍵を持っていれば、分かれ目で扉か輪かを選べる。扉では止まり、開けると開いたまま', () => {
     const r = run(); r.state.midDone = true; r.state.key = true;
     const j = junctionOf(r);
-    r.state.pos = j; r.state.steps = 4;
+    place(r, j, j - 1); r.state.steps = 4;
     expect(r.step()).toBe('choose');
     expect(r.options()).toContain(r.doorIndex);
     expect(r.step(r.doorIndex)).toBe('landed');       // 歩数が残っていても止まる

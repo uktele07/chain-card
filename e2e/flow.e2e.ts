@@ -353,7 +353,7 @@ describe('ダンジョン', () => {
   it('鍵を持って輪の分かれ目に来ると、扉を選べる。扉で止まって開く', async () => {
     g = await open();
     await enter();
-    await scene(g.page, s => { const r = s.run; r.state.midDone = true; r.state.key = true; r.state.pos = r.board.findIndex((q: { next: number[] }) => q.next.includes(r.doorIndex)); s.toBoard(); });
+    await scene(g.page, s => { const r = s.run; r.state.midDone = true; r.state.key = true; r.state.pos = r.board.findIndex((q: { next: number[] }) => q.next.includes(r.doorIndex)); r.state.prev = r.state.pos - 1; s.toBoard(); });
     await fix(0.99);     // 6の目
     await roll();
     await mode('choose');

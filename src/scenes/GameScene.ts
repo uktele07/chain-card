@@ -197,17 +197,19 @@ export class GameScene extends Phaser.Scene {
   }
   sqPos(i: number) { const r = this.run!, q = r.board[i], G = r.def.cell; return { x: q.x * G + G / 2, y: q.y * G + G / 2 }; }
   private bfs(key: string, from: number, depth: number): Set<number> {
-    const st0 = this.run!.state, k = `${key}:${from}:${st0.midDone}:${!!st0.key}:${!!st0.doorOpen}`, hit = this.setCache.get(k);
+    const st0 = this.run!.state, k = `${key}:${from}:${st0.prev}:${st0.midDone}:${!!st0.key}:${!!st0.doorOpen}`, hit = this.setCache.get(k);
     if (hit) return hit;
-    const run = this.run!, out = new Set<number>(), q: [number, number][] = [[from, 0]];
+    const run = this.run!, out = new Set<number>(), q: [number, number, number][] = [[from, from === st0.pos ? st0.prev ?? -1 : -1, 0]], seen = new Set<string>();
     while (q.length) {
-      const [i, d] = q.shift()!;
+      const [i, p, d] = q.shift()!;
       if (d >= depth) continue;
-      // 先にあるマスは、扉の先も含める（鍵がなくても薄くしない）。届くマスは、通れる道だけ
-      for (const n of depth < 99 ? run.exits(i) : run.board[i].next) {
-        if (out.has(n)) continue;
+      // 先にあるマスは、扉の先も含める（鍵がなくても薄くしない）。届くマスは、通れる道だけ（輪の中は向きを保つ）
+      for (const n of depth < 99 ? run.exitsFrom(i, p) : run.board[i].next) {
         out.add(n);
-        if (!(run.isGate(n) && depth < 99)) q.push([n, d + 1]);     // 関所では必ず止まるので、その先には届かない
+        const k = `${n},${i}`;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        if (!(run.isGate(n) && depth < 99)) q.push([n, i, d + 1]);     // 関所では必ず止まるので、その先には届かない
       }
     }
     if (this.setCache.size > 200) this.setCache.clear();
@@ -248,11 +250,11 @@ export class GameScene extends Phaser.Scene {
   /** 分かれ道で first を選んだとき、いまの出目で止まるマス（先にまた分かれ道があれば、そこまで） */
   stopFrom(first: number): number {
     const run = this.run!;
-    let pos = first;
+    let pos = first, prev = run.state.pos;
     for (let left = run.state.steps - 1; left > 0; left--) {
-      const next = run.exits(pos);
+      const next = run.exitsFrom(pos, prev);
       if (run.isGate(pos) || next.length !== 1) break;
-      pos = next[0];
+      prev = pos; pos = next[0];
     }
     return pos;
   }
