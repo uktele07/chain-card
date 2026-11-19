@@ -13,13 +13,13 @@ type Seg = { id: string; next: string[]; cells: [number, number, string][] };
 const seg = (id: string, kinds: string, next: string[]): Seg => ({ id, next, cells: [...kinds].map((k, i) => [i, 0, k] as [number, number, string]) });
 
 /** 敵の強さ: hp と damage に掛ける倍率（ダンジョンの敵だけ） */
-function enemies(zHp = 1, zDmg = 1, bHp = 1, bDmg = 1) {
+function enemies(zHp = 1, zDmg = 1, bHp = 1, bDmg = 1, ceil = false) {
   return (cards.enemies as EnemyDef[]).filter(e => (e as EnemyDef & { dungeon?: string }).dungeon).map(e => {
     const boss = e.id === base.midBoss || e.id === base.boss, h = boss ? bHp : zHp, d = boss ? bDmg : zDmg;
-    return { ...e, hp: Math.round(e.hp * h), actions: e.actions.map(a => ({ ...a, damage: Math.max(1, Math.round(a.damage * d)) })) };
+    return { ...e, hp: Math.round(e.hp * h), actions: e.actions.map(a => ({ ...a, damage: Math.max(1, (ceil ? Math.ceil : Math.round)(a.damage * d - 1e-9)) })) };
   });
 }
-type Variant = { name: string; segs: Seg[]; foes: EnemyDef[]; policy?: 'hp' | 'short' | 'long' };
+type Variant = { name: string; segs: Seg[]; foes: EnemyDef[]; event?: number };
 const cur = base.segments as unknown as Seg[];
 
 // 案A: いまの盤面（比べるため）
@@ -44,11 +44,14 @@ const VARIANTS: Variant[] = [
   { name: 'B 長く', segs: [...longMain, ...curBranches], foes: enemies() },
   { name: 'C 長く＋遠回りに損', segs: [...longMain, ...newBranches], foes: enemies() },
   { name: 'D Cに＋敵を強く', segs: [...longMain, ...newBranches], foes: enemies(1.3, 1.3, 1.25, 1.2) },
+  // 案F（持ち主の指示、2026-11-19）: D を直す。雑魚は HP そのまま・ダメージ ×1.3（切り上げ）、中ボス・ボスは HP ×1.2・ダメージ ×1.3（切り上げ）、火柱 3→7
+  { name: 'F Dを直す', segs: [...longMain, ...newBranches], foes: enemies(1, 1.3, 1.2, 1.3, true), event: 7 },
+  { name: 'G いまの盤面でFの数値', segs: cur, foes: enemies(1, 1.3, 1.2, 1.3, true), event: 7 },
   { name: 'E Cに＋敵を少し強く', segs: [...longMain, ...newBranches], foes: enemies(1.15, 1.2, 1.15, 1.1) },
 ];
 
 function play(v: Variant, skill: (typeof SKILLS)[keyof typeof SKILLS], setup: Setup, policy: 'hp' | 'short' | 'long') {
-  const def = { ...base, segments: v.segs } as unknown as DungeonDef;
+  const def = { ...base, segments: v.segs, event: { ...base.event, damage: v.event ?? base.event.damage } } as unknown as DungeonDef;
   const foe = (id: string) => v.foes.find(e => e.id === id)!;
   const run = new DungeonRun(def, 100, [true, true, true]);
   let sec = 0, deaths = 0;
