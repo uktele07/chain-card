@@ -12,6 +12,7 @@
 .bd .map svg { display: block; }
 .bd .items { position: absolute; left: 40px; bottom: 96px; white-space: nowrap; }
 .bd .item { display: inline-block; font-size: 11px; letter-spacing: 2px; padding: 3px 10px; border: 1px solid rgba(216,180,106,.6); color: #fff; margin-right: 6px; background: rgba(10,9,8,.6); }
+.bd .item.key { border-color: #ffd76a; color: #ffd76a; box-shadow: 0 0 10px rgba(255,215,106,.35); }
 .bd .item.used { border-color: rgba(216,180,106,.2); color: #5c554a; }
 .bd .hp { position: absolute; left: 40px; bottom: 24px; font: 500 40px/1 var(--f-num); font-variant-numeric: tabular-nums; }
 .bd .hp.low { color: var(--ac); }

@@ -18,14 +18,28 @@ function walk(r: DungeonRun, n: number, pick = 0) {
 
 describe('盤面', () => {
   const board = buildBoard(fire);
-  it('入口から始まり、どの道を選んでもボスに着く', () => {
+  it('入口から始まり、鍵を持てば、どの道を選んでもボスに着く', () => {
     expect(board[0].kind).toBe('start');
-    const boss = board.findIndex(s => s.kind === 'boss');
+    const r = run(); r.state.key = true;
     for (const pick of [0, 1]) {
       let i = 0, n = 0;
-      while (board[i].next.length && n++ < 200) i = board[i].next[Math.min(pick, board[i].next.length - 1)];
-      expect(i).toBe(boss);
+      // 輪の分かれ目では扉の側へ
+      while (r.exits(i).length && n++ < 200) { const o = r.exits(i), d = o.find(x => board[x].kind === 'door'); i = d ?? o[Math.min(pick, o.length - 1)]; }
+      expect(i).toBe(r.bossIndex);
     }
+  });
+  it('中ボスの先に輪があり、鍵は輪の中に1本、扉は輪の出口に1つ', () => {
+    const r = run(), key = board.filter(s => s.kind === 'key'), door = board.filter(s => s.kind === 'door');
+    expect(key.length).toBe(1); expect(door.length).toBe(1);
+    // 扉の手前のマスから、扉を通らずに一周して戻れる
+    const junction = board.findIndex(s => s.next.includes(r.doorIndex));
+    let i = r.exits(junction)[0], n = 1;
+    const ring = [junction];
+    while (i !== junction && n < 100) { ring.push(i); i = r.exits(i)[0]; n++; }
+    expect(i).toBe(junction);
+    expect(ring.length).toBe(18);
+    expect(ring).toContain(key[0].id);
+    expect(ring.every(x => x > r.midIndex)).toBe(true);
   });
   it('分かれ道が3つ、中ボスとボスが1つずつある', () => {
     expect(board.filter(s => s.next.length > 1).length).toBe(3);
@@ -104,10 +118,10 @@ describe('マスの効果', () => {
     expect(r.state.used).toEqual([false, true, false]);
     expect(at(r, 'item')).toMatchObject({ index: -1 });
   });
-  it('イベントは3ダメージ。これで倒れることはない', () => {
+  it('イベントは7ダメージ。これで倒れることはない', () => {
     const r = run();
-    expect(at(r, 'event')).toMatchObject({ kind: 'event', damage: 3 });
-    expect(r.state.hp).toBe(97);
+    expect(at(r, 'event')).toMatchObject({ kind: 'event', damage: 7 });
+    expect(r.state.hp).toBe(93);
     r.state.hp = 2;
     at(r, 'event');
     expect(r.state.hp).toBe(1);
@@ -122,6 +136,67 @@ describe('マスの効果', () => {
     const r = run(seq(2.5 / 6));          // 6種類のうち3番目（回復）
     r.state.hp = 50;
     expect(at(r, 'random')).toMatchObject({ kind: 'heal', random: true });
+  });
+});
+
+describe('最深部の鍵と扉', () => {
+  const junctionOf = (r: DungeonRun) => r.board.findIndex(s => s.next.includes(r.doorIndex));
+  const keyIndex = (r: DungeonRun) => r.board.findIndex(s => s.kind === 'key');
+  it('鍵がないと、輪の分かれ目で扉へは進めず、輪をもう一周する（選ぶ画面も出ない）', () => {
+    const r = run(); r.state.midDone = true;
+    const j = junctionOf(r);
+    r.state.pos = j; r.state.steps = 3;
+    expect(r.options().length).toBe(1);
+    expect(r.step()).toBe('moved');
+    expect(r.board[r.state.pos].kind).not.toBe('door');
+  });
+  it('鍵は止まったときだけ手に入る。通り過ぎるだけでは得られない', () => {
+    const r = run(); r.state.midDone = true;
+    r.state.pos = keyIndex(r) - 1; walk(r, 2);
+    expect(r.land()).toMatchObject({ kind: expect.not.stringMatching('key') });
+    expect(r.state.key).toBeFalsy();
+    r.state.pos = keyIndex(r) - 1; walk(r, 1);
+    expect(r.land()).toEqual({ kind: 'key' });
+    expect(r.state.key).toBe(true);
+    expect(r.land()).toEqual({ kind: 'none' });      // 1本だけ。持っている間はもう出ない
+  });
+  it('鍵を持っていれば、分かれ目で扉か輪かを選べる。扉では止まり、開けると開いたまま', () => {
+    const r = run(); r.state.midDone = true; r.state.key = true;
+    const j = junctionOf(r);
+    r.state.pos = j; r.state.steps = 4;
+    expect(r.step()).toBe('choose');
+    expect(r.options()).toContain(r.doorIndex);
+    expect(r.step(r.doorIndex)).toBe('landed');       // 歩数が残っていても止まる
+    expect(r.land()).toEqual({ kind: 'door' });
+    expect(r.state).toMatchObject({ doorOpen: true, key: false });
+    r.state.pos = j; r.state.steps = 1;
+    expect(r.step(r.doorIndex)).toBe('landed');
+    r.state.steps = 2;
+    expect(r.step()).toBe('moved');                    // 開いた扉は止まらずに通れる
+  });
+  it('鍵を持って負けると、鍵を失い、鍵はもとのマスに戻る', () => {
+    const r = run(); r.state.midDone = true; r.state.key = true; r.state.pos = junctionOf(r);
+    r.battleLost();
+    expect(r.state).toMatchObject({ key: false, pos: r.midIndex });
+    r.state.pos = keyIndex(r);
+    expect(r.land()).toEqual({ kind: 'key' });
+  });
+  it('扉を開けたあとに負けると、扉のマスから。鍵のマスでは何も起きない', () => {
+    const r = run(); r.state.midDone = true; r.state.doorOpen = true; r.state.pos = r.bossIndex;
+    r.battleLost();
+    expect(r.state.pos).toBe(r.doorIndex);
+    expect(r.land()).toEqual({ kind: 'none' });
+    r.state.pos = keyIndex(r);
+    expect(r.land()).toEqual({ kind: 'none' });
+  });
+  it('次の目標: 中ボス → 鍵 → 扉 → ボス', () => {
+    const r = run();
+    expect(r.goalName).toBe('中ボス');
+    r.state.midDone = true; expect(r.goalName).toBe('鍵');
+    r.state.pos = keyIndex(r) - 2; expect(r.distanceToGate()).toBe(2);
+    r.state.key = true; expect(r.goalName).toBe('扉');
+    r.state.pos = junctionOf(r); expect(r.distanceToGate()).toBe(1);
+    r.state.doorOpen = true; r.state.key = false; expect(r.goalName).toBe('ボス');
   });
 });
 

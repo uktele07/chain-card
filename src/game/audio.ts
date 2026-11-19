@@ -1,18 +1,12 @@
-// 効果音とBGM。素材ファイルを使わず、その場で音を合成する。
+// 効果音とBGM。効果音はその場で合成する。BGM は持ち主が用意した曲（public/audio）を流す。
 type Osc = OscillatorType;
 
 export class Sound {
   private ctx: AudioContext | null = null;
   private master!: GainNode;
   private seBus!: GainNode;
-  private bgmBus!: GainNode;
   private noiseBuf!: AudioBuffer;
   muted = false;
-  private bgmOn = false;
-  private nextStep = 0;
-  private step = 0;
-  /** BGMの厚み（チェインの段数 0〜4）。上がるほど音が増える */
-  intensity = 0;
 
   /** 音を出せる状態か（ブラウザは、クリックやキー操作があるまで音を止めている） */
   get ready() { return !!this.ctx && this.ctx.state === 'running'; }
@@ -27,7 +21,6 @@ export class Sound {
         const comp = this.ctx.createDynamicsCompressor();
         this.master.connect(comp).connect(this.ctx.destination);
         this.seBus = this.ctx.createGain(); this.seBus.gain.value = 0.9; this.seBus.connect(this.master);
-        this.bgmBus = this.ctx.createGain(); this.bgmBus.gain.value = 0.26; this.bgmBus.connect(this.master);
         const len = this.ctx.sampleRate;
         this.noiseBuf = this.ctx.createBuffer(1, len, len);
         const d = this.noiseBuf.getChannelData(0);
@@ -40,6 +33,7 @@ export class Sound {
   toggleMute() {
     this.muted = !this.muted;
     if (this.ctx) this.master.gain.setTargetAtTime(this.muted ? 0 : 0.55, this.ctx.currentTime, 0.02);
+    for (const a of Object.values(this.tracks)) a.muted = this.muted;
   }
 
   private tone(bus: GainNode, type: Osc, f0: number, f1: number, dur: number, gain: number, at = 0, attack = 0.004) {
@@ -152,33 +146,26 @@ export class Sound {
     for (const [i, f] of [392, 523.25, 659.25, 783.99].entries()) this.tone(this.seBus, 'triangle', f, f, 0.9, 0.13, i * 0.09);
   }
 
-  // ---- BGM: 16分音符を刻んで先回りで予約する ----
-  startBgm() { if (!this.ctx) return; this.bgmOn = true; this.step = 0; this.nextStep = this.ctx.currentTime + 0.05; }
-  stopBgm() { this.bgmOn = false; }
-
-  /** 毎フレーム呼ぶ */
-  update() {
-    if (!this.bgmOn || !this.ready) return;
-    const c = this.ctx!, spb = 60 / 138 / 4;
-    if (this.nextStep < c.currentTime - 0.2) this.nextStep = c.currentTime + 0.02;   // タブが止まっていた場合
-    while (this.nextStep < c.currentTime + 0.12) {
-      this.schedule(this.step, this.nextStep - c.currentTime);
-      this.nextStep += spb; this.step++;
+  // ---- BGM: 持ち主が用意した曲（public/audio）。ループで流す ----
+  private tracks: Record<string, HTMLAudioElement> = {};
+  private playing: string | null = null;
+  private tokens: Record<string, unknown> = {};
+  /**
+   * 流す曲を毎フレーム伝える。null なら止める（位置は残す）。
+   * token が前回と違えば、曲の頭から流す（新しい戦闘、新しい探索）
+   */
+  music(name: 'dungeon' | 'battle' | null, token?: unknown) {
+    if (this.playing && this.playing !== name) { this.tracks[this.playing].pause(); this.playing = null; }
+    if (!name || !this.ready) return;
+    let a = this.tracks[name];
+    if (!a) {
+      a = this.tracks[name] = new Audio(`audio/bgm-${name}.mp3`);
+      a.loop = true; a.preload = 'auto';
     }
-  }
-
-  private schedule(step: number, at: number) {
-    const b = this.bgmBus, s = step % 16, bar = Math.floor(step / 16) % 4;
-    const root = [110, 87.31, 130.81, 98][bar];                       // Am F C G
-    const chord = [[1, 1.189, 1.498], [1, 1.26, 1.498], [1, 1.26, 1.498], [1, 1.26, 1.498]][bar];
-    if (s % 4 === 0) this.tone(b, 'sine', 150, 42, 0.16, 0.95, at, 0.002);                                    // キック
-    if (s % 4 === 2) this.noise(b, 'highpass', 7000, 7000, 0.035, this.intensity >= 1 ? 0.2 : 0.1, at);       // ハット
-    if (this.intensity >= 2 && s % 8 === 4) this.noise(b, 'bandpass', 1800, 1800, 0.11, 0.38, at, 0.8);       // スネア
-    if (s % 2 === 0) this.tone(b, 'sawtooth', root * (s % 8 === 6 ? 2 : 1), root * (s % 8 === 6 ? 2 : 1), 0.11, 0.2, at); // ベース
-    if (this.intensity >= 1) {                                                                                // アルペジオ
-      const n = chord[[0, 1, 2, 1][s % 4]] * root * 4 * (s >= 8 && this.intensity >= 3 ? 2 : 1);
-      this.tone(b, 'square', n, n, 0.09, this.intensity >= 3 ? 0.085 : 0.06, at);
-    }
-    if (this.intensity >= 4 && s % 2 === 0) { const n = chord[(s / 2) % 3] * root * 8; this.tone(b, 'triangle', n, n, 0.2, 0.11, at); } // S中の上物
+    a.volume = BGM_VOLUME; a.muted = this.muted;
+    if (this.tokens[name] !== token) { this.tokens[name] = token; try { a.currentTime = 0; } catch { /* 読み込み前 */ } }
+    if (this.playing !== name) { this.playing = name; a.play().catch(() => { if (this.playing === name) this.playing = null; }); }
   }
 }
+/** BGM の音量（曲は平均 -14dB と大きいので、効果音より下げる） */
+const BGM_VOLUME = 0.35;

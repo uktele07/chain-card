@@ -114,8 +114,8 @@ export class GameScene extends Phaser.Scene {
     this.lastTick = 0; this.hurt = 0;
     (window as unknown as Record<string, unknown>).__battle = this.battle;
   }
-  toList() { this.base = 'list'; this.overlays = []; this.snd.stopBgm(); this.snd.intensity = 0; }
-  toReady(e: EnemyDef) { this.enemy = e; this.base = 'ready'; this.overlays = []; this.snd.stopBgm(); this.snd.intensity = 0; this.newBattle(); }
+  toList() { this.base = 'list'; this.overlays = []; }
+  toReady(e: EnemyDef) { this.enemy = e; this.base = 'ready'; this.overlays = []; this.newBattle(); }
   pop() {
     const closed = this.overlays.pop();
     if (closed === 'equip' && this.base === 'board' && this.run) {     // 入口で装備を変えた: アイテムの枠を作り直す
@@ -132,7 +132,6 @@ export class GameScene extends Phaser.Scene {
     this.cur.result = won ? 1 : 0;      // 勝ち→一覧に戻る / 負け→もう一度
     this.outcome = { rank: null, newBest: false, prevBest: null, wins: 0 };
     this.gained = null;
-    this.snd.stopBgm();
     if (this.inRun && this.run) { this.finishInRun(won); return; }
     if (!won) { this.snd.lose(); return; }
     this.snd.win();
@@ -195,17 +194,17 @@ export class GameScene extends Phaser.Scene {
   }
   sqPos(i: number) { const r = this.run!, q = r.board[i], G = r.def.cell; return { x: q.x * G + G / 2, y: q.y * G + G / 2 }; }
   private bfs(key: string, from: number, depth: number): Set<number> {
-    const k = `${key}:${from}:${this.run!.state.midDone}`, hit = this.setCache.get(k);
+    const st0 = this.run!.state, k = `${key}:${from}:${st0.midDone}:${!!st0.key}:${!!st0.doorOpen}`, hit = this.setCache.get(k);
     if (hit) return hit;
     const run = this.run!, out = new Set<number>(), q: [number, number][] = [[from, 0]];
     while (q.length) {
       const [i, d] = q.shift()!;
       if (d >= depth) continue;
-      for (const n of run.board[i].next) {
+      // 先にあるマスは、扉の先も含める（鍵がなくても薄くしない）。届くマスは、通れる道だけ
+      for (const n of depth < 99 ? run.exits(i) : run.board[i].next) {
         if (out.has(n)) continue;
         out.add(n);
-        const kind = run.board[n].kind, gate = kind === 'boss' || (kind === 'mid' && !run.state.midDone);
-        if (!(gate && depth < 99)) q.push([n, d + 1]);     // 関所では必ず止まるので、その先には届かない
+        if (!(run.isGate(n) && depth < 99)) q.push([n, d + 1]);     // 関所では必ず止まるので、その先には届かない
       }
     }
     if (this.setCache.size > 200) this.setCache.clear();
@@ -226,7 +225,7 @@ export class GameScene extends Phaser.Scene {
   }
   toBoard() {
     const run = this.run!, st = run.state;
-    this.base = 'board'; this.overlays = []; this.snd.stopBgm(); this.snd.intensity = 0;
+    this.base = 'board'; this.overlays = [];
     this.piece = this.sqPos(st.pos); this.target = null; this.effect = null; this.diceFace = 0;
     this.cam = this.camTarget();
     if (st.cleared) this.bmode = 'cleared';
@@ -248,8 +247,8 @@ export class GameScene extends Phaser.Scene {
     const run = this.run!;
     let pos = first;
     for (let left = run.state.steps - 1; left > 0; left--) {
-      const k = run.board[pos].kind, next = run.board[pos].next;
-      if (k === 'boss' || (k === 'mid' && !run.state.midDone) || next.length !== 1) break;
+      const next = run.exits(pos);
+      if (run.isGate(pos) || next.length !== 1) break;
       pos = next[0];
     }
     return pos;
@@ -257,7 +256,7 @@ export class GameScene extends Phaser.Scene {
   /** 1マス進める。分かれ道なら選ぶ画面にする */
   advance(choice?: number) {
     const run = this.run!, r = run.step(choice);
-    if (r === 'choose') { this.bmode = 'choose'; this.pick = 0; return; }
+    if (r === 'choose') { this.bmode = 'choose'; this.pick = Math.max(0, run.options().findIndex(n => run.board[n].kind === 'door')); return; }   // 鍵があれば、扉の側を選んだ状態で始める
     this.bmode = 'moving'; this.target = this.sqPos(run.state.pos); this.landAfter = r === 'landed';
   }
   land() {
@@ -342,7 +341,7 @@ export class GameScene extends Phaser.Scene {
         break;
 
       case 'ready':
-        if (ok) { this.base = 'fight'; this.snd.startBgm(); this.snd.refill(); }   // 開始するだけ。○のカードは出さない
+        if (ok) { this.base = 'fight'; this.snd.refill(); }   // 開始するだけ。○のカードは出さない
         else if (b === 'l2') { if (bt.cycleItem()) this.snd.uiMove(); }
         else if (this.inRun) { if (back || b === 'options') this.snd.miss(); }      // ダンジョンでは逃げられず、装備も変えられない
         else if (back) { this.snd.uiBack(); this.toList(); }
@@ -404,7 +403,7 @@ export class GameScene extends Phaser.Scene {
         else if (b === 'skip') bt.skip();
         else if (b === 'l2') { if (bt.cycleItem()) this.snd.uiMove(); }
         else if (b === 'r2') bt.useSelected();
-        else if (b === 'options') { this.cur.pause = 0; this.overlays.push('pause'); this.snd.stopBgm(); this.snd.uiOk(); }
+        else if (b === 'options') { this.cur.pause = 0; this.overlays.push('pause'); this.snd.uiOk(); }
         break;
       }
 
@@ -588,7 +587,7 @@ export class GameScene extends Phaser.Scene {
     if (this.top === 'fight') bt.update(dt);
     if (this.top === 'resume') {
       this.resumeLeft -= dt;
-      if (this.resumeLeft <= 0) { this.overlays = []; this.snd.startBgm(); }
+      if (this.resumeLeft <= 0) this.overlays = [];
     }
     this.resultWait = Math.max(0, this.resultWait - dt);
     this.updateBoard(dt);
@@ -634,8 +633,8 @@ export class GameScene extends Phaser.Scene {
       const step = left <= 0.5 ? 1 : left <= 1.0 ? 2 : left <= 1.5 ? 3 : 0;
       if (step && step !== this.lastTick) { this.lastTick = step; this.snd.warnTick(step); }
     }
-    this.snd.intensity = this.top === 'fight' ? bt.chain : 0;
-    this.snd.update();
+    // BGM: 戦闘中（ポーズ中は止める）と、すごろくの盤面の上（メニューを開いていても流す）
+    this.snd.music(this.top === 'fight' ? 'battle' : this.base === 'board' ? 'dungeon' : null, this.top === 'fight' ? bt : this.run);
     this.enemyShake = Math.max(0, this.enemyShake - dt);
     this.ringPulse = Math.max(0, this.ringPulse - dt);
     this.hurt = Math.max(0, this.hurt - dt);

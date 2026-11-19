@@ -313,11 +313,14 @@ describe('ダンジョン', () => {
   it('分かれ道は盤面の上で選ぶ。先を見ることもできる', async () => {
     g = await open();
     await enter();
-    await scene(g.page, s => { s.run.state.pos = 11; s.toBoard(); });
+    // 最初の分かれ道のマスから
+    const fork = await scene(g.page, s => { const f = s.run.board.findIndex((q: { next: number[] }) => q.next.length > 1); s.run.state.pos = f; s.toBoard(); return f; });
     await fix(0);
     await roll();
     await mode('choose');
-    expect(await scene(g.page, s => s.run.options().map((o: number) => s.stopFrom(o)))).toEqual([12, 15]);   // 1の目: 止まるのは最初のマス
+    const first = await scene(g.page, s => s.run.options());
+    expect(await scene(g.page, s => s.run.options().map((o: number) => s.stopFrom(o)))).toEqual(first);   // 1の目: 止まるのは最初のマス
+    expect(first.length).toBe(2); expect(fork).toBeGreaterThan(0);
     await key(g.page, 'KeyA');
     await mode('look');
     await key(g.page, 'KeyA');
@@ -327,6 +330,19 @@ describe('ダンジョン', () => {
     await key(g.page, 'Enter');
     await g.page.waitForFunction(() => (window as any).__scene.bmode !== 'moving' && (window as any).__scene.bmode !== 'choose');
     expect(await scene(g.page, s => s.run.square.seg)).toBe('b1');
+  });
+
+  it('鍵を持って輪の分かれ目に来ると、扉を選べる。扉で止まって開く', async () => {
+    g = await open();
+    await enter();
+    await scene(g.page, s => { const r = s.run; r.state.midDone = true; r.state.key = true; r.state.pos = r.board.findIndex((q: { next: number[] }) => q.next.includes(r.doorIndex)); s.toBoard(); });
+    await fix(0.99);     // 6の目
+    await roll();
+    await mode('choose');
+    expect(await scene(g.page, s => s.run.options()[s.pick] === s.run.doorIndex)).toBe(true);   // 扉の側を選んだ状態で始まる
+    await key(g.page, 'Enter');
+    await mode('landed');
+    expect(await scene(g.page, s => [s.effect.kind, s.run.state.doorOpen, s.run.state.key, s.run.state.pos === s.run.doorIndex])).toEqual(['door', true, false, true]);
   });
 
   it('負けると入口に戻り、最大HPアップは消える', async () => {

@@ -13,7 +13,7 @@ export function resultView(gs: GameScene) {
   const b = gs.battle, won = b.result === 'won', ready = gs.resultWait <= 0, pad = gs.pad;
   // 選ぶもの: 討伐は「もう一度 / 一覧に戻る」、ダンジョンは1つだけ（勝てば進む、負ければ入口か中間地点）
   // ダンジョンで負けたときは「ダンジョンから出る」も選べる
-  const choices = gs.inRun && gs.run ? (won ? ['進む'] : [gs.run.state.midDone ? '中間地点に戻る' : '入口に戻る', 'ダンジョンから出る']) : ['もう一度', '一覧に戻る'];
+  const choices = gs.inRun && gs.run ? (won ? ['進む'] : [gs.run.state.doorOpen ? '扉に戻る' : gs.run.state.midDone ? '中間地点に戻る' : '入口に戻る', 'ダンジョンから出る']) : ['もう一度', '一覧に戻る'];
   const sel = choices.length === 1 ? 0 : gs.cur.result;
   const long = choices.some(c => c.length > 6);   // 「ダンジョンから出る」など長い項目は、少し左から詰めて並べる
   const chs = choices.map((c, i) => html`<div class="ch ${ready && i === sel ? 'on' : ''} ${ready ? '' : 'wait'}" style="left:${long ? 762 : 770}px;letter-spacing:${long ? 2 : 4}px;top:${244 + (choices.length === 1 ? 20 : i * 40)}px">${c}</div>`);

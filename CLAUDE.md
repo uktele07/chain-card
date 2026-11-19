@@ -14,7 +14,7 @@
 
 ## 開発ルール
 
-- 技術: TypeScript + Phaser 3（Canvas / WebGL に描く）。HTML と CSS は入れ物だけで、画面は作っていない。絵は SVG をコードで生成、音は WebAudio で合成。
+- 技術: TypeScript + Phaser 3（Canvas / WebGL に描く）。HTML と CSS は入れ物だけで、画面は作っていない。絵は SVG をコードで生成、効果音は WebAudio で合成。BGM は持ち主が用意した曲（`public/audio/`）。
   - 見た目の上限を決めているのはエンジンではなく、絵がコード生成の仮の絵であること。質を上げるときは、画像ファイル（PNG）に差し替える。動きの演出は Phaser の粒子・トゥイーンを使う。
   - 移行はほぼ済み（戦闘・結果・ポーズ・行き先・メニュー類・盤面。残りは古い Canvas の画面の片付け）: 画面まわり（手札、ゲージ、メニュー）を HTML と CSS に移し、Phaser は背景・敵・演出に使う併用。文字組みと斜め・ぼかしは CSS のほうが楽で質も出る（見本は CSS で組んだ）。手順は [docs/ui-migration.md](docs/ui-migration.md)。
   - 配信は、後々 Steam を想定。ページをアプリに包んで出す（Electron など）ので、エンジンの乗り換えは要らない。家庭用機で出すと決めたら、Godot / Unity への移行を検討する。
@@ -60,10 +60,10 @@
 ## 構成
 
 - `data/cards.json`: カード、アイテム、武器、防具、敵、ルールの数値。**数値の調整はまずここ。**
-- `data/dungeons.json`: ダンジョンの盤面（マスの並び、分かれ道、溶岩の位置）と報酬。
+- `data/dungeons.json`: ダンジョンの盤面（マスの並び、分かれ道、溶岩の位置）と報酬。炎の神殿の盤面は `scripts/boards/spiral.mjs` で組み、`node scripts/boards/apply.mjs spiral` で書き込む（手で直さない）。全体図は `node scripts/boards/capture.mjs spiral`。
 - `src/game/dungeon.ts`: ダンジョン（すごろく）のルール本体。battle.ts と同じく、描画や入力に依存しない。
 - `src/game/battle.ts`: 戦闘ルール本体。描画や入力に依存しない。テストとシミュレーションが直接使う。
-- `src/game/`: `content`（データの取り出し）、`loadout`（デッキと装備補正）、`save`（セーブ）、`input`、`audio`（音は合成）、`art`（仮の絵、SVG）、`ui`（描画の層）
+- `src/game/`: `content`（データの取り出し）、`loadout`（デッキと装備補正）、`save`（セーブ）、`input`、`audio`（効果音は合成、BGM は曲を流す）、`art`（仮の絵、SVG）、`ui`（描画の層）
 - `src/scenes/GameScene.ts`: 状態と入力。どの画面にいるか、ボタンで何が起きるか。
 - `src/screens/`: 画面ごとの描画。新しい画面はここに1ファイル足す。共通部品は `common.ts`。
 - `src/views/`: 画面まわりの HTML の層（移行中。`docs/ui-migration.md`）。`root.ts` の `VIEWS` に入れた画面は、`src/screens/` ではなくこちらで描く。色と書体は `tokens.css`。

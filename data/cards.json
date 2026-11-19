@@ -386,17 +386,17 @@
         {
           "name": "かみつき",
           "chargeSec": 3.8,
-          "damage": 2
+          "damage": 3
         },
         {
           "name": "かみつき",
           "chargeSec": 3.8,
-          "damage": 2
+          "damage": 3
         },
         {
           "name": "火の息",
           "chargeSec": 4.8,
-          "damage": 5,
+          "damage": 7,
           "big": true
         }
       ]
@@ -416,7 +416,7 @@
         {
           "name": "火花",
           "chargeSec": 3.0,
-          "damage": 2
+          "damage": 3
         }
       ]
     },
@@ -435,17 +435,17 @@
         {
           "name": "のしかかり",
           "chargeSec": 5.0,
-          "damage": 4
+          "damage": 6
         },
         {
           "name": "のしかかり",
           "chargeSec": 5.0,
-          "damage": 4
+          "damage": 6
         },
         {
           "name": "溶岩弾",
           "chargeSec": 5.5,
-          "damage": 8,
+          "damage": 11,
           "big": true
         }
       ]
@@ -454,7 +454,7 @@
       "id": "fire_guard",
       "name": "炎の番人",
       "rank": "中",
-      "hp": 75,
+      "hp": 90,
       "dungeon": "fire",
       "drop": {
         "id": "guard_core",
@@ -465,17 +465,17 @@
         {
           "name": "斬りつけ",
           "chargeSec": 4.0,
-          "damage": 5
+          "damage": 7
         },
         {
           "name": "斬りつけ",
           "chargeSec": 4.0,
-          "damage": 5
+          "damage": 7
         },
         {
           "name": "炎の一閃",
           "chargeSec": 5.0,
-          "damage": 13,
+          "damage": 17,
           "big": true
         }
       ]
@@ -484,7 +484,7 @@
       "id": "fire_beast",
       "name": "炎獣",
       "rank": "主",
-      "hp": 110,
+      "hp": 132,
       "dungeon": "fire",
       "burn": {
         "everySec": 3.0,
@@ -499,23 +499,23 @@
         {
           "name": "爪",
           "chargeSec": 3.8,
-          "damage": 5
+          "damage": 7
         },
         {
           "name": "爪",
           "chargeSec": 3.8,
-          "damage": 5
+          "damage": 7
         },
         {
           "name": "業火",
           "chargeSec": 5.0,
-          "damage": 15,
+          "damage": 20,
           "big": true
         },
         {
           "name": "突進",
           "chargeSec": 3.8,
-          "damage": 6
+          "damage": 8
         }
       ]
     }

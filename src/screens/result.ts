@@ -34,7 +34,7 @@ export function drawResult(gs: GameScene, l: Layer) {
   const ready = gs.resultWait <= 0;
   if (gs.inRun && gs.run) {
     // ダンジョン: 選ぶものはない。勝てば先へ、負ければ入口（中ボス討伐後は中間地点）へ
-    const label = won ? '進む' : gs.run.state.midDone ? '中間地点に戻る' : '入口に戻る';
+    const label = won ? '進む' : gs.run.state.doorOpen ? '扉に戻る' : gs.run.state.midDone ? '中間地点に戻る' : '入口に戻る';
     l.rect(CX - 98, 418, 196, 44, { fill: ready ? C.sel : undefined, stroke: ready ? C.white : C.line, rx: 8 });
     l.text(CX, 440, label, 16, C.text, 'middle', ready, ready ? 1 : 0.4);
     guide(gs, l, '○ 決定', 'Enter 決定');

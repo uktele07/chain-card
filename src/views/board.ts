@@ -38,8 +38,8 @@ function minimap(gs: GameScene) {
   const run = gs.run!, [cols, rows] = run.def.size, G = run.def.cell, w = 120, k = w / cols, h = rows * k;
   const vx = Math.max(0, gs.cam.x) / G * k, vy = Math.max(0, gs.cam.y) / G * k, vw = 960 / G * k, vh = 540 / G * k;
   return html`<div class="map"><svg width=${w} height=${h}>
-    ${run.board.map(q => { const here = q.id === run.state.pos, gate = q.kind === 'boss' || (q.kind === 'mid' && !run.state.midDone), r = here || gate ? 1.6 : 0;
-      return `<rect x="${q.x * k - r}" y="${q.y * k - r}" width="${k * .8 + r * 2}" height="${k * .8 + r * 2}" fill="${here ? '#fff' : gate ? '#ff4b1f' : 'rgba(216,180,106,.55)'}"/>`; }).map(t => html`${unsafeSvg(t)}`)}
+    ${run.board.map(q => { const st = run.state, here = q.id === st.pos, gate = q.kind === 'boss' || (q.kind === 'mid' && !st.midDone), key = (q.kind === 'key' && !st.key && !st.doorOpen) || (q.kind === 'door' && !st.doorOpen), r = here || gate || key ? 1.6 : 0;
+      return `<rect x="${q.x * k - r}" y="${q.y * k - r}" width="${k * .8 + r * 2}" height="${k * .8 + r * 2}" fill="${here ? '#fff' : gate ? '#ff4b1f' : key ? '#ffd76a' : 'rgba(216,180,106,.55)'}"/>`; }).map(t => html`${unsafeSvg(t)}`)}
     <rect x=${vx} y=${vy} width=${Math.min(vw, w - vx)} height=${Math.min(vh, h - vy)} fill="none" stroke="rgba(255,255,255,.5)" stroke-width=".8"></rect></svg></div>`;
 }
 // マスの並びは数が多いので、svg の文字列にしてまとめて入れる（中身はゲームのデータだけ）
@@ -59,7 +59,7 @@ export function boardView(gs: GameScene) {
       <div class="guide">${key(gs, '○', 'Enter', '決定')}</div>${corners}</div>`;
   }
   const look = mode === 'look';
-  const gate = mode === 'choose' ? '分かれ道' : `${st.midDone ? 'ボス' : '中ボス'}まで あと ${run.distanceToGate()}マス`;
+  const gate = mode === 'choose' ? '分かれ道' : `${run.goalName}まで あと ${run.distanceToGate()}マス`;
   const low = st.hp <= run.maxHp * 0.3;
   const label = mode === 'idle' ? '振る' : mode === 'rolling' ? (gs.diceTest ? '十字キーで目を選ぶ' : '止める') : st.steps > 0 ? `あと ${st.steps}マス` : gs.rolled ? `${gs.rolled} 進んだ` : '';
   let mid: unknown = nothing;
@@ -83,7 +83,7 @@ export function boardView(gs: GameScene) {
     <div class="ttl">${def.name}</div>
     <div class="gate">${gate}${st.maxBonus > 0 ? html`<span class="bonus">最大HP +${st.maxBonus}</span>` : nothing}</div>
     ${minimap(gs)}
-    <div class="items">${gs.save.items.map((id, i) => { const it = itemOf(id); return html`<span class="item ${!it || st.used[i] ? 'used' : ''}">${it ? it.name : 'なし'}</span>`; })}</div>
+    <div class="items">${gs.save.items.map((id, i) => { const it = itemOf(id); return html`<span class="item ${!it || st.used[i] ? 'used' : ''}">${it ? it.name : 'なし'}</span>`; })}${st.key ? html`<span class="item key">最深部の鍵</span>` : nothing}</div>
     <div class="sm" style="left:40px;bottom:66px">HP</div>
     <div class="hp ${low ? 'low' : ''}">${st.hp}<small> / ${run.maxHp}</small></div>
     <div class="bar"><i style="width:${Math.min(1, st.hp / run.maxHp) * 100}%"></i></div>

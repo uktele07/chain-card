@@ -227,11 +227,14 @@ export function legendView(gs: GameScene) {
     ['monster', '敵と戦う。討伐すると戦利品を1つ得る。'], ['heal', `HP +${d.heal}。`],
     ['maxhp', `最大HP +${d.maxHpUp}。HPも同じだけ回復。負けると消える。`], ['item', '使ったアイテムが1つ復活する。'],
     ['event', `${d.event.name}。${d.event.damage} ダメージ（HPは1残る）。`], ['random', '上のどれか、または何も起こらない。'],
-    ['mid', '必ず止まる。討伐すると、負けてもここから再開。'], ['boss', '必ず止まる。討伐すると踏破。'],
+    ['mid', '必ず止まる。討伐すると、負けてもここから再開。'],
+    ...(gs.run!.doorIndex >= 0 ? [['key', '止まると手に入る（通り過ぎるだけでは得られない）。1本だけ。負けると失い、このマスに戻る。'], ['door', '鍵がないと通れない。開けると開いたまま。負けてもここから再開。']] as [string, string][] : []),
+    ['boss', '必ず止まる。討伐すると踏破。'],
   ];
+  const rh = list.length > 8 ? 36 : 44;   // 鍵と扉があるダンジョンは、行を詰めて画面に収める
   // メニューの柱は出さない（盤面の △ で開く画面。メニューの項目ではない）
   return html`<div class="mn">${corners}<div class="pg" style="left:40px">マスの説明</div>
-    ${list.map(([k, t], i) => { const sq = SQUARE[k], url = iconUrl(gs, runeKey(k)); return html`<div class="row" style="left:40px;top:${92 + i * 44}px;width:880px;height:44px;color:#fff"><span class="sq">${url ? html`<img src=${url}>` : nothing}</span><span style="width:150px">${sq.name}</span><span style="font-size:12px;letter-spacing:1px;color:var(--sub);white-space:normal">${t}</span></div>`; })}
-    <div class="row" style="left:40px;top:${92 + list.length * 44}px;width:880px;height:44px;color:#fff"><span class="sq" style="background:linear-gradient(135deg,#585049,#3d3631);border-radius:3px"></span><span style="width:150px">絵のないマス</span><span style="font-size:12px;letter-spacing:1px;color:var(--sub)">何も起こらない。</span></div>
+    ${list.map(([k, t], i) => { const sq = SQUARE[k], url = iconUrl(gs, runeKey(k)); return html`<div class="row" style="left:40px;top:${92 + i * rh}px;width:880px;height:${rh}px;color:#fff"><span class="sq">${url ? html`<img src=${url}>` : nothing}</span><span style="width:150px">${sq.name}</span><span style="font-size:12px;letter-spacing:1px;color:var(--sub);white-space:normal">${t}</span></div>`; })}
+    <div class="row" style="left:40px;top:${92 + list.length * rh}px;width:880px;height:${rh}px;color:#fff"><span class="sq" style="background:linear-gradient(135deg,#585049,#3d3631);border-radius:3px"></span><span style="width:150px">絵のないマス</span><span style="font-size:12px;letter-spacing:1px;color:var(--sub)">何も起こらない。</span></div>
     ${guide(gs, [BACK])}</div>`;
 }

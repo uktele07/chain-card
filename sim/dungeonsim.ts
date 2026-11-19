@@ -12,11 +12,12 @@ const ROLL_SEC = 7, EVENT_SEC = 4, BATTLE_EXTRA_SEC = 10;   // サイコロ・�
 function play(def: DungeonDef, skill: Skill, setup: Setup) {
   const run = new DungeonRun(def, 100, [true, true, true]);
   let sec = 0, deaths = 0, battles = 0, rolls = 0, bossHp = 0;
-  while (!run.state.cleared && deaths < 20) {
+  while (!run.state.cleared && deaths < 20 && rolls < 2000) {
     run.roll(); rolls++; sec += ROLL_SEC;
     for (let guard = 0; guard < 20; guard++) {
-      // 分かれ道: HPが6割を切っていたら長い道（回復がある）、そうでなければ短い道
-      const opt = run.options(), pick = opt.length > 1 ? opt[run.state.hp < run.maxHp * 0.6 ? 1 : 0] : undefined;
+      // 分かれ道: HPが6割を切っていたら長い道（回復がある）、そうでなければ短い道。鍵を持って輪の分かれ目に来たら扉へ
+      const opt = run.options(), door = opt.find(n => run.board[n].kind === 'door');
+      const pick = opt.length > 1 ? door ?? opt[run.state.hp < run.maxHp * 0.6 ? 1 : 0] : undefined;
       if (run.step(pick) === 'landed') break;
     }
     const eff = run.land();

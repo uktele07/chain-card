@@ -40,7 +40,7 @@ export const SQUARE: Record<string, { color: string; icon: string; name: string 
   monster: { color: '#d9534a', icon: 'mon', name: 'モンスター' }, heal: { color: '#4fae6a', icon: 'heal', name: '回復' },
   maxhp: { color: '#e07ab0', icon: 'heart', name: '最大HPアップ' }, item: { color: '#3fb7c9', icon: 'bag', name: 'アイテム' },
   event: { color: '#f2a23a', icon: 'flame', name: 'イベント' }, random: { color: '#9b7be0', icon: 'q', name: 'ランダム' },
-  mid: { color: '#c8453c', icon: 'mid', name: '中ボス' }, boss: { color: '#ff5a4a', icon: 'boss', name: 'ボス' },
+  mid: { color: '#c8453c', icon: 'mid', name: '中ボス' }, key: { color: '#f0c75e', icon: 'key', name: '最深部の鍵' }, door: { color: '#d0874a', icon: 'door', name: '最深部の扉' }, boss: { color: '#ff5a4a', icon: 'boss', name: 'ボス' },
 };
 export const EQUIP_ROWS = ['武器', '防具', 'アクセサリ', 'アイテム 1', 'アイテム 2', 'アイテム 3'];
 

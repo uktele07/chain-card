@@ -21,6 +21,8 @@ export function effectText(gs: GameScene, eff: Effect): { head: string; main: st
   else if (eff.kind === 'maxhp') main = `最大HP +${eff.amount}`;
   else if (eff.kind === 'item') main = eff.index >= 0 ? `${itemOf(gs.save.items[eff.index])?.name ?? 'アイテム'} が復活` : '復活するアイテムなし';
   else if (eff.kind === 'event') main = `${run.def.event.name}！ ${eff.damage} ダメージ`;
+  else if (eff.kind === 'key') main = '最深部の鍵を手に入れた';
+  else if (eff.kind === 'door') main = '最深部の扉が開いた';
   return { head, main, color: sq.color, icon: sq.icon };
 }
 
@@ -40,7 +42,8 @@ export function drawBoard(gs: GameScene, l0: Layer, l1: Layer, l2: Layer, hud = 
   for (const q of run.board) {
     const { x, y } = mid(q);
     if (x < -G || x > W + G || y < -G || y > 540 + G) continue;
-    const sq = SQUARE[q.kind], passed = !ahead.has(q.id) && q.id !== st.pos, al = passed ? 0.4 : 1;
+    // 鍵を持っている間と、扉を開けたあとの鍵のマスは、鍵がないので薄くする
+    const sq = SQUARE[q.kind], gone = q.kind === 'key' && (st.key || st.doorOpen), passed = gone || (!ahead.has(q.id) && q.id !== st.pos), al = passed ? 0.4 : 1;
     const big = q.kind === 'boss' ? 54 : q.kind === 'mid' ? 50 : 44;
     // マスの絵は紋章（刻印石の板と光る溝）。HTML へ移す前の見た目では、以前の色の板と白い絵
     if (sq.icon && !hud) l1.image(runeKey(q.kind), x, y, big, al);
