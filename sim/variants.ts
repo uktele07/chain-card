@@ -39,6 +39,12 @@ const newBranches = [
   seg('a2', 'mimu', ['s4']), seg('b2', 'nennhenrnen', ['s4']),
   seg('a3', 'mumi', ['s6']), seg('b3', 'nenrnhennen', ['s6']),
 ];
+// 案H（持ち主の指示、2026-11-19）: F のうち、長い道の火柱を 3→2 に。盤面の形の都合で、短い道を 5マスにした（遠回りの道は差が偶数になるため）
+const hBranches = [
+  seg('a1', 'mumni', ['s2']), seg('b1', 'nenhnnnrnen', ['s2']),
+  seg('a2', 'mimnu', ['s4']), seg('b2', 'nennhnnrnen', ['s4']),
+  seg('a3', 'mumni', ['s6']), seg('b3', 'nenrnhnnnen', ['s6']),
+];
 const VARIANTS: Variant[] = [
   { name: 'A いま', segs: cur, foes: enemies() },
   { name: 'B 長く', segs: [...longMain, ...curBranches], foes: enemies() },
@@ -46,6 +52,7 @@ const VARIANTS: Variant[] = [
   { name: 'D Cに＋敵を強く', segs: [...longMain, ...newBranches], foes: enemies(1.3, 1.3, 1.25, 1.2) },
   // 案F（持ち主の指示、2026-11-19）: D を直す。雑魚は HP そのまま・ダメージ ×1.3（切り上げ）、中ボス・ボスは HP ×1.2・ダメージ ×1.3（切り上げ）、火柱 3→7
   { name: 'F Dを直す', segs: [...longMain, ...newBranches], foes: enemies(1, 1.3, 1.2, 1.3, true), event: 7 },
+  { name: 'H Fの長い道の火柱を2つに', segs: [...longMain, ...hBranches], foes: enemies(1, 1.3, 1.2, 1.3, true), event: 7 },
   { name: 'G いまの盤面でFの数値', segs: cur, foes: enemies(1, 1.3, 1.2, 1.3, true), event: 7 },
   { name: 'E Cに＋敵を少し強く', segs: [...longMain, ...newBranches], foes: enemies(1.15, 1.2, 1.15, 1.1) },
 ];
