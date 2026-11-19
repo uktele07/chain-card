@@ -117,15 +117,33 @@ describe('戦闘', () => {
 });
 
 describe('メニュー', () => {
-  it('灰色の項目は飛ばす。✕ で閉じる', async () => {
+  it('上下で項目を選ぶ。✕ で閉じる', async () => {
     g = await open();
     await key(g.page, 'Escape');
     expect(await top(g.page)).toBe('menu');
     const labels: string[] = [];
     for (let i = 0; i < 7; i++) { labels.push(await scene(g.page, s => s.cur.menu)); await key(g.page, 'ArrowDown'); }
-    expect(new Set(labels).size).toBe(6);               // 7項目のうち1つ（設定）は止まらない
+    expect(new Set(labels).size).toBe(7);
     await key(g.page, 'Backspace');
     expect(await top(g.page)).toBe('list');
+  });
+
+  it('設定: 左右で BGM と効果音の音量を変え、保存する。セーブリセットでも残る', async () => {
+    g = await open();
+    await key(g.page, 'Escape', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'Enter');   // 装備・カード編集・ショップ・設定
+    await waitTop(g.page, 'settings');
+    await key(g.page, 'ArrowLeft', 'ArrowLeft', 'ArrowDown', 'ArrowLeft');
+    expect((await save(g.page)).volume).toEqual({ bgm: 5, se: 9 });
+    expect(await g.page.evaluate(() => (window as any).__sound.seLevel)).toBeCloseTo(0.81);
+    for (let i = 0; i < 12; i++) await key(g.page, 'ArrowLeft');
+    expect((await save(g.page)).volume.se).toBe(0);      // 0 で止まる
+    await key(g.page, 'Backspace');
+    await waitTop(g.page, 'menu');
+    await scene(g.page, s => { s.cur.reset = 1; s.overlays.push('reset'); });
+    await waitTop(g.page, 'reset');
+    await key(g.page, 'Enter');
+    await waitTop(g.page, 'list');
+    expect((await save(g.page)).volume).toEqual({ bgm: 5, se: 0 });
   });
 
   it('装備: 武器を持ち替えると戦闘に反映される。同じアイテムは2つセットできない', async () => {
@@ -208,12 +226,12 @@ describe('メニュー', () => {
     await waitTop(g.page, 'list');
     const s = await save(g.page);
     expect(s).toMatchObject({ gold: 0, weapon: 'sword', records: {}, loot: {} });
-    expect(await stored(g.page)).toBeNull();
+    expect(await stored(g.page)).toMatchObject({ gold: 0, records: {}, volume: { bgm: 7, se: 10 } });   // 音量だけ残して保存し直す
   });
 
   it('操作説明が開いて、閉じられる', async () => {
     g = await open();
-    await key(g.page, 'Escape', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'Enter');
+    await key(g.page, 'Escape', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'Enter');   // 設定の次
     expect(await top(g.page)).toBe('help');
     await key(g.page, 'Backspace', 'Backspace');
     expect(await top(g.page)).toBe('list');
@@ -398,7 +416,7 @@ describe('ダンジョン', () => {
     g = await open();
     await enter();
     await scene(g.page, s => { s.run.state.pos = 4; s.toBoard(); });
-    await key(g.page, 'Escape', 'ArrowDown', 'Enter');   // 最初からやり直す（入口以外: 操作説明・やり直す・出る・閉じる）
+    await key(g.page, 'Escape', 'ArrowDown', 'ArrowDown', 'Enter');   // 最初からやり直す（入口以外: 設定・操作説明・やり直す・出る・閉じる）
     expect(await scene(g.page, s => s.restartArmed)).toBe(true);
     await key(g.page, 'Enter');                           // 初めは「いいえ」
     expect(await scene(g.page, s => [s.restartArmed, s.run.state.pos])).toEqual([false, 4]);
@@ -411,7 +429,7 @@ describe('ダンジョン', () => {
     g = await open();
     await enter();
     await scene(g.page, s => { s.run.state.pos = 4; s.run.state.hp = 55; s.keepRun(); });
-    await key(g.page, 'Escape', 'ArrowDown', 'ArrowDown', 'Enter');   // ダンジョンから出る（入口以外: 操作説明・やり直す・出る・閉じる）
+    await key(g.page, 'Escape', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'Enter');   // ダンジョンから出る（入口以外: 設定・操作説明・やり直す・出る・閉じる）
     await waitTop(g.page, 'list');
     expect((await stored(g.page)).run.pos).toBe(4);
     await g.page.reload();

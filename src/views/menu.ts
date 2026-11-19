@@ -215,6 +215,20 @@ export function resetView(gs: GameScene) {
     ${guide(gs, [['← →', '← →', '選ぶ'], ['○', 'Enter', '決定'], ['✕', 'Backspace', 'やめる']])}`);
 }
 
+// ---------------- 設定（音量） ----------------
+export const SETTINGS = [{ key: 'bgm', label: 'BGM' }, { key: 'se', label: '効果音' }] as const;
+export function settingsView(gs: GameScene) {
+  const v = gs.save.volume;
+  return page(gs, 'settings', html`<div class="pg">設定</div>
+    ${SETTINGS.map((r, i) => { const n = v[r.key], on = i === gs.cur.setting;
+      return html`<div class="row ${on ? 'on' : ''}" style="left:270px;top:${100 + i * 52}px;width:640px;height:52px">
+        <span style="width:130px">${r.label}</span>
+        <span class="vol">${Array.from({ length: 10 }, (_, k) => html`<i class=${k < n ? 'f' : ''}></i>`)}</span>
+        <span class="n vn" style="letter-spacing:0">${n === 0 ? '無音' : n}</span></div>`; })}
+    <div class="desc" style="left:292px;top:220px">0〜10 の11段階。0 は無音。変えた音量は、すぐに反映して保存する（セーブリセットでは消えない）。</div>
+    ${guide(gs, [['↑ ↓', '↑ ↓', '選ぶ'], ['← →', '← →', '変える'], BACK])}`);
+}
+
 // ---------------- マスの説明（盤面のメニューから） ----------------
 const iconCache = new Map<string, string>();
 function iconUrl(gs: GameScene, key: string) {

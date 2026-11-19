@@ -13,11 +13,11 @@ import { resultView, pauseView, resumeView } from './overlays';
 import menuCss from './menu.css?inline';
 import boardCss from './board.css?inline';
 import { boardView } from './board';
-import { menuView, dmenuView, equipView, deckView, shopView, confirmView, helpView, resetView, legendView } from './menu';
+import { menuView, dmenuView, equipView, deckView, shopView, confirmView, helpView, resetView, legendView, settingsView } from './menu';
 import type { GameScene } from '../scenes/GameScene';
 
 /** HTML で描く画面と、その描き方。移し終えた画面をここに足す（GameScene.draw は、ここにある画面を Canvas に描かない） */
-export type ViewName = 'list' | 'board' | 'battle' | 'result' | 'menu' | 'equip' | 'deck' | 'shop' | 'confirm' | 'help' | 'reset' | 'pause' | 'resume' | 'dmenu' | 'legend';
+export type ViewName = 'list' | 'board' | 'battle' | 'result' | 'menu' | 'equip' | 'deck' | 'shop' | 'confirm' | 'help' | 'reset' | 'pause' | 'resume' | 'dmenu' | 'legend' | 'settings';
 export const VIEWS: Partial<Record<ViewName, (gs: GameScene) => TemplateResult>> = {
   battle: battleView,   // 段階1: 開始前・戦闘中（結果とポーズの下敷きも兼ねる）
   list: listView,       // 段階3（先に実施）: 行き先
@@ -26,7 +26,7 @@ export const VIEWS: Partial<Record<ViewName, (gs: GameScene) => TemplateResult>>
   resume: resumeView,
   menu: menuView,       // 段階4: メニュー類（C 柱）
   board: boardView,     // 段階5: すごろくの盤面の上の情報（A 角）
-  dmenu: dmenuView, equip: equipView, deck: deckView, shop: shopView, confirm: confirmView, help: helpView, reset: resetView, legend: legendView,
+  dmenu: dmenuView, equip: equipView, deck: deckView, shop: shopView, confirm: confirmView, help: helpView, reset: resetView, legend: legendView, settings: settingsView,
 };
 export const isHtml = (v: ViewName) => v in VIEWS;
 

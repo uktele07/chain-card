@@ -15,7 +15,12 @@ export interface SaveData {
   gold: number;
   loot: Record<string, number>;    // 換金アイテムの個数
   records: Record<string, EnemyRecord>;
+  volume: Volume;                  // 音量（0〜10。セーブリセットでも消さない）
 }
+/** 音量の段階。0 は無音、10 が最大 */
+export interface Volume { bgm: number; se: number }
+export const DEFAULT_VOLUME: Volume = { bgm: 7, se: 10 };
+const vol = (v: unknown, d: number) => typeof v === 'number' && v >= 0 && v <= 10 ? Math.round(v) : d;
 export interface SaveConfig {
   items: string[]; defaultItems: (string | null)[];
   spells: string[]; defaultSpells: string[]; maxSpells: number;
@@ -33,7 +38,7 @@ export function rankOf(sec: number, th?: { S: number; A: number; B: number }): R
 }
 
 function fresh(c: SaveConfig): SaveData {
-  return { items: [...c.defaultItems], spells: [...c.defaultSpells], weapon: c.startWeapon, armor: c.startArmor, weapons: [c.startWeapon], armors: [c.startArmor], accessory: null, accessories: [], cleared: {}, run: null, gold: 0, loot: {}, records: {} };
+  return { items: [...c.defaultItems], spells: [...c.defaultSpells], weapon: c.startWeapon, armor: c.startArmor, weapons: [c.startWeapon], armors: [c.startArmor], accessory: null, accessories: [], cleared: {}, run: null, gold: 0, loot: {}, records: {}, volume: { ...DEFAULT_VOLUME } };
 }
 const uniq = <T>(a: T[]) => a.filter((x, i) => a.indexOf(x) === i);
 
@@ -71,6 +76,7 @@ export function loadSave(c: SaveConfig): SaveData {
       weapon: weapons.includes(d.weapon ?? '') ? d.weapon! : c.startWeapon,
       armor: armors.includes(d.armor ?? '') ? d.armor! : c.startArmor,
       gold: typeof d.gold === 'number' && d.gold > 0 ? Math.floor(d.gold) : 0,
+      volume: { bgm: vol(d.volume?.bgm, DEFAULT_VOLUME.bgm), se: vol(d.volume?.se, DEFAULT_VOLUME.se) },
     };
   } catch { return f; }   // 保存が使えない環境でも、そのまま遊べるようにする
 }

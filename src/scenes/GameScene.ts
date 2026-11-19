@@ -43,7 +43,7 @@ export class GameScene extends Phaser.Scene {
 
   base: Base = 'list';
   overlays: Overlay[] = [];
-  cur = { list: 0, menu: 0, pause: 0, result: 0, reset: 0, slot: 0, opt: 0, deck: 0, shop: 0, sell: 0, dlist: 0, dmenu: 0, restart: 0 };
+  cur = { setting: 0, list: 0, menu: 0, pause: 0, result: 0, reset: 0, slot: 0, opt: 0, deck: 0, shop: 0, sell: 0, dlist: 0, dmenu: 0, restart: 0 };
   listTab: 0 | 1 = 0;       // 0=討伐 1=ダンジョン
   // --- ダンジョン ---
   run: DungeonRun | null = null;
@@ -89,6 +89,7 @@ export class GameScene extends Phaser.Scene {
     loadTempleArt(this, ZOOM);
     loadRunes(this, ZOOM);
     this.save = loadSave(SAVE_CONFIG);
+    this.applyVolume();
     this.input.on('pointerdown', () => this.snd.unlock());
     window.addEventListener('keydown', () => this.snd.unlock());
     const w = window as unknown as Record<string, unknown>;
@@ -176,10 +177,11 @@ export class GameScene extends Phaser.Scene {
     this.keepRun();
   }
   /** 盤面のメニュー。入口（最初のマス）にいる間だけ、装備を変えられる */
-  dmenuItems(): { label: string; act: 'equip' | 'legend' | 'help' | 'restart' | 'leave' | 'close'; note?: string }[] {
+  dmenuItems(): { label: string; act: 'equip' | 'legend' | 'help' | 'settings' | 'restart' | 'leave' | 'close'; note?: string }[] {
     const atStart = !!this.run && this.run.state.pos === 0;
     return [
       ...(atStart ? [{ label: '装備', act: 'equip' as const, note: '入口でだけ変えられる' }] : []),
+      { label: '設定', act: 'settings' },
       { label: '操作説明', act: 'help' },   // マスの説明は盤面の △ で開く（メニューには置かない）
       { label: '最初からやり直す', act: 'restart' },
       { label: 'ダンジョンから出る', act: 'leave', note: '続きから再開できる' }, { label: '閉じる', act: 'close' },
@@ -389,6 +391,7 @@ export class GameScene extends Phaser.Scene {
         else if (!ok) break;
         else if (act === 'equip') { this.snd.uiOk(); this.cur.slot = 0; this.equipFocus = 'slots'; this.overlays.push('equip'); }
         else if (act === 'legend' || act === 'help') { this.snd.uiOk(); this.overlays.push(act); }
+        else if (act === 'settings') { this.snd.uiOk(); this.cur.setting = 0; this.overlays.push('settings'); }
         else if (act === 'restart') {
           this.restartArmed = true; this.cur.restart = 0; this.snd.uiOk();      // 押し間違いを防ぐため、確認を出す（初めは「いいえ」）
         }
@@ -447,6 +450,7 @@ export class GameScene extends Phaser.Scene {
             if (act === 'deck') this.cur.deck = 0;
             if (act === 'shop') { this.cur.shop = 0; this.cur.sell = 0; this.shopTab = 0; }
             if (act === 'reset') this.cur.reset = 0;
+            if (act === 'settings') this.cur.setting = 0;
             this.overlays.push(act);
           }
         }
@@ -543,12 +547,21 @@ export class GameScene extends Phaser.Scene {
         if (ok || back || b === 'options') { this.snd.uiBack(); this.pop(); }
         break;
 
+      case 'settings': {   // 音量: 上下で選び、左右で 0〜10 を変える。変えたらすぐ反映して保存
+        if (b === 'up' || b === 'down') this.move('setting', b === 'up' ? -1 : 1, 2);
+        else if (b === 'left' || b === 'right') {
+          const v = this.save.volume, k = this.cur.setting === 0 ? 'bgm' : 'se', n = Math.max(0, Math.min(10, v[k] + (b === 'left' ? -1 : 1)));
+          if (n !== v[k]) { v[k] = n; this.applyVolume(); storeSave(this.save); this.snd.uiMove(); }   // 効果音の大きさは、この音で分かる
+        } else if (back || b === 'options') { this.snd.uiBack(); this.pop(); }
+        break;
+      }
       case 'reset':
         if (b === 'left' || b === 'right') this.move('reset', b === 'left' ? -1 : 1, 2);
         else if (back || (ok && this.cur.reset === 0)) { this.snd.uiBack(); this.pop(); }
         else if (ok) {
+          const volume = this.save.volume;   // 音量はセーブリセットでも残す
           clearSave();
-          this.save = loadSave(SAVE_CONFIG);
+          this.save = loadSave(SAVE_CONFIG); this.save.volume = volume; storeSave(this.save);
           this.cur.list = 0; this.enemy = ENEMIES[0]; this.run = null; this.inRun = false; this.listTab = 0; this.cur.dlist = 0;
           this.snd.uiOk(); this.toList(); this.newBattle();
         }
@@ -662,6 +675,7 @@ export class GameScene extends Phaser.Scene {
       const o = this.top;
       if (o === 'dmenu') show('dmenu', () => drawDMenu(this, this.L[3])); else if (o === 'equip') show('equip', () => drawEquip(this, this.L[3]));
       else if (o === 'help') show('help', () => drawHelp(this, this.L[3])); else if (o === 'legend') show('legend', () => drawLegend(this, this.L[3]));
+      else if (o === 'settings') show('settings', () => {});
     } else {
       if (this.base === 'list' && isHtml('list')) { drawListScene(this, a, this.overlays.some(o => !isHtml(o))); views.push('list'); }   // 地と絵は Canvas、ほかは HTML
       else if (this.base === 'list') show('list', () => drawList(this, a));
@@ -677,6 +691,7 @@ export class GameScene extends Phaser.Scene {
         else if (o === 'confirm') show('confirm', () => drawConfirm(this, l));
         else if (o === 'help') show('help', () => drawHelp(this, l));
         else if (o === 'reset') show('reset', () => drawReset(this, l));
+        else if (o === 'settings') show('settings', () => {});   // HTML だけで描く
         else if (o === 'pause') show('pause', () => drawPause(this, l));
         else if (o === 'resume') show('resume', () => drawResume(this, l));
       });
@@ -687,6 +702,7 @@ export class GameScene extends Phaser.Scene {
     this.ui.draw(this, views);
   }
 
+  applyVolume() { this.snd.setVolume(this.save.volume.bgm, this.save.volume.se); }
   get pad() { return this.input2.padConnected; }
   /** アイテムの名前（無ければ null） */
   itemName(id: string | null) { return itemOf(id)?.name ?? null; }

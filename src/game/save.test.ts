@@ -18,4 +18,10 @@ describe('セーブの読み込み', () => {
     store['chain-card-save-v1'] = JSON.stringify({ records: { slime: { bestTime: 18.4, bestRank: 'A', wins: 7 } } });
     expect(loadSave(c).records.slime.wins).toBe(7);
   });
+  it('音量の無い古いセーブは、初期値（BGM 7、効果音 10）で読む。範囲外は初期値', () => {
+    store['chain-card-save-v1'] = JSON.stringify({ gold: 5 });
+    expect(loadSave(c).volume).toEqual({ bgm: 7, se: 10 });
+    store['chain-card-save-v1'] = JSON.stringify({ volume: { bgm: 0, se: 42 } });
+    expect(loadSave(c).volume).toEqual({ bgm: 0, se: 10 });
+  });
 });

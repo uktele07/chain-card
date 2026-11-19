@@ -76,6 +76,13 @@
 .mn .ch.on::before { content: ''; position: absolute; left: -4px; top: 16px; width: 7px; height: 7px; background: var(--gold); transform: rotate(45deg); }
 .mn .ch.warn { color: var(--ac); }
 
+/* 設定（音量）: 10個の目盛り。満ちた所を金で */
+.mn .vol { display: inline-flex; gap: 4px; }
+.mn .vol i { width: 22px; height: 10px; border: 1px solid rgba(216,180,106,.45); }
+.mn .vol i.f { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 6px rgba(216,180,106,.45); }
+.mn .vn { width: 56px; text-align: right; font-size: 18px; color: #fff; }
+.mn .row:not(.on) .vol i.f { background: rgba(216,180,106,.6); box-shadow: none; }
+
 /* 操作説明・マスの説明 */
 .mn table { position: absolute; border-collapse: collapse; font-size: 12px; letter-spacing: 1px; }
 .mn th { text-align: left; font-weight: 500; font-size: 10px; letter-spacing: 4px; color: var(--gold); padding: 0 0 8px; }

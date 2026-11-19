@@ -24,11 +24,11 @@ export const MON = { x: 808, y: 330, size: 258 };
 export const RESULT_WAIT = 0.8;
 
 export type Base = 'list' | 'ready' | 'fight' | 'result' | 'board';
-export type Overlay = 'menu' | 'equip' | 'deck' | 'shop' | 'confirm' | 'help' | 'reset' | 'pause' | 'resume' | 'dmenu' | 'legend';
+export type Overlay = 'menu' | 'equip' | 'deck' | 'shop' | 'confirm' | 'help' | 'reset' | 'pause' | 'resume' | 'dmenu' | 'legend' | 'settings';
 /** 売買の確認。buy=購入 / sell=個数を選んで売る / sellAll=戦利品をすべて売る */
 export type Deal = { kind: 'buy'; index: number } | { kind: 'sell'; id: string; qty: number } | { kind: 'sellAll' };
 export const MENU: { label: string; off?: boolean; act?: Overlay | 'close' }[] = [
-  { label: '装備', act: 'equip' }, { label: 'カード編集', act: 'deck' }, { label: 'ショップ', act: 'shop' }, { label: '設定', off: true },
+  { label: '装備', act: 'equip' }, { label: 'カード編集', act: 'deck' }, { label: 'ショップ', act: 'shop' }, { label: '設定', act: 'settings' },
   { label: '操作説明', act: 'help' }, { label: 'セーブリセット', act: 'reset' }, { label: '閉じる', act: 'close' },
 ];
 export const PAUSE = ['戦闘再開', 'やり直す', '戦闘終了'];

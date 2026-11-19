@@ -7,6 +7,14 @@ export class Sound {
   private seBus!: GainNode;
   private noiseBuf!: AudioBuffer;
   muted = false;
+  private bgmLevel = 0.35;   // 曲の音量（HTMLAudioElement の volume）
+  private seLevel = 0.9;     // 効果音の音量（seBus の gain）
+  /** 音量を変える（0〜10 の段階）。BGM は 10 で 0.5、効果音は 10 で 0.9（これまでの音量） */
+  setVolume(bgm: number, se: number) {
+    this.bgmLevel = BGM_MAX * bgm / 10; this.seLevel = 0.9 * se / 10;
+    if (this.ctx) this.seBus.gain.setTargetAtTime(this.seLevel, this.ctx.currentTime, 0.02);
+    for (const a of Object.values(this.tracks)) a.volume = this.bgmLevel;
+  }
 
   /** 音を出せる状態か（ブラウザは、クリックやキー操作があるまで音を止めている） */
   get ready() { return !!this.ctx && this.ctx.state === 'running'; }
@@ -20,7 +28,7 @@ export class Sound {
         this.master = this.ctx.createGain(); this.master.gain.value = this.muted ? 0 : 0.55;
         const comp = this.ctx.createDynamicsCompressor();
         this.master.connect(comp).connect(this.ctx.destination);
-        this.seBus = this.ctx.createGain(); this.seBus.gain.value = 0.9; this.seBus.connect(this.master);
+        this.seBus = this.ctx.createGain(); this.seBus.gain.value = this.seLevel; this.seBus.connect(this.master);
         const len = this.ctx.sampleRate;
         this.noiseBuf = this.ctx.createBuffer(1, len, len);
         const d = this.noiseBuf.getChannelData(0);
@@ -162,10 +170,10 @@ export class Sound {
       a = this.tracks[name] = new Audio(`audio/bgm-${name}.mp3`);
       a.loop = true; a.preload = 'auto';
     }
-    a.volume = BGM_VOLUME; a.muted = this.muted;
+    a.volume = this.bgmLevel; a.muted = this.muted;
     if (this.tokens[name] !== token) { this.tokens[name] = token; try { a.currentTime = 0; } catch { /* 読み込み前 */ } }
     if (this.playing !== name) { this.playing = name; a.play().catch(() => { if (this.playing === name) this.playing = null; }); }
   }
 }
-/** BGM の音量（曲は平均 -14dB と大きいので、効果音より下げる） */
-const BGM_VOLUME = 0.35;
+/** BGM の最大の音量（曲は平均 -14dB と大きいので、効果音より下げる。初期値 7 で 0.35） */
+const BGM_MAX = 0.5;
