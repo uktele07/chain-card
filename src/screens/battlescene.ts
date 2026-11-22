@@ -9,7 +9,7 @@ import { ENEMY_COL } from './common';
 import type { GameScene } from '../scenes/GameScene';
 
 /** チェインのひし形の中心（HTML 側と同じ値）。演出の位置合わせに使う */
-export const CHAIN_AT = { x: 480, y: 368 };
+export const CHAIN_AT = { x: 406, y: 368 };   // 2026-11-22 に手札と一緒に 74 左へ
 /** アイテムの選択中の段と、自分の HP の数字のあたり。数字が跳ねて出る位置 */
 export const ITEM_AT = { x: 130, y: 233 };
 export const HP_AT = { x: 150, y: 470 };

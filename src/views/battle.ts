@@ -13,7 +13,10 @@ const KIND: Record<string, string> = { 主: 'BOSS', 中: 'GUARD', 弱: '弱', �
 /** 差し色（ダンジョンごと）。討伐の差し色は未定なので、火と同じにしている */
 const ACCENT: Record<string, string> = { fire: '#ff4b1f', water: '#1fa8ff' };
 /** 手札の置き場（中心からのずれ。82×92 の 0.9倍で、上下に 90、左右に 98） */
-const OFF = [[0, -100], [109, 0], [0, 100], [-109, 0]];
+// 手札の4枚の中心（チェインのひし形からの距離）。2026-11-22 に間隔を縮めた（左右 98→86、上下 90→86。見本 docs/samples/style-L2-*.png）
+const OFF = [[0, -86], [86, 0], [0, 86], [-86, 0]];
+/** 手札とチェインのひし形の中心。2026-11-22 にカード1枚分（74）左へ寄せた（敵を広く見せるため） */
+export const HAND_AT = { x: 406, y: 368 };
 /** アイテムの段（上から。1段目が選択中） */
 const SLOT = [{ x: 0, y: 0, w: 204, h: 38, fs: 14, a: 1 }, { x: -9, y: 43, w: 190, h: 32, fs: 12.5, a: 0.8 }, { x: -18, y: 80, w: 174, h: 26, fs: 11, a: 0.6 }];
 
@@ -49,7 +52,7 @@ export function battleView(gs: GameScene) {
   // 手札
   const cards = OFF.map(([dx, dy], i) => {
     const slot = b.slots[i], c = slot?.card ?? null;
-    const at = `left:${480 + dx * 0.9 - 41}px;top:${368 + dy * 0.9 - 46}px;transform:rotate(${tiltOf(i, ready ? null : c)}deg) scale(.9)`;
+    const at = `left:${HAND_AT.x + dx - 41}px;top:${HAND_AT.y + dy - 46}px;transform:rotate(${tiltOf(i, ready ? null : c)}deg) scale(.855)`;   // 82×92 を 0.855倍（以前の 0.9 の 95%）
     if (ready) return html`<div class="c off q" style=${at}><div class="lv">?</div><div class="gl">${GLY[i]}</div></div>`;
     if (hidden || !c) {
       const pr = !hidden && b.charging && b.chargeTotal > 0 ? 1 - b.chargeLeft / b.chargeTotal : 0;
@@ -110,9 +113,9 @@ export function battleView(gs: GameScene) {
 
     <div class="band"></div>
     <div class="ename">${kind ? html`<span class="kind">${kind}</span>` : nothing}<span class="nm">${e.def.name}</span></div>
-    <div class="sm" style="right:30px;top:84px">HP</div>
-    <div class="num" style="right:30px;top:102px">${e.hp}<span class="of"> / ${e.def.hp}</span></div>
-    <div class="bar ehp" style="right:30px;top:148px;width:230px"><i style="width:${(e.hp / e.def.hp) * 100}%"></i></div>
+    <div class="sm" style="right:44px;top:84px">HP</div>
+    <div class="num" style="right:44px;top:102px">${e.hp}<span class="of"> / ${e.def.hp}</span></div>
+    <div class="bar ehp" style="right:44px;top:148px;width:230px"><i style="width:${(e.hp / e.def.hp) * 100}%"></i></div>
 
     ${next}
     ${cards}
