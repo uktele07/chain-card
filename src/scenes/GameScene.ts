@@ -242,7 +242,9 @@ export class GameScene extends Phaser.Scene {
     this.cam = this.camTarget();
     if (st.cleared) this.bmode = 'cleared';
     else if (st.pending) {       // 戦闘の途中で閉じていたら、その敵からやり直す
-      const k = run.square.kind;
+      const k = run.square.kind, d = run.def;
+      // 敵を入れ替える前のセーブ（もういない敵）なら、このマスの敵に置き換える
+      if (![...d.zako, d.midBoss, d.boss].includes(st.pending)) st.pending = k === 'mid' ? d.midBoss : k === 'boss' ? d.boss : d.zako[Math.floor(Math.random() * d.zako.length)];
       this.effect = { kind: 'monster', enemy: st.pending, rank: k === 'mid' ? 'mid' : k === 'boss' ? 'boss' : 'zako' };
       this.bmode = 'landed';
     } else if (st.steps > 0) this.advance();

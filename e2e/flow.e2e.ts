@@ -350,6 +350,15 @@ describe('ダンジョン', () => {
     expect(await scene(g.page, s => s.run.square.seg)).toBe('b1');
   });
 
+  it('もういない敵と戦う途中のセーブは、そのマスの新しい敵に置き換わる', async () => {
+    g = await open();
+    await enter();
+    await scene(g.page, s => { const r = s.run; r.state.pos = r.board.findIndex((q: { kind: string }) => q.kind === 'monster'); r.state.pending = 'lava_slime'; s.toBoard(); });
+    await mode('landed');
+    const [enemy, zako] = await scene(g.page, s => [s.effect.enemy, s.run.def.zako]);
+    expect(zako).toContain(enemy);
+  });
+
   it('鍵を持って輪の分かれ目に来ると、扉を選べる。扉で止まって開く', async () => {
     g = await open();
     await enter();
