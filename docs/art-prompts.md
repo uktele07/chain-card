@@ -52,3 +52,24 @@ Same art style, linework, palette, paper and lighting as the reference image. A 
 - 炎の飛竜は、古竜と同じ系統に見えるよう、古竜の絵を見本として必ず渡す。
 - 赤スライムは、かわいくならないよう「顔を描かない」が要。
 - トレジャーハンターだけ人間。暗く、顔を半分隠す。
+
+## 戦闘の背景（炎の神殿）
+
+いまの背景（コードで描いた神殿の広間）を、画像に替えるための指示文。ゲームの中で弱くぼかし、暗くして使う（敵と手札を読みやすくするため）。
+
+置き場所の約束（いまの画面の配置に合わせる）:
+- 横長 16:9。敵は画面の右寄り（横 80% あたり、床の上）に立つ。そこに床が見え、奥から光が当たっていること。
+- 左と中央には、文字（アイテム、HP、次の攻撃）と手札が重なる。細かい模様や明るいものを置かない。
+- 床の奥行きの線（地平線）は、高さの 55〜60% あたり。
+- 生き物・人・文字を描かない。
+
+```
+Interior of an ancient fire temple, a vast stone hall seen from inside, wide 16:9 landscape, eye-level view. Massive dark stone pillars and old brick walls on both sides, tall arched doorways in the back wall, a stone floor of large cracked slabs receding into the distance (horizon at about 58 percent of the image height). Far in the back, rivers of lava glow behind the arches, casting warm orange-red light across the floor. The right side of the floor is softly lit, an open empty area where a monster will stand. The left and center are calm and dark with few details. Embers drift in the air. No creatures, no people, no text.
+
+Watercolor painting with bold black ink linework, strong confident strokes, watercolor washes with controlled bleeding, dark muted palette of charcoal and deep brown with orange-red accents, subtle paper texture. Moody, quiet and dark overall.
+```
+
+うまくいかないときに足す一文:
+- 明るすぎる: `Very dark overall; only the lava and the right side of the floor are lit.`
+- 真ん中に目立つものが来る: `Keep the center of the image empty and dark.`
+- 敵の場所がない: `Leave the right third of the floor open and empty.`

@@ -30,7 +30,7 @@ export function drawBattleScene(gs: GameScene, l: Layer) {
   if (art && gs.textures.exists(key)) {
     // 画像の敵: 縦横比を保って、足元をそろえて置く。足元に橙の照り返し（加算）
     const src = gs.textures.get(key).getSourceImage(), h = art.w * src.height / src.width, cy = art.bottom - h / 2;
-    if (gs.inRun) l.image(SQUARE_GLOW, art.cx, art.bottom - 4, art.w * 0.75, 0.55, 0xff7a3a, art.w * 0.14, 0, true);
+    if (gs.inRun) l.image(SQUARE_GLOW, art.cx, art.bottom - 4 + (art.shadowDy ?? 0), art.w * (art.shadowDy ? 0.6 : 0.75), art.shadowDy ? 0.4 : 0.55, 0xff7a3a, art.w * 0.14, 0, true);   // 飛んでいる敵は、離れた床に小さく薄く
     if (big) l.ellipse(art.cx, cy, h * 0.9 + Math.sin(gs.clock * 10) * 14, h * 0.9 + Math.sin(gs.clock * 10) * 14, '#ff2a2a', 0.22);
     l.image(key, art.cx + sx, cy, art.w, alpha, tint, h);
   } else {

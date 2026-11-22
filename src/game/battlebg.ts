@@ -12,11 +12,11 @@ export const ENEMY_AT = { x: 800, y: 326, size: 300 };
  * 画像の敵（public/enemies/<id>.webp）の大きさと置き場所（960×540 の座標）。w: 幅（高さは絵の縦横比から）、cx: 中心の横、bottom: 足元。
  * 大ボスだけ大きく、右にはみ出してよい。頭が HP の帯に重ならないよう足元を下げる（docs/art-prompts.md）
  */
-export const ENEMY_ART: Record<string, { w: number; cx: number; bottom: number }> = {
+export const ENEMY_ART: Record<string, { w: number; cx: number; bottom: number; shadowDy?: number }> = {   // shadowDy: 足元の照り返しを下げる量（飛んでいる敵）
   red_slime: { w: 321, cx: 782, bottom: 420 },
   treasure_hunter: { w: 248, cx: 788, bottom: 429 },
   flame_lizard: { w: 383, cx: 790, bottom: 418 },
-  fire_wyvern: { w: 380, cx: 794, bottom: 406 },
+  fire_wyvern: { w: 380, cx: 794, bottom: 406, shadowDy: 40 },
   elder_dragon: { w: 603, cx: 834, bottom: 495 },
 };
 export const enemyArtUrl = (id: string) => `enemies/${id}.webp`;
