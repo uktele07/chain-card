@@ -9,6 +9,9 @@ const patch = String.raw`<script>
   const NAMES = { A: 'にじみ（全マスがそろって明滅、1周 3.8秒）', B: '波（駒から道に沿って流れる、1周 4.2秒）', N: '光なし（いまのゲーム）' };
   let v = 'A';
   const COL = { monster: 0xd9534a, heal: 0x4fae6a, maxhp: 0xe07ab0, item: 0x3fb7c9, event: 0xf2a23a, random: 0x9b7be0, mid: 0xc8453c, key: 0xf0c75e, door: 0xd0874a };
+  // 見本は毎回まっさらな状態から始める。前に開いたときのセーブ（ダンジョンの途中など）が残っていると、
+  // 自動で進める手順が途中で止まり、演出が出なかった（2026-11-22、持ち主の指摘）
+  try { localStorage.removeItem('chain-card-save-v1'); } catch (e) {}
   const key = code => { for (const t of ['keydown', 'keyup']) window.dispatchEvent(new KeyboardEvent(t, { code, key: code })); };
   const wait = (f, then) => { const id = setInterval(() => { try { if (f()) { clearInterval(id); then(); } } catch (e) {} }, 100); };
   wait(() => window.__scene && document.querySelector('#ui .ls'), () => {

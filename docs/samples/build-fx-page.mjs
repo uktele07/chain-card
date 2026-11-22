@@ -17,6 +17,9 @@ const patch = String.raw`<script>
   const BG = ${JSON.stringify(bg)}, ENEMY = ${JSON.stringify(enemy)};
   const on = { ember: false, smoke: false };
   let mode = 'A';
+  // 見本は毎回まっさらな状態から始める。前に開いたときのセーブ（ダンジョンの途中など）が残っていると、
+  // 自動で進める手順が途中で止まり、演出が出なかった（2026-11-22、持ち主の指摘）
+  try { localStorage.removeItem('chain-card-save-v1'); } catch (e) {}
   const key = code => { for (const t of ['keydown', 'keyup']) window.dispatchEvent(new KeyboardEvent(t, { code, key: code })); };
   const wait = (f, then) => { const id = setInterval(() => { try { if (f()) { clearInterval(id); then(); } } catch (e) {} }, 100); };
   const img = src => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = src; });
@@ -25,8 +28,8 @@ const patch = String.raw`<script>
     s.textures.addImage('fx-bg', await img(BG));
     if (!s.textures.exists('monster-elder_dragon')) s.textures.addImage('monster-elder_dragon', await img(ENEMY));
     key('ArrowRight'); setTimeout(() => key('Enter'), 150);
-    wait(() => s.base === 'board' && s.bmode === 'idle', () => {
-      s.run.state.pending = 'elder_dragon'; s.toBoard();
+    wait(() => s.base === 'board', () => {
+      s.run.state.cleared = false; s.run.state.pending = 'elder_dragon'; s.toBoard();
       wait(() => s.bmode === 'landed', () => { key('Enter');
         wait(() => s.base === 'ready', () => { s.invincible = true; s.battle.invincible = true; key('Enter'); wait(() => s.base === 'fight', start); }); });
     });
