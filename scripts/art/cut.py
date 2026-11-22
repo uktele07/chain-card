@@ -27,7 +27,28 @@ body=Image.fromarray(np.where(reach,0,255).astype('uint8'),'L').copy()
 sx,sy=int(W*0.45),int(H*0.5)
 ImageDraw.floodfill(body,(sx,sy),200)
 reach=np.asarray(body)!=200
-al=Image.fromarray(np.where(reach,0,255).astype('uint8')).filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(1.2))
+# 囲まれた紙（脚のあいだ、翼と首のあいだなど）: 背景に近い色のかたまりで、大きいものは消す
+from collections import deque
+cand=(~reach)&(dist<th)
+seen=np.zeros_like(cand); H2,W2=cand.shape
+ys,xs=np.nonzero(cand)
+for y0,x0 in zip(ys,xs):
+  if seen[y0,x0]: continue
+  q=deque([(y0,x0)]); seen[y0,x0]=True; comp=[]
+  while q:
+    y,x=q.popleft(); comp.append((y,x))
+    for dy,dx in ((1,0),(-1,0),(0,1),(0,-1)):
+      ny,nx=y+dy,x+dx
+      if 0<=ny<H2 and 0<=nx<W2 and cand[ny,nx] and not seen[ny,nx]: seen[ny,nx]=True; q.append((ny,nx))
+  if len(comp)>W*H*0.002:
+    cy,cx=zip(*comp); reach[np.array(cy),np.array(cx)]=True
+# 縁はやわらかく: 背景に近い色ほど薄くする（にじみや光のぼかしを、紙の灰色ごと残さないため）
+# ただし内側（縁から 8px より内）は不透明のまま（明るい部分が透けないように）
+soft=np.clip((dist-6)/22,0,1)
+hard=Image.fromarray(np.where(reach,0,255).astype('uint8'))
+inner=np.asarray(hard.filter(ImageFilter.MinFilter(17)))>0
+alpha=np.where(reach,0,np.where(inner,255,soft*255))
+al=Image.fromarray(alpha.astype('uint8')).filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(1.2))
 o=src.copy(); o.putalpha(al); o.save(out_path)
 chk=Image.new('RGBA',src.size,(60,10,10,255)); chk.alpha_composite(o); chk.convert('RGB').resize((W//2,H//2)).save(out_path.replace('.png','-check.png'))
 print('bg removed', reach.mean())
