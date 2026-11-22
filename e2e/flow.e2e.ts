@@ -324,8 +324,8 @@ describe('ダンジョン', () => {
     const sv = await stored(g.page);
     expect(sv.loot.fire_shard).toBe(1);
     expect(sv.run.pos).toBe(2);
-    expect(sv.records.fire_lizard.wins).toBe(1);        // ダンジョンの敵にも、討伐回数と最速タイムを付ける（ランクは付けない）
-    expect(sv.records.fire_lizard.bestTime).toBeGreaterThan(0);
+    expect(sv.records.red_slime.wins).toBe(1);        // ダンジョンの敵にも、討伐回数と最速タイムを付ける（ランクは付けない）
+    expect(sv.records.red_slime.bestTime).toBeGreaterThan(0);
   });
 
   it('分かれ道は盤面の上で選ぶ。先を見ることもできる', async () => {
@@ -448,7 +448,7 @@ describe('ダンジョン', () => {
       await mode('landed');
       await key(g.page, 'Enter');
       await waitTop(g.page, 'ready');
-      expect(await scene(g.page, s => s.enemy.id)).toBe('fire_beast');
+      expect(await scene(g.page, s => s.enemy.id)).toBe('elder_dragon');
       await start(g.page);
       await win(g.page);
       await key(g.page, 'Enter');

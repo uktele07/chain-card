@@ -94,7 +94,7 @@ export function drawBattle(gs: GameScene, l: Layer) {
   // 自分のHP（手札の下）
   const low = b.hp <= b.maxHp * 0.3, hw = 320, hx = CX - hw / 2;
   l.text(hx, 500, b.invincible ? 'HP　無敵（テスト用）' : 'HP', 12, b.invincible ? C.keep : C.dim, 'start', true);
-  if (e.def.burn && !b.invincible) l.text(hx + 30, 500, `やけど（${e.def.burn.everySec}秒ごとに −${e.def.burn.damage}）`, 11, '#ff8a2a', 'start', true);
+  if (b.burning && !b.invincible) l.text(hx + 30, 500, `やけど（${b.burning.everySec}秒ごとに −${b.burning.damage}）`, 11, '#ff8a2a', 'start', true);
   l.text(hx + hw, 500, `${b.hp} / ${b.maxHp}`, 15, low ? '#ff6a6a' : C.text, 'end', true);
   l.rect(hx, 512, hw, 14, { fill: C.panel, rx: 4 });
   l.rect(hx, 512, hw * b.hp / b.maxHp, 14, { fill: low ? C.miss : C.item, rx: 4 });

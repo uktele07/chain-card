@@ -127,7 +127,7 @@ export function battleView(gs: GameScene) {
         <div class="b"><i style="width:${Math.min(1, l / t) * 100}%"></i></div></div>`)}` : nothing}
     </div>
 
-    <div class="sm" style="left:30px;bottom:66px">HP${e.def.burn ? html`<span class="burn">やけど　${e.def.burn.everySec}秒ごとに −${e.def.burn.damage}</span>` : nothing}</div>
+    <div class="sm" style="left:30px;bottom:66px">HP${b.burning && !b.invincible ? html`<span class="burn">やけど　${b.burning.everySec}秒ごとに −${b.burning.damage}</span>` : nothing}</div>
     <div class="num ${low ? 'low' : ''}" style="left:30px;bottom:24px">${b.hp}<span class="of"> / ${b.maxHp}</span></div>
     <div class="bar php" style="left:30px;bottom:14px;width:230px"><i style="width:${(b.hp / b.maxHp) * 100}%"></i></div>
 

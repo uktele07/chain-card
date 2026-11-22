@@ -15,6 +15,8 @@ export const WEAPONS = data.weapons as WeaponDef[];
 export const ARMORS = data.armors as ArmorDef[];
 export const ITEMS = data.items as (ItemDef & { short: string })[];
 export const ALL_ENEMIES = data.enemies as EnemyDef[];
+/** いまはどの敵も落とさないが、持ち主のセーブに残っているかもしれない換金アイテム（2026-11-22 に敵を入れ替えた。売れるように残す） */
+export const LEGACY_LOOT = [{ id: 'guard_core', name: '番人の核', price: 80 }, { id: 'beast_fang', name: '炎獣の牙', price: 150 }];
 /** 討伐の一覧に出す敵（ダンジョン専用の敵は除く） */
 export const ENEMIES = ALL_ENEMIES.filter(e => !e.dungeon);
 export const enemyById = (id: string) => ALL_ENEMIES.find(e => e.id === id) ?? ALL_ENEMIES[0];

@@ -21,7 +21,7 @@ export function drawResult(gs: GameScene, l: Layer) {
     l.text(CX - 190, 362, '最大ダメージ（1ターン）', 13, C.dim, 'start');
     l.text(CX + 190, 362, b.stats.maxTurn, 16, C.text, 'end', true);
     l.text(CX - 190, 388, '戦利品', 13, C.dim, 'start');
-    l.text(CX + 190, 388, gs.gained ? `${gs.gained.name} ×1` : 'なし', 15, gs.gained ? C.keep : C.faint, 'end', true);
+    l.text(CX + 190, 388, gs.gained ? (gs.gained.money ? gs.gained.name : `${gs.gained.name} ×1`) : 'なし', 15, gs.gained ? C.keep : C.faint, 'end', true);
   } else {
     l.text(CX - 190, 262, `${gs.enemy.name} の残りHP`, 13, C.dim, 'start');
     l.text(CX + 190, 262, `${b.enemy!.hp} / ${gs.enemy.hp}`, 22, C.text, 'end', true);

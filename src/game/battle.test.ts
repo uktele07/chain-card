@@ -461,6 +461,31 @@ describe('ダンジョン向けの引き継ぎと仕掛け', () => {
     expect(b.result).toBe('lost');
   });
 
+  it('技のやけど: 当たるとやけどになり、3秒ごとに −1。重ねない', () => {
+    const enemy: EnemyDef = { id: 'b', name: 'b', hp: 99, actions: [{ name: 'x', chargeSec: 1, damage: 2 }, { name: '火炎', chargeSec: 1, damage: 5, burn: true }] };
+    const b = new Battle(defs, rules, seeded(), [], enemy, {}, { hp: 50 });
+    wait(b, 1.05);
+    expect(b.burning).toBeNull();                    // やけどの付かない技
+    wait(b, 1.0);
+    expect(b.hp).toBe(43);
+    expect(b.burning).toEqual({ everySec: 3, damage: 1 });
+    const hp = b.hp;
+    b.enemy!.def.actions[0].damage = 0.0001;         // 次の通常攻撃は最低1
+    b.events.length = 0;
+    wait(b, 3.0);                                    // 3秒: 通常攻撃 −1 ×2、火炎 −5（2回目もやけどは重ならない）、やけど −1 ×1
+    expect(b.burning).toEqual({ everySec: 3, damage: 1 });
+    expect(b.events.filter(e => e.kind === 'burn').length).toBe(1);
+    expect(hp - b.hp).toBe(1 + 5 + 1 + 1);
+  });
+
+  it('技のやけど: 無敵のときは付かない', () => {
+    const enemy: EnemyDef = { id: 'b', name: 'b', hp: 99, actions: [{ name: '火炎', chargeSec: 1, damage: 5, burn: true }] };
+    const b = new Battle(defs, rules, seeded(), [], enemy, {}, { hp: 50 });
+    b.invincible = true;
+    wait(b, 1.05);
+    expect(b.burning).toBeNull();
+  });
+
   it('アクセサリで、使い切りボーナスが置き換わる', () => {
     const b = new Battle(defs, rules, seeded(), [], null, { consumeBonus: 3 });
     setHand(b, ['atk1', 'atk1', 'atk1', 'atk1']);

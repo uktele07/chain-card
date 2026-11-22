@@ -8,6 +8,18 @@ import { W, H } from './display';
 export const battleBgKey = (kind: string) => `battlebg-${kind}`;
 /** 敵の絵の中心（960×540 の座標）。光もここに当てる */
 export const ENEMY_AT = { x: 800, y: 326, size: 300 };
+/**
+ * 画像の敵（public/enemies/<id>.webp）の大きさと置き場所（960×540 の座標）。w: 幅（高さは絵の縦横比から）、cx: 中心の横、bottom: 足元。
+ * 大ボスだけ大きく、右にはみ出してよい。頭が HP の帯に重ならないよう足元を下げる（docs/art-prompts.md）
+ */
+export const ENEMY_ART: Record<string, { w: number; cx: number; bottom: number }> = {
+  red_slime: { w: 321, cx: 782, bottom: 420 },
+  treasure_hunter: { w: 248, cx: 788, bottom: 429 },
+  flame_lizard: { w: 383, cx: 790, bottom: 418 },
+  fire_wyvern: { w: 380, cx: 794, bottom: 406 },
+  elder_dragon: { w: 603, cx: 834, bottom: 495 },
+};
+export const enemyArtUrl = (id: string) => `enemies/${id}.webp`;
 
 function canvasTexture(scene: Phaser.Scene, key: string, zoom: number) {
   if (scene.textures.exists(key)) scene.textures.remove(key);
@@ -18,12 +30,13 @@ function canvasTexture(scene: Phaser.Scene, key: string, zoom: number) {
 }
 
 /** 敵の周りの光と、縁の暗さ（どちらの背景にも重ねる） */
-function lightAndVignette(ctx: CanvasRenderingContext2D, rgb: string, strength: number) {
+function lightAndVignette(ctx: CanvasRenderingContext2D, rgb: string, strength: number, foot = true) {
   const { x, y } = ENEMY_AT;
   let g = ctx.createRadialGradient(x, y + 10, 0, x, y + 10, 260);
   g.addColorStop(0, `rgba(${rgb},${strength})`); g.addColorStop(1, `rgba(${rgb},0)`);
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  // 足元の照り返し（中心 800,450、横 100・縦 20 の楕円）
+  // 足元の照り返し（中心 800,450、横 100・縦 20 の楕円）。神殿では敵ごとの足元に描く（src/screens/battlescene.ts）
+  if (!foot) return;
   ctx.save(); ctx.translate(x, y + 124); ctx.scale(1, 0.2);
   g = ctx.createRadialGradient(0, 0, 0, 0, 0, 100);
   g.addColorStop(0, `rgba(${rgb},${strength * 1.6})`); g.addColorStop(1, `rgba(${rgb},0)`);
@@ -91,7 +104,7 @@ export function ensureBattleBg(scene: Phaser.Scene, kind: string, zoom: number) 
   const key = battleBgKey(kind);
   if (scene.textures.exists(key)) return key;
   const { tex, ctx } = canvasTexture(scene, key, zoom);
-  if (kind === 'temple') { templeHall(ctx); lightAndVignette(ctx, '255,150,70', 0.3); }
+  if (kind === 'temple') { templeHall(ctx); lightAndVignette(ctx, '255,150,70', 0.3, false); }
   else { const rgb = rgbOf(kind.slice(5)); abstractBg(ctx, rgb); lightAndVignette(ctx, rgb, 0.18); }
   tex.refresh();
   return key;

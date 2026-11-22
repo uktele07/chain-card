@@ -33,7 +33,7 @@ export function resultView(gs: GameScene) {
   const rows: [string, string, string][] = [
     ['討伐回数', b.usedInvincible ? '記録なし' : `${o.wins} 回`, b.usedInvincible ? 'none' : ''],
     ['これまでの最速タイム', o.prevBest === null ? '—' : `${o.prevBest.toFixed(1)} 秒`, o.prevBest === null ? 'none' : ''],
-    ['戦利品', gs.gained ? `${gs.gained.name} ×1` : 'なし', gs.gained ? 'g' : 'none'],
+    ['戦利品', gs.gained ? (gs.gained.money ? gs.gained.name : `${gs.gained.name} ×1`) : 'なし', gs.gained ? 'g' : 'none'],
   ];
   return html`<div class="ov" style="--ac:${accent(gs)}"><div class="dim"></div>
     <div class="band" style="top:150px;height:240px"></div>

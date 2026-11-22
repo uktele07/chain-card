@@ -4,16 +4,16 @@ import { Input, type Btn } from '../game/input';
 import { Sound } from '../game/audio';
 import { ZOOM } from '../game/display';
 import { Layer } from '../game/ui';
-import { BOARD_PAD, loadArt, loadBoardArt, loadTempleArt } from '../game/art';
+import { BOARD_PAD, loadArt, loadBoardArt, loadTempleArt, monsterKey } from '../game/art';
 import { DungeonRun, type DungeonDef, type Effect } from '../game/dungeon';
 import { clearSave, loadSave, rankOf, rankValue, storeSave, type Rank, type SaveData } from '../game/save';
 import { buildDeck, gearOf } from '../game/loadout';
-import { RULES, DEFS, SPELLS, WEAPONS, ARMORS, ITEMS, ENEMIES, ALL_ENEMIES, ACCESSORIES, DUNGEONS, enemyById, itemOf, SAVE_CONFIG, SHOP } from '../game/content';
+import { RULES, DEFS, SPELLS, WEAPONS, ARMORS, ITEMS, ENEMIES, ALL_ENEMIES, ACCESSORIES, DUNGEONS, enemyById, itemOf, SAVE_CONFIG, SHOP, LEGACY_LOOT } from '../game/content';
 import { C, CARD_BTN, KEEP_BTN, RESULT_WAIT, MENU, PAUSE, PAUSE_DUNGEON, EQUIP_ROWS, type Base, type Overlay, type Deal } from '../screens/common';
 import { drawList } from '../screens/list';
 import { drawBattle } from '../screens/battle';
 import { drawBattleScene, CHAIN_AT, ITEM_AT, HP_AT } from '../screens/battlescene';
-import { ENEMY_AT } from '../game/battlebg';
+import { ENEMY_AT, ENEMY_ART, enemyArtUrl } from '../game/battlebg';
 import { drawListScene } from '../screens/listscene';
 import { loadRunes } from '../game/runes';
 import { UIRoot, isHtml, UI_DEBUG, DEBUG_MARKS, type ViewName } from '../views/root';
@@ -64,7 +64,7 @@ export class GameScene extends Phaser.Scene {
   shopTab: 0 | 1 = 0;       // 0=買う 1=売る
   deal: Deal | null = null;
   dealCursor = 0;           // 0=実行 1=やめる
-  gained: { name: string; price: number } | null = null;   // 直前の戦闘で手に入れた換金アイテム
+  gained: { name: string; price: number; money?: boolean } | null = null;   // 直前の戦闘で手に入れた換金アイテム（money: お金）
   equipFocus: 'slots' | 'options' = 'slots';
   enemy: EnemyDef = ENEMIES[0];
   invincible = false;       // テスト用。画面を移っても維持する
@@ -88,6 +88,9 @@ export class GameScene extends Phaser.Scene {
     loadArt(this, ZOOM);
     loadTempleArt(this, ZOOM);
     loadRunes(this, ZOOM);
+    // 画像の敵（持ち主が生成した絵。docs/credits.md）。読み込みが済むまでは、敵の絵が出ないだけ
+    for (const id of Object.keys(ENEMY_ART)) if (!this.textures.exists(monsterKey(id))) this.load.image(monsterKey(id), enemyArtUrl(id));
+    this.load.start();
     this.save = loadSave(SAVE_CONFIG);
     this.applyVolume();
     this.input.on('pointerdown', () => this.snd.unlock());
@@ -104,7 +107,7 @@ export class GameScene extends Phaser.Scene {
   get weapon() { return WEAPONS.find(w => w.id === this.save.weapon) ?? WEAPONS[0]; }
   get armor() { return ARMORS.find(a => a.id === this.save.armor) ?? ARMORS[0]; }
   get accessory() { return ACCESSORIES.find(a => a.id === this.save.accessory); }
-  sellList() { return ALL_ENEMIES.map(e => e.drop).filter((d, i, a): d is NonNullable<EnemyDef['drop']> => !!d && (this.save.loot[d.id] ?? 0) > 0 && a.findIndex(o => o?.id === d.id) === i); }
+  sellList() { return [...ALL_ENEMIES.map(e => e.drop), ...LEGACY_LOOT].filter((d, i, a): d is NonNullable<EnemyDef['drop']> => !!d && (this.save.loot[d.id] ?? 0) > 0 && a.findIndex(o => o?.id === d.id) === i); }
 
   newBattle() {
     // ダンジョンの中では、HP・最大HP・アイテムの使用状況を引き継ぐ
@@ -140,9 +143,14 @@ export class GameScene extends Phaser.Scene {
     if (b.usedInvincible) return;        // 無敵を使った戦闘は、ランクも記録も付けない
     const rank = rankOf(b.time, this.enemy.rankSec);
     this.record(rank);
-    const drop = this.enemy.drop;
-    if (drop) { this.save.loot[drop.id] = (this.save.loot[drop.id] ?? 0) + 1; this.gained = drop; }
+    this.takeDrop();
     storeSave(this.save);
+  }
+  /** 戦利品を受け取る（換金アイテムか、お金） */
+  takeDrop() {
+    const e = this.enemy, sv = this.save;
+    if (e.gold) { sv.gold += e.gold; this.gained = { name: `${e.gold} G`, price: e.gold, money: true }; }
+    else if (e.drop) { sv.loot[e.drop.id] = (sv.loot[e.drop.id] ?? 0) + 1; this.gained = e.drop; }
   }
   /** 討伐の記録（最速タイム・ランク・回数）を付ける。rank が null ならランクは出さない（ダンジョンの敵） */
   record(rank: Rank | null) {
@@ -164,8 +172,7 @@ export class GameScene extends Phaser.Scene {
     this.snd.win();
     run.battleWon(b.hp, b.items.map(it => !!it?.used));
     if (!b.usedInvincible) this.record(null);
-    const drop = this.enemy.drop;
-    if (drop) { sv.loot[drop.id] = (sv.loot[drop.id] ?? 0) + 1; this.gained = drop; }
+    this.takeDrop();
     if (run.state.cleared) {
       const id = run.def.id, rw = run.def.reward;
       if (!sv.cleared[id] && !sv.accessories.includes(rw.accessory)) {      // 初回はアクセサリ。2回目以降はお金

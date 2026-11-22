@@ -29,7 +29,13 @@
 
 | ファイル | 中身 | 作ったサービス | 日付 |
 |---|---|---|---|
-| （まだない） | | | |
+| `public/enemies/red_slime.webp` | 赤スライム | Gemini（持ち主が生成） | 2026-11-22 |
+| `public/enemies/treasure_hunter.webp` | トレジャーハンター | Gemini（持ち主が生成） | 2026-11-22 |
+| `public/enemies/flame_lizard.webp` | フレイムリザード | Gemini（持ち主が生成） | 2026-11-22 |
+| `public/enemies/fire_wyvern.webp` | 炎の飛竜 | Gemini（持ち主が生成） | 2026-11-22 |
+| `public/enemies/elder_dragon.webp` | 炎の古竜 | Gemini（持ち主が生成） | 2026-11-22 |
+
+- 背景（紙の灰色）は `scripts/art/cut.py` で切り抜き、余白を切り落として webp にした（`python3 scripts/art/cut.py <元の画像> <出力.png> 13`）。元の画像はリポジトリに入れていない。
 
 - Steam で出すときは、AIで作った素材を使っていることをストアページで申告する（出す前に、その時点の規定を確かめる）。
 

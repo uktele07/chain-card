@@ -2,7 +2,7 @@
   "dungeons": [
     {
       "id": "fire", "name": "炎の神殿", "mark": "炎", "color": "#f2a23a", "minutes": 10,
-      "zako": ["fire_lizard", "fire_wisp", "lava_slime"], "midBoss": "fire_guard", "boss": "fire_beast",
+      "zako": ["red_slime", "treasure_hunter", "flame_lizard"], "midBoss": "fire_wyvern", "boss": "elder_dragon",
       "heal": 20, "maxHpUp": 10,
       "event": { "name": "火柱", "damage": 7 },
       "reward": { "accessory": "flame_ring", "gold": 300 },

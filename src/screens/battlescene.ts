@@ -2,7 +2,8 @@
 import Phaser from 'phaser';
 import { W, H, ZOOM } from '../game/display';
 import { monsterKey } from '../game/art';
-import { ensureBattleBg, ENEMY_AT } from '../game/battlebg';
+import { ensureBattleBg, ENEMY_AT, ENEMY_ART } from '../game/battlebg';
+import { SQUARE_GLOW } from '../game/runes';
 import type { Layer } from '../game/ui';
 import { ENEMY_COL } from './common';
 import type { GameScene } from '../scenes/GameScene';
@@ -25,8 +26,17 @@ export function drawBattleScene(gs: GameScene, l: Layer) {
 
   // 敵。強い攻撃の溜め中は赤く光る
   const sx = gs.enemyShake > 0 ? Phaser.Math.Between(-5, 5) : 0, dead = b.result === 'won';
-  if (big) l.ellipse(ENEMY_AT.x, ENEMY_AT.y, 280 + Math.sin(gs.clock * 10) * 14, 280 + Math.sin(gs.clock * 10) * 14, '#ff2a2a', 0.22);
-  l.image(monsterKey(e.def.id), ENEMY_AT.x + sx, ENEMY_AT.y, ENEMY_AT.size, dead ? 0.3 : hidden ? 0.6 : 1, big ? 0xffb0a0 : undefined);
+  const key = monsterKey(e.def.id), art = ENEMY_ART[e.def.id], alpha = dead ? 0.3 : hidden ? 0.6 : 1, tint = big ? 0xffb0a0 : undefined;
+  if (art && gs.textures.exists(key)) {
+    // 画像の敵: 縦横比を保って、足元をそろえて置く。足元に橙の照り返し（加算）
+    const src = gs.textures.get(key).getSourceImage(), h = art.w * src.height / src.width, cy = art.bottom - h / 2;
+    if (gs.inRun) l.image(SQUARE_GLOW, art.cx, art.bottom - 4, art.w * 0.75, 0.55, 0xff7a3a, art.w * 0.14, 0, true);
+    if (big) l.ellipse(art.cx, cy, h * 0.9 + Math.sin(gs.clock * 10) * 14, h * 0.9 + Math.sin(gs.clock * 10) * 14, '#ff2a2a', 0.22);
+    l.image(key, art.cx + sx, cy, art.w, alpha, tint, h);
+  } else {
+    if (big) l.ellipse(ENEMY_AT.x, ENEMY_AT.y, 280 + Math.sin(gs.clock * 10) * 14, 280 + Math.sin(gs.clock * 10) * 14, '#ff2a2a', 0.22);
+    l.image(key, ENEMY_AT.x + sx, ENEMY_AT.y, ENEMY_AT.size, alpha, tint);
+  }
 
   // 被弾の赤い光と、強い攻撃の予告（画面の縁とチェインの周りが赤く点滅）
   if (gs.hurt > 0 && fight) gs.fx.fillStyle(0xff2a2a, Math.min(0.35, gs.hurt * 0.7)).fillRect(0, 0, W, H);

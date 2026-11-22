@@ -28,14 +28,17 @@ export interface ItemDef {
 export interface ItemSlot { def: ItemDef; used: boolean }
 
 /** 敵: actions を上から順に繰り返す。chargeSec かけてゲージを溜め、満タンで damage を与える */
-export interface EnemyAction { name: string; chargeSec: number; damage: number; big?: boolean }
+export interface EnemyAction { name: string; chargeSec: number; damage: number; big?: boolean; burn?: boolean }   // burn: 当たるとやけど（重ねない。戦闘が終われば治る）
+/** 技で付くやけどの強さ */
+export const BURN = { everySec: 3, damage: 1 };
 export interface EnemyDef {
   id: string; name: string; rank?: string; hp: number; actions: EnemyAction[];
   rankSec?: { S: number; A: number; B: number };   // 撃破タイムがこの秒数以内ならそのランク
   dungeon?: string;                                 // ダンジョン専用の敵（討伐の一覧には出さない）
-  burn?: { everySec: number; damage: number };      // やけど: 戦闘中、時間でHPが減る（ボスの仕掛け）
+  burn?: { everySec: number; damage: number };      // 戦闘の初めからやけど（いまは使っていない。技で付くやけどは EnemyAction.burn）
   unlock?: 'prev';                                  // 一覧でこれより前の敵をすべて倒すと出現
   drop?: { id: string; name: string; price: number };   // 討伐で手に入る換金アイテム
+  gold?: number;                                    // 討伐で手に入るお金（換金アイテムの代わり）
 }
 
 /** 装備による補正（武器と防具をまとめたもの） */
@@ -117,6 +120,8 @@ export class Battle {
   hp: number;
   maxHp: number;
   private burnWait = 0;
+  /** やけどの強さ（null ならやけどしていない） */
+  burning: { everySec: number; damage: number } | null = null;
   time = 0;
   stats = { damage: 0, plays: 0, skips: 0, autoSkips: 0, misses: 0, sCount: 0, fullConsumes: 0, maxTurn: 0, chainBreaks: 0, taken: 0 };
   events: BattleEvent[] = [];
@@ -174,13 +179,15 @@ export class Battle {
   private updateEnemy(dt: number) {
     const e = this.enemy;
     if (!e) return;
-    if (e.def.burn && !this.invincible) {   // やけどは、敵がスタンしていても進む
+    const burn = this.burning ?? e.def.burn;
+    if (burn && !this.invincible) {   // やけどは、敵がスタンしていても進む
+      this.burning = burn;
       this.burnWait += dt;
-      while (this.burnWait >= e.def.burn.everySec && this.hp > 0) {
-        this.burnWait -= e.def.burn.everySec;
-        this.hp = Math.max(0, this.hp - e.def.burn.damage);
-        this.stats.taken += e.def.burn.damage;
-        this.events.push({ kind: 'burn', damage: e.def.burn.damage });
+      while (this.burnWait >= burn.everySec && this.hp > 0) {
+        this.burnWait -= burn.everySec;
+        this.hp = Math.max(0, this.hp - burn.damage);
+        this.stats.taken += burn.damage;
+        this.events.push({ kind: 'burn', damage: burn.damage });
       }
       if (this.hp <= 0) { this.result = 'lost'; this.events.push({ kind: 'lose' }); return; }
     }
@@ -192,6 +199,7 @@ export class Battle {
     this.hp = Math.max(0, this.hp - damage);
     this.stats.taken += damage;
     this.events.push({ kind: 'enemyAttack', name: a.name, damage, big: !!a.big });
+    if (a.burn && damage > 0 && !this.burning) { this.burning = BURN; this.burnWait = 0; }   // 重ねない
     e.gauge = 0;
     e.actionIndex = (e.actionIndex + 1) % e.def.actions.length;
     if (this.hp <= 0) { this.result = 'lost'; this.events.push({ kind: 'lose' }); return; }

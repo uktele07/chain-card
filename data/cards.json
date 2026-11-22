@@ -372,137 +372,121 @@
       }
     },
     {
-      "id": "fire_lizard",
-      "name": "火トカゲ",
+      "id": "red_slime",
+      "name": "赤スライム",
       "rank": "雑",
-      "hp": 30,
+      "hp": 22,
       "dungeon": "fire",
+      "actions": [
+        {
+          "name": "体当たり",
+          "chargeSec": 3.0,
+          "damage": 3
+        }
+      ],
       "drop": {
         "id": "fire_shard",
         "name": "火の欠片",
         "price": 15
-      },
+      }
+    },
+    {
+      "id": "treasure_hunter",
+      "name": "トレジャーハンター",
+      "rank": "雑",
+      "hp": 30,
+      "dungeon": "fire",
       "actions": [
         {
-          "name": "かみつき",
+          "name": "短剣",
           "chargeSec": 3.8,
           "damage": 3
         },
         {
-          "name": "かみつき",
+          "name": "短剣",
           "chargeSec": 3.8,
           "damage": 3
         },
         {
-          "name": "火の息",
+          "name": "火薬玉",
           "chargeSec": 4.8,
           "damage": 7,
           "big": true
         }
-      ]
+      ],
+      "gold": 50
     },
     {
-      "id": "fire_wisp",
-      "name": "鬼火",
-      "rank": "雑",
-      "hp": 22,
-      "dungeon": "fire",
-      "drop": {
-        "id": "fire_shard",
-        "name": "火の欠片",
-        "price": 15
-      },
-      "actions": [
-        {
-          "name": "火花",
-          "chargeSec": 3.0,
-          "damage": 3
-        }
-      ]
-    },
-    {
-      "id": "lava_slime",
-      "name": "溶岩スライム",
+      "id": "flame_lizard",
+      "name": "フレイムリザード",
       "rank": "雑",
       "hp": 40,
       "dungeon": "fire",
+      "actions": [
+        {
+          "name": "噛みつき",
+          "chargeSec": 5.0,
+          "damage": 6
+        },
+        {
+          "name": "噛みつき",
+          "chargeSec": 5.0,
+          "damage": 6
+        },
+        {
+          "name": "火炎の息",
+          "chargeSec": 5.5,
+          "damage": 9,
+          "big": true,
+          "burn": true
+        }
+      ],
       "drop": {
         "id": "fire_shard",
         "name": "火の欠片",
         "price": 15
-      },
-      "actions": [
-        {
-          "name": "のしかかり",
-          "chargeSec": 5.0,
-          "damage": 6
-        },
-        {
-          "name": "のしかかり",
-          "chargeSec": 5.0,
-          "damage": 6
-        },
-        {
-          "name": "溶岩弾",
-          "chargeSec": 5.5,
-          "damage": 11,
-          "big": true
-        }
-      ]
+      }
     },
     {
-      "id": "fire_guard",
-      "name": "炎の番人",
+      "id": "fire_wyvern",
+      "name": "炎の飛竜",
       "rank": "中",
       "hp": 90,
       "dungeon": "fire",
-      "drop": {
-        "id": "guard_core",
-        "name": "番人の核",
-        "price": 80
-      },
       "actions": [
         {
-          "name": "斬りつけ",
+          "name": "クロー",
           "chargeSec": 4.0,
           "damage": 7
         },
         {
-          "name": "斬りつけ",
+          "name": "クロー",
           "chargeSec": 4.0,
           "damage": 7
         },
         {
-          "name": "炎の一閃",
+          "name": "爆風",
           "chargeSec": 5.0,
           "damage": 17,
-          "big": true
+          "big": true,
+          "burn": true
         }
-      ]
+      ],
+      "drop": {
+        "id": "wyvern_scale",
+        "name": "飛竜の鱗",
+        "price": 80
+      }
     },
     {
-      "id": "fire_beast",
-      "name": "炎獣",
+      "id": "elder_dragon",
+      "name": "炎の古竜",
       "rank": "主",
       "hp": 132,
       "dungeon": "fire",
-      "burn": {
-        "everySec": 3.0,
-        "damage": 1
-      },
-      "drop": {
-        "id": "beast_fang",
-        "name": "炎獣の牙",
-        "price": 150
-      },
       "actions": [
         {
-          "name": "爪",
-          "chargeSec": 3.8,
-          "damage": 7
-        },
-        {
-          "name": "爪",
+          "name": "クロー",
           "chargeSec": 3.8,
           "damage": 7
         },
@@ -510,14 +494,20 @@
           "name": "業火",
           "chargeSec": 5.0,
           "damage": 20,
-          "big": true
+          "big": true,
+          "burn": true
         },
         {
-          "name": "突進",
+          "name": "テイル",
           "chargeSec": 3.8,
           "damage": 8
         }
-      ]
+      ],
+      "drop": {
+        "id": "dragon_fang",
+        "name": "古竜の牙",
+        "price": 150
+      }
     }
   ],
   "weapons": [
