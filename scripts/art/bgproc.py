@@ -8,7 +8,8 @@ if th<=H0: im=im.crop((0,(H0-th)//2,W0,(H0-th)//2+th))
 else: tw=int(H0*16/9); im=im.crop(((W0-tw)//2,0,(W0-tw)//2+tw,H0))
 im=im.resize((1920,1080),Image.LANCZOS)
 p=im.filter(ImageFilter.GaussianBlur(float(sys.argv[3]) if len(sys.argv)>3 else 3))
-p=ImageEnhance.Color(p).enhance(0.8); p=ImageEnhance.Brightness(p).enhance(0.55)
+BR=float(sys.argv[4]) if len(sys.argv)>4 else 0.55   # 明るさ（1 でそのまま）
+p=ImageEnhance.Color(p).enhance(0.8); p=ImageEnhance.Brightness(p).enhance(BR)
 a=np.asarray(p).astype(float); H,W=a.shape[:2]; yy,xx=np.mgrid[0:H,0:W]
 d=np.sqrt((xx-1600)**2+(yy-652)**2); light=np.clip(1-d/520,0,1)**1.5
 a=a*(1+0.6*light[...,None])+np.array([255,150,70])*0.12*light[...,None]

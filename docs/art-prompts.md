@@ -81,3 +81,15 @@ Watercolor painting with bold black ink linework, strong confident strokes, wate
 - まだ奥へ延びる通路になる: `Orthographic side view. Do not draw a corridor or a vanishing point.`
 - 壁が近すぎて床が見えない: `Show more floor: the floor fills the lower 40 percent of the image.`
 - 明るすぎる: `Very dark overall; only the lava and the right side of the floor are lit.`
+
+### 神々しく、明るめにする版（2026-11-22、持ち主の希望）
+
+横から見た舞台の構図はそのまま。高い天井から差し込む光、金の装飾、炎の神をかたどった浮き彫りで、神殿らしい神々しさを足す。加工の明るさは 0.55 → 0.8 程度に上げる（`python3 scripts/art/bgproc.py <元> <出力> 2 0.8`）。
+
+```
+Use the attached image only as a composition guide (layout of the wall, arches, floor and the lit area on the right). Do not copy its flat colors or simple shapes; paint a detailed scene.
+
+Side view of a sacred battle hall inside an ancient fire temple, wide 16:9 landscape, like a theater stage seen straight on. The back wall runs parallel to the picture plane across the whole image: tall majestic stone pillars with carved golden ornaments, high arched openings evenly spaced from left to right, and large stone reliefs of a flame deity and sun motifs between the arches. Beams of warm golden light fall from high windows above, with soft light rays and glowing dust in the air. Behind the arches, lava glows gently in orange-red. A wide flat polished stone floor runs horizontally across the lower part of the image (the back edge of the floor at about 60 percent of the image height), with faint golden inlaid patterns, no strong perspective and no corridor leading into the distance. The right side of the floor is bathed in golden light where a monster will stand; the left and center are calmer and slightly darker. Divine, solemn and majestic atmosphere. No creatures, no people, no text. No border, no frame, no white paper margin; the painting fills the entire image edge to edge.
+
+Watercolor painting with bold black ink linework, strong confident strokes, watercolor washes with controlled bleeding, palette of warm stone, deep brown and charcoal with gold and orange-red accents, subtle paper texture.
+```
