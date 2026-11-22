@@ -13,7 +13,8 @@ import { C, CARD_BTN, KEEP_BTN, RESULT_WAIT, MENU, PAUSE, PAUSE_DUNGEON, EQUIP_R
 import { drawList } from '../screens/list';
 import { drawBattle } from '../screens/battle';
 import { drawBattleScene, CHAIN_AT, ITEM_AT, HP_AT } from '../screens/battlescene';
-import { ENEMY_AT, ENEMY_ART, enemyArtUrl } from '../game/battlebg';
+import { ENEMY_AT, ENEMY_ART, enemyArtUrl, BATTLE_BG_IMAGES, battleBgImageKey, battleBgImageUrl } from '../game/battlebg';
+import { BattleFx } from '../game/battlefx';
 import { drawListScene } from '../screens/listscene';
 import { loadRunes } from '../game/runes';
 import { UIRoot, isHtml, UI_DEBUG, DEBUG_MARKS, type ViewName } from '../views/root';
@@ -90,6 +91,8 @@ export class GameScene extends Phaser.Scene {
     loadRunes(this, ZOOM);
     // 画像の敵（持ち主が生成した絵。docs/credits.md）。読み込みが済むまでは、敵の絵が出ないだけ
     for (const id of Object.keys(ENEMY_ART)) if (!this.textures.exists(monsterKey(id))) this.load.image(monsterKey(id), enemyArtUrl(id));
+    for (const id of BATTLE_BG_IMAGES) if (!this.textures.exists(battleBgImageKey(id))) this.load.image(battleBgImageKey(id), battleBgImageUrl(id));
+    this.battleFx = new BattleFx(this);
     this.load.start();
     this.save = loadSave(SAVE_CONFIG);
     this.applyVolume();
@@ -674,8 +677,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   // ---------------- 描画 ----------------
+  battleFx!: BattleFx;   // 戦闘背景の炎と火の粉
   draw() {
     for (const l of this.L) l.begin();
+    this.battleFx.set(null);   // 戦闘の背景を描くときだけ、drawBattleScene が出し直す（同じなら何もしない）
     this.fx.clear();
     const [a, b] = this.L;
     // いま見えている画面（奥から順）。HTML へ移した画面は Canvas に描かず、HTML の層に描く
@@ -712,6 +717,7 @@ export class GameScene extends Phaser.Scene {
     // 位置合わせの目印（?uidebug）: HTML 側の水色の枠と、Canvas 側の赤い四角が重なれば合っている
     if (UI_DEBUG) for (const [x, y] of DEBUG_MARKS) this.fx.fillStyle(0xff2a2a, 1).fillRect(x + 4, y + 4, 12, 12);
     for (const l of this.L) l.end();
+    this.battleFx.commit();
     this.ui.draw(this, views);
   }
 

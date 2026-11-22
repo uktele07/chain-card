@@ -46,11 +46,12 @@ export class Layer {
   image(key: string, x: number, y: number, size: number, alpha = 1, tint?: number, h = size, rot = 0, add = false) {
     if (!this.scene.textures.exists(key)) return;
     let im = this.imgs[this.ii];
-    if (!im) { im = this.scene.add.image(0, 0, key).setDepth(this.depth + 1); this.imgs.push(im); }
+    if (!im) { im = this.scene.add.image(0, 0, key); this.imgs.push(im); }
     if (im.texture.key !== key) im.setTexture(key);
-    im.setPosition(x, y).setDisplaySize(size, h).setAlpha(alpha).setRotation(rot).setBlendMode(add ? 1 : 0).setVisible(true);   // 1 = ADD, 0 = NORMAL
+    im.setDepth(this.depth + 1).setPosition(x, y).setDisplaySize(size, h).setAlpha(alpha).setRotation(rot).setBlendMode(add ? 1 : 0).setVisible(true);   // 1 = ADD, 0 = NORMAL
     if (tint === undefined) im.clearTint(); else im.setTint(tint);
     this.ii++;
+    return im;   // 深さを変えたいとき（戦闘の敵を背景の演出より手前に出す）
   }
 
   rect(x: number, y: number, w: number, h: number, o: { fill?: string; stroke?: string; sw?: number; rx?: number; alpha?: number } = {}) {

@@ -2,7 +2,7 @@
 import Phaser from 'phaser';
 import { W, H, ZOOM } from '../game/display';
 import { monsterKey } from '../game/art';
-import { ensureBattleBg, ENEMY_AT, ENEMY_ART } from '../game/battlebg';
+import { ensureBattleBg, ENEMY_AT, ENEMY_ART, battleBgImageKey } from '../game/battlebg';
 import { SQUARE_GLOW } from '../game/runes';
 import type { Layer } from '../game/ui';
 import { ENEMY_COL } from './common';
@@ -21,8 +21,13 @@ export function drawBattleScene(gs: GameScene, l: Layer) {
   const big = fight && !!act.big && e.stunLeft <= 0;
 
   // 背景: ダンジョンは神殿の広間、討伐は敵の色の抽象
-  const kind = gs.inRun ? 'temple' : `hunt-${ENEMY_COL[e.def.id] ?? '#d8b46a'}`;
-  l.image(ensureBattleBg(gs, kind, ZOOM), W / 2, H / 2, W, 1, undefined, H);
+  // ダンジョンに背景の画像があれば、それを使い、炎と火の粉を出す（src/game/battlefx.ts）
+  const dungeon = gs.inRun && gs.run ? gs.run.def.id : null, img = dungeon ? battleBgImageKey(dungeon) : '';
+  if (dungeon && gs.textures.exists(img)) { l.image(img, W / 2, H / 2, W, 1, undefined, H); gs.battleFx.set(dungeon); }
+  else {
+    const kind = gs.inRun ? 'temple' : `hunt-${ENEMY_COL[e.def.id] ?? '#d8b46a'}`;
+    l.image(ensureBattleBg(gs, kind, ZOOM), W / 2, H / 2, W, 1, undefined, H);
+  }
 
   // 敵。強い攻撃の溜め中は赤く光る
   const sx = gs.enemyShake > 0 ? Phaser.Math.Between(-5, 5) : 0, dead = b.result === 'won';
@@ -30,12 +35,12 @@ export function drawBattleScene(gs: GameScene, l: Layer) {
   if (art && gs.textures.exists(key)) {
     // 画像の敵: 縦横比を保って、足元をそろえて置く。足元に橙の照り返し（加算）
     const src = gs.textures.get(key).getSourceImage(), h = art.w * src.height / src.width, cy = art.bottom - h / 2;
-    if (gs.inRun) l.image(SQUARE_GLOW, art.cx, art.bottom - 4 + (art.shadowDy ?? 0), art.w * (art.shadowDy ? 0.6 : 0.75), art.shadowDy ? 0.4 : 0.55, 0xff7a3a, art.w * 0.14, 0, true);   // 飛んでいる敵は、離れた床に小さく薄く
+    if (gs.inRun) l.image(SQUARE_GLOW, art.cx, art.bottom - 4 + (art.shadowDy ?? 0), art.w * (art.shadowDy ? 0.6 : 0.75), art.shadowDy ? 0.4 : 0.55, 0xff7a3a, art.w * 0.14, 0, true)?.setDepth(1.55);   // 飛んでいる敵は、離れた床に小さく薄く
     if (big) l.ellipse(art.cx, cy, h * 0.9 + Math.sin(gs.clock * 10) * 14, h * 0.9 + Math.sin(gs.clock * 10) * 14, '#ff2a2a', 0.22);
-    l.image(key, art.cx + sx, cy, art.w, alpha, tint, h);
+    l.image(key, art.cx + sx, cy, art.w, alpha, tint, h)?.setDepth(1.6);   // 背景の演出（深さ 1.3）より手前
   } else {
     if (big) l.ellipse(ENEMY_AT.x, ENEMY_AT.y, 280 + Math.sin(gs.clock * 10) * 14, 280 + Math.sin(gs.clock * 10) * 14, '#ff2a2a', 0.22);
-    l.image(key, ENEMY_AT.x + sx, ENEMY_AT.y, ENEMY_AT.size, alpha, tint);
+    l.image(key, ENEMY_AT.x + sx, ENEMY_AT.y, ENEMY_AT.size, alpha, tint)?.setDepth(1.6);
   }
 
   // 被弾の赤い光と、強い攻撃の予告（画面の縁とチェインの周りが赤く点滅）

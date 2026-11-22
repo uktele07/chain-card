@@ -20,6 +20,10 @@ export const ENEMY_ART: Record<string, { w: number; cx: number; bottom: number; 
   elder_dragon: { w: 603, cx: 834, bottom: 495 },
 };
 export const enemyArtUrl = (id: string) => `enemies/${id}.webp`;
+/** ダンジョンの戦闘背景の画像（持ち主が生成した絵を、scripts/art/bgproc.py で暗くぼかしたもの）。無いダンジョンは、コードで描いた神殿の広間 */
+export const BATTLE_BG_IMAGES = ['fire'];
+export const battleBgImageKey = (id: string) => `battlebg-img-${id}`;
+export const battleBgImageUrl = (id: string) => `battle/${id}.jpg`;
 
 function canvasTexture(scene: Phaser.Scene, key: string, zoom: number) {
   if (scene.textures.exists(key)) scene.textures.remove(key);

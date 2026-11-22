@@ -34,8 +34,9 @@
 | `public/enemies/flame_lizard.webp` | フレイムリザード | Gemini（持ち主が生成） | 2026-11-22 |
 | `public/enemies/fire_wyvern.webp` | 炎の飛竜 | Gemini（持ち主が生成） | 2026-11-22 |
 | `public/enemies/elder_dragon.webp` | 炎の古竜 | Gemini（持ち主が生成） | 2026-11-22 |
+| `public/battle/fire.jpg` | 炎の神殿の戦闘背景（横から見た舞台） | Gemini（持ち主が生成） | 2026-11-22 |
 
-- 背景（紙の灰色）は `scripts/art/cut.py` で切り抜き、余白を切り落として webp にした（`python3 scripts/art/cut.py <元の画像> <出力.png> 13`）。元の画像はリポジトリに入れていない。
+- 背景（紙の灰色）は `scripts/art/cut.py` で切り抜き、余白を切り落として webp にした（`python3 scripts/art/cut.py <元の画像> <出力.png> 13`）。元の画像はリポジトリに入れていない。戦闘背景は `scripts/art/bgproc.py` で暗くぼかした（`python3 scripts/art/bgproc.py <元> <出力> 2 0.8`）。
 
 - Steam で出すときは、AIで作った素材を使っていることをストアページで申告する（出す前に、その時点の規定を確かめる）。
 
