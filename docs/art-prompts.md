@@ -16,27 +16,39 @@
 - 色は黒と暗い茶に、差し色1色。
 - 形ははっきり、描き込みは中くらい（小さく映しても読めるように）。
 
-## 炎の古竜（大ボス）
+## 大きさと位置（2026-11-22、持ち主）
 
+- 大ボス（炎の古竜）だけ大きく、幅 640（960×540 の座標）。右の翼と尾は画面の外にはみ出してよい。頭が HP の帯に重ならないよう、足元を y 500 に置く（見本 `docs/samples/style-E1-dragon-B2.png`）。
+- 雑魚と中ボスは、幅 460 くらい（見本 `docs/samples/style-E1-dragon-A.png`）。画面に収める。
+- 床の影（橙の楕円）は、足元に合わせて動かす（入れるときに直す）。
+
+## 指示文の型
+
+うまくいったのは Gemini に「共通部分＋描き分け W1」を渡したとき（2026-11-22、炎の古竜）。ChatGPT で「重い顎」「縁全体を強く光らせる」「見上げて大きく」を足すと、ずんぐりして体中が光る、ださい絵になった。**指示は足しすぎない。**
+
+**共通部分（Design の段落だけを敵ごとに書き換える）**
 ```
-A fearsome ancient fire dragon, the final boss of a fire temple. Full body, facing LEFT: the head, face, chest and body are turned toward the left side of the image, three-quarter view from the left, slightly low angle looking up at the dragon so it feels huge and dominant.
+[Design]. Full body, facing LEFT (head, face and body turned to the left side of the image), three-quarter view from the left. Cool and intimidating (not cute). Glowing orange-red embers and cracks, rim light in orange-red from behind and above. Clear readable silhouette. Plain background, no scenery, no text.
 
-Composition: square image (1:1). Close and tall framing, the dragon fills most of the frame with a little margin on every side; the whole body, wings, tail and claws stay inside the frame. Wings raised upward and slightly back, not spread flat to the sides. Tail curls behind the body toward the right.
-
-Design: massive heavy jaw, thick curved horns sweeping back, glowing orange eyes, menacing ancient face (not bird-like, no beak). Dark charcoal and deep brown armored scales, glowing orange-red cracks and embers between the scales, tattered wing membranes in dark red. Cool and intimidating, not cute.
-
-Lighting: strong bright orange-red rim light outlining the whole silhouette from behind and above, the front of the body in deep shadow, the cracks and eyes glowing.
-
-Style: watercolor painting with bold black ink linework, strong confident strokes, watercolor washes with controlled bleeding, subtle paper texture, dark muted palette of charcoal and deep brown with orange-red accents only. Clear readable silhouette.
-
-Background: plain flat dark gray background, no scenery, no ground shadow, no text, no frame, no signature.
+Watercolor painting with bold black ink linework, strong confident strokes, watercolor washes with controlled bleeding, dark muted palette of charcoal and deep brown with orange-red accents, dark gray paper background.
 ```
 
-うまくいかないときに足す一文:
-- 右を向いてしまう: `The dragon must face left. Mirror the pose if needed.`
-- 小さく描かれる: `The dragon fills about 85 percent of the image height.`
-- 背景に模様が出る: `The background is a single flat color without texture.`
+仲間の敵は、炎の古竜の絵を見本として一緒に渡し、最後に次の一文を足す:
+```
+Same art style, linework, palette, paper and lighting as the reference image. A different creature, not a dragon unless stated.
+```
 
-## ほかの敵に使うとき
+## 炎の神殿の Design の段落
 
-上の「Design」の段落だけを、その敵の姿に書き換える。ほかの段落は変えない。仲間の敵は、気に入った1枚を見本の画像として一緒に渡し、`Same art style, linework, palette and lighting as the reference image.` を足す。
+| 敵 | Design |
+|---|---|
+| 炎の古竜（大ボス。済み） | `A fearsome ancient fire dragon, the final boss of a fire temple, slender and sharp, tattered wings, long spiked tail` |
+| 炎の飛竜（中ボス） | `A fierce young fire wyvern, smaller and leaner than an ancient dragon, two legs and two large wings (wings are its arms), long neck, sharp beak-less snout, spiked tail, in mid-air hovering pose with wings raised` |
+| フレイムリザード（雑魚・強め） | `A large fire lizard the size of a crocodile, low and wide stance on four legs, heavy armored scales, glowing throat sac about to breathe fire, spiked back ridge, long thick tail` |
+| トレジャーハンター（雑魚・中） | `A ruthless human treasure hunter raiding a fire temple, lean and hooded, wearing a scorched leather coat and a scarf over the mouth, a curved dagger in one hand and a lit powder bomb in the other, satchel full of stolen gold, crouched ready to strike, the face half hidden in shadow` |
+| 赤スライム（雑魚・弱め） | `A menacing red slime made of semi-molten magma, a low blob with a glowing molten core visible inside, bubbling surface with dark crusted patches, drips of lava, no cute face (only two small glowing eye-like embers)` |
+
+注意:
+- 炎の飛竜は、古竜と同じ系統に見えるよう、古竜の絵を見本として必ず渡す。
+- 赤スライムは、かわいくならないよう「顔を描かない」が要。
+- トレジャーハンターだけ人間。暗く、顔を半分隠す。
