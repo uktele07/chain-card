@@ -55,21 +55,29 @@ Same art style, linework, palette, paper and lighting as the reference image. A 
 
 ## 戦闘の背景（炎の神殿）
 
-いまの背景（コードで描いた神殿の広間）を、画像に替えるための指示文。ゲームの中で弱くぼかし、暗くして使う（敵と手札を読みやすくするため）。
+背景の構図は、**横から見た舞台**にする（2026-11-22、持ち主）。戦闘は左のプレイヤーと右の敵が横に向き合うので、奥へ延びる通路を正面から見る構図は不自然（1回目の生成がそうなった）。
+ゲームの中で弱くぼかし、暗くして使う。
 
-置き場所の約束（いまの画面の配置に合わせる）:
-- 横長 16:9。敵は画面の右寄り（横 80% あたり、床の上）に立つ。そこに床が見え、奥から光が当たっていること。
-- 左と中央には、文字（アイテム、HP、次の攻撃）と手札が重なる。細かい模様や明るいものを置かない。
-- 床の奥行きの線（地平線）は、高さの 55〜60% あたり。
-- 生き物・人・文字を描かない。
+置き場所の約束:
+- 横長 16:9。奥の壁が画面と平行に立ち、床は左右に延びる帯。消失点（奥へ集まる線）を作らない。
+- 床の奥の端は、高さの 60% あたり。敵は右の床（横 80% あたり）に立つので、そこだけ明るく空ける。
+- 左と中央には文字と手札が重なる。細かい模様や明るいものを置かない。
+- 生き物・人・文字・枠・紙の余白を描かない。
+
+作り方:
+1. Gemini で**新しい会話**を始める（同じ会話だと、前の絵の構図を引きずる）。
+2. 構図の下絵 `docs/samples/bg-layout-guide.png` を添付する。敵の絵は添付しない（背景に描き込まれやすい）。
+3. 下の指示文を送る。縦横比は 16:9。
 
 ```
-Interior of an ancient fire temple, a vast stone hall seen from inside, wide 16:9 landscape, eye-level view. Massive dark stone pillars and old brick walls on both sides, tall arched doorways in the back wall, a stone floor of large cracked slabs receding into the distance (horizon at about 58 percent of the image height). Far in the back, rivers of lava glow behind the arches, casting warm orange-red light across the floor. The right side of the floor is softly lit, an open empty area where a monster will stand. The left and center are calm and dark with few details. Embers drift in the air. No creatures, no people, no text.
+Use the attached image only as a composition guide (layout of the wall, arches, floor and the lit area on the right). Do not copy its flat colors or simple shapes; paint a detailed scene.
+
+Side view of a battle arena inside an ancient fire temple, wide 16:9 landscape, like a theater stage seen straight on. The back wall runs parallel to the picture plane across the whole image: massive dark stone pillars and old brick walls with tall arched openings, evenly spaced from left to right. Through the arches and from cracks at the base of the wall, rivers of lava glow, casting warm orange-red light on the floor. A wide flat stone floor of large cracked slabs runs horizontally across the lower part of the image (the back edge of the floor at about 60 percent of the image height), seen from a slightly raised eye level, with no strong perspective and no corridor leading into the distance. The right side of the floor is softly lit where a monster will stand; the left and center stay calm and dark. Embers drift in the air. No creatures, no people, no text. No border, no frame, no white paper margin; the painting fills the entire image edge to edge.
 
 Watercolor painting with bold black ink linework, strong confident strokes, watercolor washes with controlled bleeding, dark muted palette of charcoal and deep brown with orange-red accents, subtle paper texture. Moody, quiet and dark overall.
 ```
 
 うまくいかないときに足す一文:
+- まだ奥へ延びる通路になる: `Orthographic side view. Do not draw a corridor or a vanishing point.`
+- 壁が近すぎて床が見えない: `Show more floor: the floor fills the lower 40 percent of the image.`
 - 明るすぎる: `Very dark overall; only the lava and the right side of the floor are lit.`
-- 真ん中に目立つものが来る: `Keep the center of the image empty and dark.`
-- 敵の場所がない: `Leave the right third of the floor open and empty.`
