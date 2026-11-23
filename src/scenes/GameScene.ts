@@ -15,6 +15,7 @@ import { drawBattle } from '../screens/battle';
 import { drawBattleScene, CHAIN_AT, ITEM_AT, HP_AT } from '../screens/battlescene';
 import { ENEMY_AT, ENEMY_ART, enemyArtUrl, BATTLE_BG_IMAGES, battleBgImageKey, battleBgImageUrl } from '../game/battlebg';
 import { BattleFx } from '../game/battlefx';
+import { InkTransition } from '../game/transition';
 import { drawListScene } from '../screens/listscene';
 import { loadRunes } from '../game/runes';
 import { UIRoot, isHtml, UI_DEBUG, DEBUG_MARKS, type ViewName } from '../views/root';
@@ -93,6 +94,7 @@ export class GameScene extends Phaser.Scene {
     for (const id of Object.keys(ENEMY_ART)) if (!this.textures.exists(monsterKey(id))) this.load.image(monsterKey(id), enemyArtUrl(id));
     for (const id of BATTLE_BG_IMAGES) if (!this.textures.exists(battleBgImageKey(id))) this.load.image(battleBgImageKey(id), battleBgImageUrl(id));
     this.battleFx = new BattleFx(this);
+    this.ink = new InkTransition(this.ui.fx);
     this.load.start();
     this.save = loadSave(SAVE_CONFIG);
     this.applyVolume();
@@ -288,7 +290,10 @@ export class GameScene extends Phaser.Scene {
   }
   closeLanded() {
     const eff = this.effect;
-    if (eff?.kind === 'monster') { this.snd.uiOk(); this.toReady(enemyById(eff.enemy)); return; }
+    if (eff?.kind === 'monster') {   // 墨のにじみで覆ってから、戦闘の開始前へ（src/game/transition.ts）
+      if (this.ink.active) { this.ink.skip(); return; }
+      this.snd.uiOk(); this.ink.start(() => this.toReady(enemyById(eff.enemy))); return;
+    }
     this.bmode = 'idle'; this.effect = null; this.diceFace = 0;
   }
   updateBoard(dt: number) {
@@ -619,6 +624,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.resultWait = Math.max(0, this.resultWait - dt);
     this.updateBoard(dt);
+    this.ink.update(dt);
 
     for (const e of bt.events) {
       if (e.kind === 'hit') {
@@ -678,6 +684,7 @@ export class GameScene extends Phaser.Scene {
 
   // ---------------- 描画 ----------------
   battleFx!: BattleFx;   // 戦闘背景の炎と火の粉
+  ink!: InkTransition;     // 戦闘への切り替わりの演出（墨のにじみ）
   draw() {
     for (const l of this.L) l.begin();
     this.battleFx.set(null);   // 戦闘の背景を描くときだけ、drawBattleScene が出し直す（同じなら何もしない）

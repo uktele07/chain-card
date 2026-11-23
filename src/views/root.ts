@@ -37,6 +37,9 @@ export const DEBUG_MARKS: [number, number][] = [[0, 0], [940, 0], [0, 520], [940
 
 export class UIRoot {
   readonly el: HTMLDivElement;
+  /** HTML の層のさらに上に重ねる、演出用の canvas（戦闘への切り替わり。src/game/transition.ts） */
+  readonly fx: HTMLCanvasElement;
+  private fxBox: HTMLDivElement;
   private canvas: HTMLCanvasElement | null = null;
   private last = '';
 
@@ -47,6 +50,11 @@ export class UIRoot {
     this.el = document.createElement('div');
     this.el.id = 'ui';
     parent.appendChild(this.el);
+    this.fxBox = document.createElement('div');
+    Object.assign(this.fxBox.style, { position: 'absolute', left: '0', top: '0', width: '960px', height: '540px', transformOrigin: '0 0', pointerEvents: 'none', zIndex: '5' });
+    this.fx = document.createElement('canvas');
+    this.fxBox.appendChild(this.fx);
+    parent.appendChild(this.fxBox);
     window.addEventListener('resize', () => requestAnimationFrame(() => this.sync()));
   }
 
@@ -65,6 +73,7 @@ export class UIRoot {
     if (key === this.last) return;
     this.last = key;
     this.el.style.transform = `translate(${r.left - pr.left}px, ${r.top - pr.top}px) scale(${r.width / 960})`;
+    this.fxBox.style.transform = this.el.style.transform;
   }
 
   /** 毎フレーム呼ぶ。views は、いま見えている画面（奥から順）。HTML で描くものだけを描く。
