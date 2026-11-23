@@ -1,5 +1,5 @@
 // 戦闘画面への切り替わりの演出（4案）の見本を、ブラウザで動く1ファイルにする。
-// 使い方: npm run page && node docs/samples/build-transition-page.mjs <背景(jpg)> <古竜(webp)> <フレイムリザード(webp)> → docs/samples/transition-sample.html
+// 使い方: npm run page && [SLOW=1.5] node docs/samples/build-transition-page.mjs <背景(jpg)> <古竜(webp)> <フレイムリザード(webp)> → docs/samples/transition-sample.html
 // ゲーム本体は変えず、1ファイル版に見本の描画を足すだけ。上のボタンで案と敵を選び「再生」で、盤面（WARNING）→ 戦闘の開始前 へ切り替わる
 // 演出は画面の上に重ねた canvas に描く。覆う（約0.35秒）→ 裏で戦闘に切り替える → 開く（約0.45秒）
 //   A 墨のにじみ: 中央から黒い墨が水彩のようににじんで広がり、引くと戦闘
@@ -18,6 +18,7 @@ const patch = String.raw`<script>
   const wait = (f, then) => { const id = setInterval(() => { try { if (f()) { clearInterval(id); then(); } } catch (e) {} }, 50); };
   const img = src => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = src; });
   let mode = 'A', enemy = 'elder_dragon', busy = false;
+  const SLOW = ${Number(process.env.SLOW || 1)};
   // 敵の目のあたり（960×540 の座標。ゲームの絵の置き場所から目で測った。C の案で光らせる）
   const EYE = { elder_dragon: [[688, 209]], flame_lizard: [[658, 290]] };
   const LIGHT_AT = { elder_dragon: [760, 330], flame_lizard: [790, 360] };
@@ -114,7 +115,7 @@ const patch = String.raw`<script>
       wait(() => s.bmode === 'landed', () => {
         setTimeout(() => {   // WARNING を少し見せてから
           fit();
-          const IN = mode === 'B' ? 420 : 350, OUT = mode === 'C' ? 650 : 450;
+          const IN = (mode === 'B' ? 420 : 350) * SLOW, OUT = (mode === 'C' ? 650 : 450) * SLOW;   // SLOW: 長さの倍率
           const t0 = performance.now();
           const step = now => {
             const t = now - t0;
@@ -151,5 +152,7 @@ const patch = String.raw`<script>
 })();
 </script>`;
 const at = base.lastIndexOf('</body>');
-fs.writeFileSync('docs/samples/transition-sample.html', base.slice(0, at) + patch + '\n' + base.slice(at));
-console.log('docs/samples/transition-sample.html', (fs.statSync('docs/samples/transition-sample.html').size / 1024 / 1024).toFixed(1) + 'MB');
+// SLOW=1.5 で長さを 1.5倍にした版を、別のファイルに書く（2026-11-23、持ち主の指示）
+const out = process.env.SLOW && process.env.SLOW !== '1' ? `docs/samples/transition-sample-x${process.env.SLOW}.html` : 'docs/samples/transition-sample.html';
+fs.writeFileSync(out, base.slice(0, at) + patch + '\n' + base.slice(at));
+console.log(out, (fs.statSync(out).size / 1024 / 1024).toFixed(1) + 'MB');
