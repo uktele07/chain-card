@@ -1,4 +1,8 @@
-// 効果音とBGM。効果音はその場で合成する。BGM は持ち主が用意した曲（public/audio）を流す。
+// 効果音とBGM。効果音は、録音の素材（public/sfx。CC0）があればそれを鳴らし、無ければその場で合成する。BGM は持ち主が用意した曲（public/audio）を流す。
+/** 録音の素材に替えた効果音（2026-11-24、持ち主が聞き比べて選んだ。docs/credits.md）。読み込めないとき（1ファイル版など）は合成の音 */
+const SAMPLES = ['hurt', 'hurt-big', 'chain-break', 'refill', 'spell', 'ui-move', 'ui-ok', 'ui-back'] as const;
+type SampleName = typeof SAMPLES[number];
+const SAMPLE_GAIN = 0.8;   // 素材は loudnorm（-18 LUFS）でそろえてある。合成の音とのつり合い
 type Osc = OscillatorType;
 
 export class Sound {
@@ -35,7 +39,27 @@ export class Sound {
         for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
       }
       if (this.ctx.state === 'suspended') void this.ctx.resume();
+      this.loadSamples();
     } catch { /* 音が使えない環境では無音で続ける */ }
+  }
+
+  private samples: Partial<Record<SampleName, AudioBuffer>> = {};
+  private samplesAsked = false;
+  private loadSamples() {
+    if (this.samplesAsked || !this.ctx) return;
+    this.samplesAsked = true;
+    for (const n of SAMPLES) {
+      fetch(`sfx/${n}.ogg`).then(r => (r.ok ? r.arrayBuffer() : Promise.reject(r.status))).then(b => this.ctx!.decodeAudioData(b)).then(buf => { this.samples[n] = buf; }).catch(() => { /* 無ければ合成の音 */ });
+    }
+  }
+  /** 録音の素材を鳴らす。鳴らせたら true（無ければ false で、呼び出し側が合成の音を鳴らす） */
+  private sample(n: SampleName, gain = 1): boolean {
+    const buf = this.samples[n];
+    if (!buf || !this.ready) return false;
+    const c = this.ctx!, s = c.createBufferSource(), g = c.createGain();
+    s.buffer = buf; g.gain.value = SAMPLE_GAIN * gain;
+    s.connect(g).connect(this.seBus); s.start();
+    return true;
   }
 
   toggleMute() {
@@ -92,7 +116,7 @@ export class Sound {
     if (powered) { this.tone(b, 'triangle', 1318.5, 2637, 0.22, 0.14, 0.03); this.noise(b, 'bandpass', 5000, 9000, 0.2, 0.12, 0.02, 4); }
   }
   spell() {
-    if (!this.ready) return;
+    if (!this.ready || this.sample('spell')) return;
     for (const [i, f] of [880, 1108.7, 1318.5, 1760].entries()) this.tone(this.seBus, 'sine', f, f, 0.16, 0.13, i * 0.035);
   }
   miss() {
@@ -101,9 +125,9 @@ export class Sound {
     this.tone(this.seBus, 'square', 92, 70, 0.2, 0.14);
   }
   skip() { if (this.ready) this.noise(this.seBus, 'bandpass', 2400, 500, 0.22, 0.3, 0, 2); }
-  refill() { if (this.ready) { this.noise(this.seBus, 'highpass', 5000, 5000, 0.03, 0.14); this.tone(this.seBus, 'triangle', 1400, 1400, 0.04, 0.07); } }
+  refill() { if (this.ready && !this.sample('refill', 0.7)) { this.noise(this.seBus, 'highpass', 5000, 5000, 0.03, 0.14); this.tone(this.seBus, 'triangle', 1400, 1400, 0.04, 0.07); } }
   keep(on: boolean) { if (this.ready) this.tone(this.seBus, 'triangle', on ? 990 : 660, on ? 1320 : 495, 0.07, 0.15); }
-  chainBreak() { if (this.ready) this.tone(this.seBus, 'triangle', 440, 150, 0.32, 0.2); }
+  chainBreak() { if (this.ready && !this.sample('chain-break')) this.tone(this.seBus, 'triangle', 440, 150, 0.32, 0.2); }
   item(effect: string) {
     if (!this.ready) return;
     const b = this.seBus;
@@ -113,7 +137,7 @@ export class Sound {
   }
   /** 敵の攻撃を受けた */
   enemyHit(big: boolean) {
-    if (!this.ready) return;
+    if (!this.ready || this.sample(big ? 'hurt-big' : 'hurt')) return;
     const b = this.seBus;
     this.tone(b, 'sine', big ? 110 : 140, 40, big ? 0.4 : 0.2, big ? 0.8 : 0.5);
     this.noise(b, 'lowpass', big ? 2500 : 1500, 200, big ? 0.35 : 0.16, big ? 0.5 : 0.3);
@@ -144,9 +168,9 @@ export class Sound {
     for (const [i, f] of [392, 349.23, 311.13, 261.63].entries()) this.tone(this.seBus, 'sawtooth', f, f * 0.97, i === 3 ? 0.9 : 0.3, 0.12, i * 0.22);
   }
   // ---- メニューの操作音 ----
-  uiMove() { if (this.ready) this.tone(this.seBus, 'triangle', 880, 880, 0.04, 0.09); }
-  uiOk() { if (this.ready) { this.tone(this.seBus, 'triangle', 880, 880, 0.06, 0.12); this.tone(this.seBus, 'triangle', 1318.5, 1318.5, 0.09, 0.12, 0.05); } }
-  uiBack() { if (this.ready) this.tone(this.seBus, 'triangle', 660, 440, 0.09, 0.11); }
+  uiMove() { if (this.ready && !this.sample('ui-move', 0.6)) this.tone(this.seBus, 'triangle', 880, 880, 0.04, 0.09); }
+  uiOk() { if (this.ready && !this.sample('ui-ok', 0.7)) { this.tone(this.seBus, 'triangle', 880, 880, 0.06, 0.12); this.tone(this.seBus, 'triangle', 1318.5, 1318.5, 0.09, 0.12, 0.05); } }
+  uiBack() { if (this.ready && !this.sample('ui-back', 0.6)) this.tone(this.seBus, 'triangle', 660, 440, 0.09, 0.11); }
   /** 再開前のカウント */
   count() { if (this.ready) this.tone(this.seBus, 'square', 660, 660, 0.1, 0.12); }
   finish() {

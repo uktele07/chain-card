@@ -40,6 +40,22 @@
 
 - Steam で出すときは、AIで作った素材を使っていることをストアページで申告する（出す前に、その時点の規定を確かめる）。
 
+## 効果音（`public/sfx/`）
+
+すべて CC0（商用利用可、クレジット表記不要）。2026-11-24 に持ち主が聞き比べて選んだ（`docs/samples/sfx-audition.html`、候補の一覧 `docs/samples/sfx-candidates2.txt`）。頭の無音を切り、高さを少し下げ（倍率）、loudnorm（-18 LUFS）で大きさをそろえて ogg にした。
+
+| ファイル | 場面 | 元の音 | 素材集・作者 | 倍率 |
+|---|---|---|---|---|
+| `hurt.ogg` | 敵の攻撃を受ける | bfh1_hit_07.ogg | OpenGameArt「75 CC0 breaking / falling / hit sfx」 | 1 |
+| `hurt-big.ogg` | 強い攻撃を受ける | hit02 | OpenGameArt「37 hits/punches」（Independent.nu） | 0.95 |
+| `chain-break.ogg` | チェイン切れ | sword_clash.5.ogg | OpenGameArt「20 Sword Sound Effects」（StarNinjas） | 0.85 |
+| `refill.ogg` | 手札の入れ替え（補充） | bookFlip2.ogg | Kenney「RPG Audio」 | 0.9 |
+| `spell.ogg` | スペル | spell_fire_01.ogg | OpenGameArt「80 CC0 RPG SFX」（rubberduck） | 0.85 |
+| `ui-move.ogg` / `ui-ok.ogg` / `ui-back.ogg` | メニューの移動・決定・戻る | switch_01 / switch_02 / switch_01 | OpenGameArt「100 CC0 SFX」 | 1.1 / 1 / 0.8 |
+
+- 出典のページ: https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx 、https://opengameart.org/content/37-hitspunches 、https://opengameart.org/content/20-sword-sound-effects-attacks-and-clashes 、https://kenney.nl/assets/rpg-audio 、https://opengameart.org/content/80-cc0-rpg-sfx 、https://opengameart.org/content/100-cc0-sfx （どれも License: CC0 を確かめた）
+- ogg（Vorbis）は、古い Safari では鳴らない。鳴らないときは合成の音になる。
+
 ## ライブラリ
 
 | ライブラリ | 版 | ライセンス | 用途 |
