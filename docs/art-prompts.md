@@ -93,3 +93,21 @@ Side view of a sacred battle hall inside an ancient fire temple, wide 16:9 lands
 
 Watercolor painting with bold black ink linework, strong confident strokes, watercolor washes with controlled bleeding, palette of warm stone, deep brown and charcoal with gold and orange-red accents, subtle paper texture.
 ```
+
+## 効果音（ElevenLabs の Sound Effects。2026-11-24）
+
+方針: 「カードを出す」は、キラキラした魔法の音（持ち主）。C の音を1つ作り、B・A は音程だけ上げる（+2・+4 半音。`src/game/audio.ts` の `CARD_RATE`）。S だけ特別な音。
+設定: ループ（∞）オフ、長さ C 0.6秒・S 1.2秒、プロンプトの影響 70%。
+**Free プランの音は商用に使えない。** 公開先（ゲーム本体）とリポジトリには入れず、試すだけ。使うと決めたら、Starter（商用可）で同じ指示文で作り直して `public/sfx/card.ogg`・`card-s.ogg` に置く（置けば、合成の音から自動で替わる）。
+
+持ち主が気に入った指示文（2026-11-24）:
+- C: `A quick enchanted twinkle: soft celesta-like ding with airy shimmering sparkles, 0.5 seconds, crisp attack, gentle fade, no reverb tail, game sound effect.`
+- S: `Ultimate spell activation sound: a quick magical whoosh rising in pitch, ending in a brilliant bell-like flash with cascading twinkles and a subtle heavy thump, clean, no reverb wash.`
+
+ほかの案:
+- C: `A short magical sparkle sound for playing a card in a fantasy game: a bright crystalline chime with a soft shimmer tail, quick sharp attack, clean and dry, single hit, no music, no voice.`
+- C: `Short magic spell cast sparkle, glassy bell tone with tiny glittering particles, fast attack and short decay, subtle and elegant, single one-shot game UI sound.`
+- S: `A powerful magical finishing burst for a fantasy card game: a rising shimmering sweep into a bright crystalline explosion of sparkles with a deep soft low boom underneath, triumphant and special, single one-shot, no music, no voice.`
+- S: `Epic magic spell climax: glittering chimes swirl upward and burst into a radiant shower of sparkles, layered with a warm resonant bass impact, 1.2 seconds, majestic and dramatic, game sound effect.`
+
+試し方: `node docs/samples/build-card-sfx-page.mjs <C.ogg> <S.ogg>` で、実際の戦闘で鳴らせる1ファイルのページを作る（できたページは Free の音を含むので、リポジトリに入れない）。

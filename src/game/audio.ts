@@ -1,6 +1,9 @@
 // 効果音とBGM。効果音は、録音の素材（public/sfx。CC0）があればそれを鳴らし、無ければその場で合成する。BGM は持ち主が用意した曲（public/audio）を流す。
 /** 録音の素材に替えた効果音（2026-11-24、持ち主が聞き比べて選んだ。docs/credits.md）。読み込めないとき（1ファイル版など）は合成の音 */
-const SAMPLES = ['hurt', 'hurt-big', 'chain-break', 'refill', 'spell', 'ui-move', 'ui-ok', 'ui-back'] as const;
+// card / card-s: カードを出す音（C の音を B・A で音程だけ上げる。S は別の音）。2026-11-24 に枠だけ作った。ファイルはまだ置いていない（ElevenLabs の Free で試した音は商用に使えないため。docs/credits.md）
+const SAMPLES = ['hurt', 'hurt-big', 'chain-break', 'refill', 'spell', 'ui-move', 'ui-ok', 'ui-back', 'card', 'card-s'] as const;
+/** カードを出す音の高さ（C・B・A。半音で 0・+2・+4） */
+const CARD_RATE = [1, 1.1225, 1.2599];
 type SampleName = typeof SAMPLES[number];
 const SAMPLE_GAIN = 0.8;   // 素材は loudnorm（-18 LUFS）でそろえてある。合成の音とのつり合い
 type Osc = OscillatorType;
@@ -53,11 +56,11 @@ export class Sound {
     }
   }
   /** 録音の素材を鳴らす。鳴らせたら true（無ければ false で、呼び出し側が合成の音を鳴らす） */
-  private sample(n: SampleName, gain = 1): boolean {
+  private sample(n: SampleName, gain = 1, rate = 1): boolean {
     const buf = this.samples[n];
     if (!buf || !this.ready) return false;
     const c = this.ctx!, s = c.createBufferSource(), g = c.createGain();
-    s.buffer = buf; g.gain.value = SAMPLE_GAIN * gain;
+    s.buffer = buf; s.playbackRate.value = rate; g.gain.value = SAMPLE_GAIN * gain;
     s.connect(g).connect(this.seBus); s.start();
     return true;
   }
@@ -101,7 +104,9 @@ export class Sound {
   hit(lv: number, powered = false) {
     if (!this.ready) return;
     const b = this.seBus;
-    if (lv >= 4) {
+    if (lv >= 4 ? this.sample('card-s') : this.sample('card', 1, CARD_RATE[Math.max(0, lv - 1)] ?? 1)) {
+      // 素材の音を鳴らした（強化中の光の音だけ、合成で足す）
+    } else if (lv >= 4) {
       this.tone(b, 'sine', 180, 38, 0.55, 0.7);
       this.noise(b, 'lowpass', 6000, 300, 0.45, 0.5);
       for (const [i, f] of [523.25, 659.25, 783.99, 1046.5].entries()) this.tone(b, 'sawtooth', f, f, 0.5, 0.11, 0.02 * i);
