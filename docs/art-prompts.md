@@ -110,5 +110,5 @@ Watercolor painting with bold black ink linework, strong confident strokes, wate
 - S: `A powerful magical finishing burst for a fantasy card game: a rising shimmering sweep into a bright crystalline explosion of sparkles with a deep soft low boom underneath, triumphant and special, single one-shot, no music, no voice.`
 - S: `Epic magic spell climax: glittering chimes swirl upward and burst into a radiant shower of sparkles, layered with a warm resonant bass impact, 1.2 seconds, majestic and dramatic, game sound effect.`
 
-C の加工（2026-11-24、持ち主「C〜A が少し軽い。音程を少し下げて、リバーブを少し足して」）: 3案を作った（ffmpeg の asetrate で -2・-3・-4 半音、aecho の細かい反射を重ねて響き 弱・中・強）。持ち主は C案3（-4半音・響き強）に決めた。S は「半音1つ上げて、リバーブを足して」→ +1半音で響き 弱・中・強の3案を作った（返事待ち）。
+C の加工（2026-11-24、持ち主「C〜A が少し軽い。音程を少し下げて、リバーブを少し足して」）: 3案を作った（ffmpeg の asetrate で -2・-3・-4 半音、aecho の細かい反射を重ねて響き 弱・中・強）。持ち主は C案3（-4半音・響き強）に決めた。S は「半音1つ上げて、リバーブを足して」→ +1半音で響き 弱・中・強の3案を作り、持ち主は S案3（響き強）に決めた。**加工の手順は `scripts/art/card-sfx.sh`**（Starter で作り直した元の音を渡すと、`public/sfx/card.ogg`・`card-s.ogg` ができ、ゲームの音が替わる）。
 試し方: `node docs/samples/build-card-sfx-page.mjs <出力.html> <S.ogg> <C.ogg>...` で、実際の戦闘で鳴らせる1ファイルのページを作る（できたページは Free の音を含むので、リポジトリに入れない）。
