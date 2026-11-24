@@ -1,8 +1,16 @@
 // 効果音の聞き比べのページ（2026-11-23。2回目の候補は 2026-11-24: 音の中身を解析して選び直した。docs/samples/sfx-candidates2.txt）。候補は Kenney と OpenGameArt の CC0 素材から、重く乾いた方向で選び、
 // ffmpeg で高さを少し下げ（重く）、音量をそろえた（loudnorm）。使い方: node docs/samples/build-sfx-audition.mjs <候補の ogg のフォルダ>
 import fs from 'node:fs';
+import { stripTypeScriptTypes } from 'node:module';
+// いまの効果音（合成の音）も鳴らせるように、src/game/audio.ts をそのまま JavaScript にしてページに入れる
+const soundJs = stripTypeScriptTypes(fs.readFileSync('src/game/audio.ts', 'utf8'), { mode: 'transform' }).replace(/^export /gm, '');
 const dir = process.argv[2];
 const b64 = id => 'data:audio/ogg;base64,' + fs.readFileSync(`${dir}/${id}.ogg`).toString('base64');
+// 4つ目: いまの音（[Sound のメソッド名, 引数...] を順に鳴らす）
+const NOW = [
+  [['hit', 1], ['hit', 2], ['hit', 3], ['hit', 4]], [['enemyHit', false]], [['enemyHit', true]], [['warn']], [['warnTick', 3], ['warnTick', 2], ['warnTick', 1]],
+  [['chainBreak']], [['miss']], [['refill']], [['spell']], [['item', 'heal']], [['uiMove'], ['uiOk'], ['uiBack']],
+];
 const ROWS = [
   ['カードを出す（C→B→A→S と続けて鳴る）', [['A', '素手の打撃（録音）'], ['B', '刃が空を切る＋打撃'], ['C', '木と重い物を叩きつける']], k => ['C', 'B', 'A', 'S'].map(l => `card_${k}_${l}`)],
   ['敵の攻撃を受ける', [['A', '鈍い打撃（録音）'], ['B', '重い物が当たる'], ['C', '叩きつけられる']], k => [`hurt_${k}`]],
@@ -38,12 +46,16 @@ const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta n
   #sum { margin-top: 20px; padding: 12px; border: 1px solid var(--gold); white-space: pre-wrap; font-size: 13px; }
 </style></head><body><main>
 <h1>効果音の聞き比べ</h1>
-<p class="note">2回目の候補です。名前ではなく、音の中身（立ち上がり、余韻の長さ、音の高さ）を解析して、重く乾いたものを選び直しました（CC0 の素材 約600音から）。▶ で鳴らし、良いものに印を付けてください。いまの合成の音のままがよい場面は「いまのまま」に。最後に出る一覧を、そのまま送ってもらえれば反映します。</p>
+<p class="note">2回目の候補です。名前ではなく、音の中身（立ち上がり、余韻の長さ、音の高さ）を解析して、重く乾いたものを選び直しました（CC0 の素材 約600音から）。▶ で鳴らし、良いものに印を付けてください。いまのゲームの音（合成）も「いまの音」で鳴らせます。いまのままがよい場面は「いまのままにする」に。最後に出る一覧を、そのまま送ってもらえれば反映します。</p>
 <div id="rows"></div>
 <div id="sum"></div>
 </main><script>
 const S = ${JSON.stringify(SOUNDS)};
 const ROWS = ${JSON.stringify(ROWS.map(([t, opts, f]) => [t, opts.map(([k, n]) => [k, n, f(k)])]))};
+const NOW = ${JSON.stringify(NOW)};
+${soundJs}
+const snd = new Sound();
+function playNow(list) { snd.unlock(); list.forEach(([m, ...a], i) => setTimeout(() => snd[m](...a), 60 + i * 450)); }
 let ctx; const buf = {};
 async function play(list) {
   ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
@@ -61,11 +73,11 @@ ROWS.forEach(([title, opts], r) => {
   const row = document.createElement('div'); row.className = 'row';
   row.innerHTML = '<h2>' + title + '</h2><div class="opts"></div>';
   const o = row.querySelector('.opts');
-  for (const [k, name, list] of [...opts, ['-', 'いまのまま', null]]) {
+  for (const [k, name, list] of [...opts, ['-', 'いまの音', null]]) {
     const el = document.createElement('div'); el.className = 'opt';
-    if (list) { const b = document.createElement('button'); b.className = 'play'; b.textContent = k + ' ' + name; b.onclick = () => play(list); el.appendChild(b); }
+    const b = document.createElement('button'); b.className = 'play'; b.textContent = list ? k + ' ' + name : 'いまの音（合成）'; b.onclick = () => list ? play(list) : playNow(NOW[r]); el.appendChild(b);
     const lab = document.createElement('label');
-    lab.innerHTML = '<input type="radio" name="r' + r + '">' + (list ? 'これにする' : 'いまのまま');
+    lab.innerHTML = '<input type="radio" name="r' + r + '">' + (list ? 'これにする' : 'いまのままにする');
     lab.querySelector('input').onchange = () => { pick[title] = list ? k + '（' + name + '）' : 'いまのまま'; o.querySelectorAll('.opt').forEach(x => x.classList.remove('on')); el.classList.add('on'); sum(); };
     el.appendChild(lab); o.appendChild(el);
   }
