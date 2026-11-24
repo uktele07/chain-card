@@ -98,7 +98,7 @@ Watercolor painting with bold black ink linework, strong confident strokes, wate
 
 方針: 「カードを出す」は、キラキラした魔法の音（持ち主）。C の音を1つ作り、B・A は音程だけ上げる（+2・+4 半音。`src/game/audio.ts` の `CARD_RATE`）。S だけ特別な音。
 設定: ループ（∞）オフ、長さ C 0.6秒・S 1.2秒、プロンプトの影響 70%。
-**Free プランの音は商用に使えない。** 公開先（ゲーム本体）とリポジトリには入れず、試すだけ。使うと決めたら、Starter（商用可）で同じ指示文で作り直して `public/sfx/card.ogg`・`card-s.ogg` に置く（置けば、合成の音から自動で替わる）。
+**Free プランの音は商用に使えない。** ElevenLabs の公式の説明（2026-11-24 に調べた。Help Center「Can I publish the content I generate on the platform?」と料金の文書）: 有料のプランの間に作った音は、解約したあとも商用で使い続けてよい（Service-Specific Terms の範囲で）。有料のプランで作った音にクレジット表記は要らない。有料の外（前・後・Free）で作った音は商用不可で、共有するときもクレジット表記が要る。**ベータ（Beta）の機能で作った音は、有料でも商用不可**（契約のときに、効果音の画面にベータの印がないか確かめる）。 公開先（ゲーム本体）とリポジトリには入れず、試すだけ。使うと決めたら、Starter（商用可）で同じ指示文で作り直して `public/sfx/card.ogg`・`card-s.ogg` に置く（置けば、合成の音から自動で替わる）。
 
 持ち主が気に入った指示文（2026-11-24）:
 - C: `A quick enchanted twinkle: soft celesta-like ding with airy shimmering sparkles, 0.5 seconds, crisp attack, gentle fade, no reverb tail, game sound effect.`
